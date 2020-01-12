@@ -1,11 +1,46 @@
 import os
 import argparse
+import re
 
 def add_zero(number, size):
     out = str(number)
     for i in range(size-len(out)):
         out = "0" + out
     return out
+
+single_pron=["a", "ai", "ao", "an", "ang", "o", "ou", "e", "ei", "er", "en", "eng"]
+double_starter = ["zh", "ch", "sh", "ii", "aa", "ee", "oo", "vv", "uu"]
+starter = ["b", "p", "m", "f", "d", "t", "n", "l", "g", "k", "h", "j", "q", "x",
+           "r", "z", "c", "s"]
+
+def text_refactor(text):
+    text = re.sub(" +", " ", text)
+    units = text.split(" ")
+    # add a e o u i
+    for i in range(len(units)):
+        if len(units[i]) < 1:
+            print("error")
+            print(units)
+            print(text)
+        if units[i] in single_pron:
+            begin = units[i][0]
+            units[i] = begin + begin + units[i]
+        elif "w" == units[i][0]:
+            units[i] = "uuu" + units[i][1:]
+        elif len(units[i]) > 1 and "yu" == units[i][:2]:
+            units[i] = "vvv" + units[i][2:]
+        elif "y" == units[i][0]:
+            units[i] = "iii" + units[i][1:]
+        if units[i] == "iiiou":
+            units[i] = "iiiu"
+    spe = []
+    for unit in units:
+        if unit[:2] in double_starter:
+            spe.extend([unit[:2], unit[2:]])
+        else:
+            spe.extend([unit[:1], unit[1:]])
+    return " ".join(spe)
+    
 
 parser = argparse.ArgumentParser()
 parser.add_argument("datadir", type=str, help="data directory")
@@ -39,7 +74,8 @@ for root, dirs, files in os.walk(args.datadir):
                 if not line:
                     break
                 line = line.strip()
-                text_storing[piece_info+add_zero(count, 4)]=line
+                if len(line) > 0:
+                    text_storing[piece_info+add_zero(count, 4)]=text_refactor(line)
                 count += 1
 
     for key in text_storing.keys():
