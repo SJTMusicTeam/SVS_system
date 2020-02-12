@@ -8,11 +8,13 @@ Created on Sun Feb  9 10:51:15 2020
 
 import numpy as np
 import math
-
+import os
+import argparse
 
 def DTW(template, sample): 
     '''
-    使用DTW算法进行对齐
+    Alignment using DTW algorithm
+    Return the record and distance of the shortest path 
     '''
     Max = -math.log(1e-300,2)     
     T_len = len(template)
@@ -22,14 +24,17 @@ def DTW(template, sample):
     record_b = [[] for i in range(T_len)]
     record_a = [[] for i in range(T_len)]
     
-    #初始化第0帧
+    #initial the first frame
     for key in sample[0].keys():
         if key in template:  
             ind = template.index(key)
             before[ind] = sample[0][key]
             
-    for i in range(1, S_len):       #从1开始，到S_len-1结束
-        #计算每一帧对应模版中所有音素的概率
+    for i in range(1, S_len):     
+        '''
+        calculate the probability of all phonemes 
+        in the corresponding template in the i-th frame
+        '''
         frame_pos = [Max for i in range(T_len)]
         for key in sample[i].keys():
             if key in template:  
@@ -53,7 +58,7 @@ def DTW(template, sample):
                     delta = 1
                     
             after [j] = before[j-delta] + cij
-            record_a[j] = record_b[j-delta][:]      #[:]是深拷贝的意思！！！
+            record_a[j] = record_b[j-delta][:]      
             record_a[j].append(template[j-delta])
             if i == S_len - 1:  record_a[j].append(template[j])
         before = after[:]
@@ -61,28 +66,26 @@ def DTW(template, sample):
     ind = np.argmin(after)
     return record_a[ind],after[ind]
 
-def text_to_matrix(Map):
+def text_to_matrix(Map,file):
     '''
-    读入后验概率矩阵并保存至字典M里
+    Read the posterior probability matrix and save it in dictionary M
     '''
     Min = 1e-300
     M = dict()
-    file = open('/Users/linhailan1/Desktop/林海斓/phone.post','r')
     post = file.readlines()
-    file.close()
-    for song in post:      #每一首曲子
+    for song in post:      #every song in file
         song = song.split(' [ ')
         name = song[0]
         line = []
-        for frame in song[1:]:    #每一帧
+        for frame in song[1:]:    #every frame in song
             frame = frame.split()
             i = 0
             pos = dict()
-            while 2 * i < len(frame) - 1: #每个音素的概率
+            while 2 * i < len(frame) - 1: #Probability of each phoneme
                 ind = int(frame[2 * i])
                 temp = float(frame[2 * i + 1])
-                if temp < Min:  temp = Min      #避免对0取对数  
-                if Map[ind] in pos.keys():   #说明之前已经存在过相同音素不同音调的音素了
+                if temp < Min:  temp = Min      #Avoid taking the log of 0  
+                if Map[ind] in pos.keys():   
                     temp = 2**(-pos[Map[ind]]) + temp 
                     if temp > 1: temp = 1
                     possi = -math.log(temp,2)
@@ -95,26 +98,34 @@ def text_to_matrix(Map):
         M[name] = line
     return M
 
-def phone_to_index():
+def index_to_phone(file):
     '''
-    建立音素与编号的对应关系，保存在Map字典里,(key = 编号，value = 音素名)
+    Establish the correspondence between phonemes and index,
+    and save them in the Map dictionary, (key = index, value = phoneme name)
     '''
-    file = open('/Users/linhailan1/Desktop/林海斓/phones.txt','r')
     lines = file.readlines()
-    file.close()
     Map = dict()
     for line in lines:
         if line[0] == '#':  break
         line = line.split()
+        #filter number and combine the same phonemes in different tones
         temp = ''.join(list(filter(str.isalpha, line[0])))
         Map[int(line[1])] = temp
     return Map
         
         
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("phone_map_path", type=str, help="phone.txt path")
+    parser.add_argument("phone_post_path", type=str, help="posterior probability matrix file phone.post path")
+    args = parser.parse_args()
     
-    Map = phone_to_index()
-    Matrix = text_to_matrix(Map)
+    file = open(args.phone_map_path,'r')
+    Map = index_to_phone(file)
+    file.close()
+    file = open(args.phone_post_path,'r')
+    Matrix = text_to_matrix(Map,file)
+    file.close()
     for name in Matrix.keys():
         template = ['a','b','c']        #此处应换成读模版（标注）文件并解析
         record,result = DTW(template,Matrix[name])
