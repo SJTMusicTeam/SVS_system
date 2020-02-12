@@ -1,0 +1,63 @@
+# compute-mfcc-feats --write-utt2dur=ark,t:exp/make_mfcc_svs/clean_set/utt2dur.13 --verbose=2 --config=conf/mfcc.conf scp,p:exp/make_mfcc_svs/clean_set/wav_clean_set.13.scp ark:- | copy-feats --write-num-frames=ark,t:exp/make_mfcc_svs/clean_set/utt2num_frames.13 --compress=true ark:- ark,scp:/data1/gs/SVS_system/preprocessing/ch_asr/mfcc_svs/raw_mfcc_clean_set.13.ark,/data1/gs/SVS_system/preprocessing/ch_asr/mfcc_svs/raw_mfcc_clean_set.13.scp 
+# Started at Wed Feb 12 17:22:42 UTC 2020
+#
+compute-mfcc-feats --write-utt2dur=ark,t:exp/make_mfcc_svs/clean_set/utt2dur.13 --verbose=2 --config=conf/mfcc.conf scp,p:exp/make_mfcc_svs/clean_set/wav_clean_set.13.scp ark:- 
+copy-feats --write-num-frames=ark,t:exp/make_mfcc_svs/clean_set/utt2num_frames.13 --compress=true ark:- ark,scp:/data1/gs/SVS_system/preprocessing/ch_asr/mfcc_svs/raw_mfcc_clean_set.13.ark,/data1/gs/SVS_system/preprocessing/ch_asr/mfcc_svs/raw_mfcc_clean_set.13.scp 
+sox WARN rate: rate clipped 3 samples; decrease volume?
+sox WARN dither: dither clipped 3 samples; decrease volume?
+VLOG[2] (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:182) Processed features for key 04260013
+sox WARN rate: rate clipped 9 samples; decrease volume?
+sox WARN dither: dither clipped 9 samples; decrease volume?
+VLOG[2] (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:182) Processed features for key 04260014
+sox WARN rate: rate clipped 82 samples; decrease volume?
+sox WARN dither: dither clipped 76 samples; decrease volume?
+VLOG[2] (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:182) Processed features for key 04260015
+sox WARN rate: rate clipped 24 samples; decrease volume?
+sox WARN dither: dither clipped 24 samples; decrease volume?
+VLOG[2] (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:182) Processed features for key 04260016
+sox WARN rate: rate clipped 122 samples; decrease volume?
+sox WARN dither: dither clipped 103 samples; decrease volume?
+VLOG[2] (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:182) Processed features for key 04260017
+sox WARN rate: rate clipped 554 samples; decrease volume?
+sox WARN dither: dither clipped 485 samples; decrease volume?
+VLOG[2] (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:182) Processed features for key 04260018
+sox WARN rate: rate clipped 79 samples; decrease volume?
+sox WARN dither: dither clipped 72 samples; decrease volume?
+VLOG[2] (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:182) Processed features for key 04260019
+sox WARN rate: rate clipped 675 samples; decrease volume?
+sox WARN dither: dither clipped 586 samples; decrease volume?
+VLOG[2] (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:182) Processed features for key 04260020
+sox WARN rate: rate clipped 1170 samples; decrease volume?
+sox WARN dither: dither clipped 1008 samples; decrease volume?
+VLOG[2] (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:182) Processed features for key 04260021
+sox WARN rate: rate clipped 40 samples; decrease volume?
+sox WARN dither: dither clipped 38 samples; decrease volume?
+LOG (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:181) Processed 10 utterances
+VLOG[2] (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:182) Processed features for key 04260022
+sox WARN rate: rate clipped 926 samples; decrease volume?
+sox WARN dither: dither clipped 805 samples; decrease volume?
+VLOG[2] (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:182) Processed features for key 04260023
+sox WARN rate: rate clipped 1806 samples; decrease volume?
+sox WARN dither: dither clipped 1568 samples; decrease volume?
+VLOG[2] (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:182) Processed features for key 04260024
+sox WARN rate: rate clipped 594 samples; decrease volume?
+sox WARN dither: dither clipped 534 samples; decrease volume?
+VLOG[2] (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:182) Processed features for key 04260025
+sox WARN rate: rate clipped 198 samples; decrease volume?
+sox WARN dither: dither clipped 167 samples; decrease volume?
+VLOG[2] (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:182) Processed features for key 04260026
+sox WARN rate: rate clipped 8 samples; decrease volume?
+sox WARN dither: dither clipped 7 samples; decrease volume?
+VLOG[2] (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:182) Processed features for key 04260027
+VLOG[2] (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:182) Processed features for key 04260028
+sox WARN rate: rate clipped 9 samples; decrease volume?
+sox WARN dither: dither clipped 9 samples; decrease volume?
+VLOG[2] (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:182) Processed features for key 04260029
+VLOG[2] (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:182) Processed features for key 04270001
+VLOG[2] (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:182) Processed features for key 04270002
+LOG (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:181) Processed 20 utterances
+VLOG[2] (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:182) Processed features for key 04270003
+LOG (compute-mfcc-feats[5.5.582~1-ba92]:main():compute-mfcc-feats.cc:185)  Done 20 out of 20 utterances.
+LOG (copy-feats[5.5.582~1-ba92]:main():copy-feats.cc:143) Copied 20 feature matrices.
+# Accounting: time=2 threads=1
+# Ended (code 0) at Wed Feb 12 17:22:44 UTC 2020, elapsed time 2 seconds

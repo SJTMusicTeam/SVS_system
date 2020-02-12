@@ -3,8 +3,8 @@
 clean=clean_set
 other=other_set
 
-python local/data_prep.py /export/c04/jiatong/data/clean $clean
-python local/data_prep.py /export/c04/jiatong/data/clean $other
+python local/data_prep.py /data1/gs/annotation/clean $clean
+python local/data_prep.py /data1/gs/annotation/other $other
 
 export LC_ALL=C
 sort_set="wav.scp text utt2spk spk2utt"

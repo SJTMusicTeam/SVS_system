@@ -63,6 +63,9 @@ for root, dirs, files in os.walk(args.datadir):
     text_storing = {}
     piece_info = add_zero(root.split("/")[-1], 4)
     for f in files:
+        if f.startswith("yll"):
+            os.system("mv %s %s" %(os.path.join(root, f), os.path.join(root, f[4:])))
+            f=f[4:]
         name, suffix = f.split(".")
         if suffix == "wav":
             wav_storing[piece_info+name]=os.path.join(root, f)
@@ -82,7 +85,7 @@ for root, dirs, files in os.walk(args.datadir):
         if len(text_storing[key]) == 0 or text_storing[key][0] == "#":
             continue
         kaldi_text.write("%s %s\n"%(key, text_storing[key]))
-        kaldi_wav_scp.write(("%s %s\n"%(key, wav_storing[key])))
+        kaldi_wav_scp.write(("%s sox -t wavpcm %s -c 1 -r 16000 -t wavpcm - |\n"%(key, wav_storing[key])))
         kaldi_utt2spk.write("%s %s\n"%(key, key))
         kaldi_spk2utt.write("%s %s\n"%(key, key))
 
