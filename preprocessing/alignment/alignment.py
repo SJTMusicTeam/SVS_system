@@ -6,7 +6,6 @@ Created on Sun Feb  9 10:51:15 2020
 @author: linhailan1
 """
 
-import numpy as np
 import math
 import os
 import argparse
@@ -26,9 +25,9 @@ def DTW(template, sample):
     
     #initial the first frame
     for key in sample[0].keys():
-        if key in template:  
-            ind = template.index(key)
-            before[ind] = sample[0][key]
+        for ind in range(len(template)):
+            if key == template[ind]:
+                before[ind] = sample[0][key]
             
     for i in range(1, S_len):     
         '''
@@ -37,14 +36,14 @@ def DTW(template, sample):
         '''
         frame_pos = [Max for i in range(T_len)]
         for key in sample[i].keys():
-            if key in template:  
-                ind = template.index(key)
-                frame_pos[ind] = sample[i][key]
+            for ind in range(len(template)):
+                if key == template[ind]:
+                    frame_pos[ind] = sample[i][key]
                 
         for j in range(T_len):
             cij = frame_pos[j]
             delta = 0
-            if j >= 2:
+            if j >= 2 and template[j] != 'sil':
                 if before[j] < before[j-1] and before[j] < before[j-2]: 
                     delta = 0
                 elif before[j-1] < before[j] and before[j-1] < before[j-2]:
@@ -63,7 +62,13 @@ def DTW(template, sample):
             if i == S_len - 1:  record_a[j].append(template[j])
         before = after[:]
         record_b = record_a[:]
-    ind = np.argmin(after)
+        
+    #either last phone or silence
+    l = len(after)
+    if after[l-2] < after[l-1]:
+        ind = l-2
+    else:
+        ind = l-1
     return record_a[ind],after[ind]
 
 def text_to_matrix(Map,file):
@@ -98,12 +103,14 @@ def text_to_matrix(Map,file):
         M[name] = line
     return M
 
-def index_to_phone(file):
+def index_to_phone(args):
     '''
     Establish the correspondence between phonemes and index,
     and save them in the Map dictionary, (key = index, value = phoneme name)
     '''
+    file = open(args.phone_map_path,'r')
     lines = file.readlines()
+    file.close()
     Map = dict()
     for line in lines:
         if line[0] == '#':  break
@@ -111,33 +118,78 @@ def index_to_phone(file):
         #filter number and combine the same phonemes in different tones
         temp = ''.join(list(filter(str.isalpha, line[0])))
         Map[int(line[1])] = temp
+    
+    #write a new file without number after phone
+    rMap = dict()
+    for key in Map.keys():
+        if Map[key] in rMap.keys():
+            rMap[Map[key]].append(key)
+        else:
+            rMap[Map[key]] = [key]
+    file = open(os.path.join(args.output_dir, 'new_phone'), "w+")
+    for key in rMap.keys():
+        file.write(key + ' ' + str(rMap[key]) + '\n')
+    file.close()
     return Map
         
         
 if __name__ == "__main__":
+    
     parser = argparse.ArgumentParser()
     parser.add_argument("phone_map_path", type=str, help="phone.txt path")
     parser.add_argument("phone_post_path", type=str, help="posterior probability matrix file phone.post path")
+    parser.add_argument("template_path", type=str, help="template path")
+    parser.add_argument("output_dir", type=str, help="alignment output path")
     args = parser.parse_args()
-    
-    file = open(args.phone_map_path,'r')
-    Map = index_to_phone(file)
-    file.close()
-    file = open(args.phone_post_path,'r')
-    Matrix = text_to_matrix(Map,file)
-    file.close()
-    for name in Matrix.keys():
-        template = ['a','b','c']        #此处应换成读模版（标注）文件并解析
-        record,result = DTW(template,Matrix[name])
-        #最后将结果写入文件
         
-    '''
-    单独测试DTW算法的例子
-    template = ['a','b','c']
-    sample = [{'a':0.1,'b':1},{'a':0.2,'b':0.9},{'a':1,'b':0.2},{'a':2,'b':0.2,'c':3},{'b':0.1,'c':2},{'b':0.3,'c':1},{'b':0.5,'c':0.4},{'b':2,'c':0.1}]
-    record,result = DTW(template,sample)
-    print(record)
-    '''
+    Map = index_to_phone(args)
+    
+    #read files and get the template
+    Matrix = dict()
+    for root, dirs, files in os.walk(args.phone_post_path):
+        for f in files:
+            if f.find('.') != -1:
+                name, suffix = f.split('.')
+                if suffix == 'post':
+                    file = open(os.path.join(root, f), "r")
+                    M = text_to_matrix(Map,file)
+                    file.close()
+                    Matrix.update(M)          
+    
+    #read the template
+    Template = dict()
+    for root, dirs, files in os.walk(args.template_path):
+        for f in files:
+            if f == 'text':
+                file = open(os.path.join(root, f), "r")
+                while True:
+                    line = file.readline()
+                    if not line:
+                        break
+                    line = line.split()
+                    #add silence between each phone
+                    temp = []
+                    for i in range(1,len(line)):
+                        temp.append('sil')
+                        temp.append(line[i])
+                    temp.append('sil')
+                    Template[line[0]] = temp
+                file.close()
+    
+    #run DTW algorithm and write result to the output directory
+    for name in Matrix.keys():
+        '''
+        file = open(os.path.join(args.output_dir, name) + '.m', "w+")
+        file.write(str(Matrix[name]))
+        file.close()
+        '''
+        record,result = DTW(Template[name],Matrix[name])
+        file = open(os.path.join(args.output_dir, name), "w+")
+        #file.write(str(result))
+        file.write(str(record))
+        file.write('\n')
+        file.close()
+     
     
     
     
