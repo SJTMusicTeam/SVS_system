@@ -10,7 +10,7 @@ import math
 import os
 import argparse
 
-def DTW(template, sample): 
+def DTW(template, sample,new_Map): 
     '''
     Alignment using DTW algorithm
     Return the record and distance of the shortest path 
@@ -59,7 +59,7 @@ def DTW(template, sample):
             after [j] = before[j-delta] + cij
             record_a[j] = record_b[j-delta][:]      
             record_a[j].append(template[j-delta])
-            if i == S_len - 1:  record_a[j].append(template[j])
+            if i == S_len - 1:  record_a[j].append(new_Map[template[j]])
         before = after[:]
         record_b = record_a[:]
         
@@ -120,17 +120,19 @@ def index_to_phone(args):
         Map[int(line[1])] = temp
     
     #write a new file without number after phone
-    rMap = dict()
+    phone_set = []
     for key in Map.keys():
-        if Map[key] in rMap.keys():
-            rMap[Map[key]].append(key)
-        else:
-            rMap[Map[key]] = [key]
+        if Map[key] not in phone_set:
+            phone_set.append(Map[key])
+    
+    new_Map = dict()
     file = open(os.path.join(args.output_dir, 'new_phone'), "w+")
-    for key in rMap.keys():
-        file.write(key + ' ' + str(rMap[key]) + '\n')
+    
+    for i in range(len(phone_set)):
+        new_Map[phone_set[i]] = i
+        file.write(phone_set[i] + ' ' + str(i) + '\n')
     file.close()
-    return Map
+    return Map,new_Map
         
         
 if __name__ == "__main__":
@@ -142,7 +144,7 @@ if __name__ == "__main__":
     parser.add_argument("output_dir", type=str, help="alignment output path")
     args = parser.parse_args()
         
-    Map = index_to_phone(args)
+    Map,new_Map = index_to_phone(args)
     
     #read files and get the template
     Matrix = dict()
@@ -178,14 +180,14 @@ if __name__ == "__main__":
     
     #run DTW algorithm and write result to the output directory
     for name in Matrix.keys():
-        '''
+        
         file = open(os.path.join(args.output_dir, name) + '.m', "w+")
         file.write(str(Matrix[name]))
         file.close()
-        '''
-        record,result = DTW(Template[name],Matrix[name])
+        
+        record,result = DTW(Template[name],Matrix[name],new_Map)
         file = open(os.path.join(args.output_dir, name), "w+")
-        #file.write(str(result))
+        file.write(str(result))
         file.write(str(record))
         file.write('\n')
         file.close()
