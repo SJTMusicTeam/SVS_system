@@ -71,8 +71,9 @@ def DTW(template, sample,new_Map):
         ind = l-1
     return record_a[ind],after[ind]
 
-def text_to_matrix(Map,file):
+def text_to_matrix_HMM(Map,file):
     '''
+    Used in HMM model
     Read the posterior probability matrix and save it in dictionary M
     '''
     Min = 1e-300
@@ -103,6 +104,39 @@ def text_to_matrix(Map,file):
         M[name] = line
     return M
 
+def text_to_matrix_TDNN(Map,file):
+    #print(Map)
+    Min = 1e-300
+    M = dict()
+    name = ''
+    while True:
+        line = file.readline()
+        if not line:    break
+        if '[' in line:
+            line = line.split('  ')
+            name = line[0]
+            M[name] = []
+        else:
+            line = line.split()
+            pos = dict()
+            for i in range(len(line)):
+                if line[i] == ']':  
+                    break
+                ind = i + 1
+                temp = float(line[i])
+                if temp < Min:  temp = Min      #Avoid taking the log of 0  
+                if Map[ind] in pos.keys():   
+                    temp = 2**(-pos[Map[ind]]) + temp 
+                    if temp > 1: temp = 1
+                    possi = -math.log(temp,2)
+                    pos[Map[ind]] = possi
+                else:
+                    possi = -math.log(temp,2)
+                    pos[Map[ind]] = possi
+            M[name].append(pos)
+    #print(M)
+    return M
+    
 def index_to_phone(args):
     '''
     Establish the correspondence between phonemes and index,
@@ -133,7 +167,22 @@ def index_to_phone(args):
         file.write(phone_set[i] + ' ' + str(i) + '\n')
     file.close()
     return Map,new_Map
-        
+
+
+def check_phones(Phone_table,text):
+    '''Check whether the text corresponds to the phone table'''     
+    Phone_set = set(Phone_table)
+    phone_text = Phone_set - text
+    text_phone = text - Phone_set
+    if phone_text | text_phone is not None:
+        print('The phonemes in the text is not corresponds to the phonemes in the phone table!')
+        if phone_text is not None:
+            print('These phonemes are in the phone table but not in the text:')
+            print(phone_text)
+        if text_phone is not None:
+            print('These phonemes are in the text but not in the phone table:')
+            print(text_phone)
+        exit(0)
         
 if __name__ == "__main__":
     
@@ -142,24 +191,17 @@ if __name__ == "__main__":
     parser.add_argument("phone_post_path", type=str, help="posterior probability matrix file phone.post path")
     parser.add_argument("template_path", type=str, help="template path")
     parser.add_argument("output_dir", type=str, help="alignment output path")
+    parser.add_argument("model", type=str, help="model type HMM or TDNN")
+    
     args = parser.parse_args()
         
     Map,new_Map = index_to_phone(args)
-    
-    #read files and get the template
-    Matrix = dict()
-    for root, dirs, files in os.walk(args.phone_post_path):
-        for f in files:
-            if f.find('.') != -1:
-                name, suffix = f.split('.')
-                if suffix == 'post':
-                    file = open(os.path.join(root, f), "r")
-                    M = text_to_matrix(Map,file)
-                    file.close()
-                    Matrix.update(M)          
-    
+        
     #read the template
     Template = dict()
+    text = set()
+    text.add('sil')
+    text.add('eps')
     for root, dirs, files in os.walk(args.template_path):
         for f in files:
             if f == 'text':
@@ -174,9 +216,28 @@ if __name__ == "__main__":
                     for i in range(1,len(line)):
                         temp.append('sil')
                         temp.append(line[i])
+                        text.add(line[i])
                     temp.append('sil')
                     Template[line[0]] = temp
                 file.close()
+    
+    check_phones(new_Map.keys(),text)
+    
+    #read files and get posterior probability
+    Matrix = dict()
+    for root, dirs, files in os.walk(args.phone_post_path):
+        for f in files:
+            if args.model == 'TDNN' and 'post' in f and 'txt' in f:
+                file = open(os.path.join(root, f), "r")
+                M = text_to_matrix_TDNN(Map,file)
+                file.close()
+                Matrix.update(M)     
+            if args.model == 'HMM' and 'post' in f:
+                file = open(os.path.join(root, f), "r")
+                M = text_to_matrix_HMM(Map,file)
+                file.close()
+                Matrix.update(M)
+    
     
     #run DTW algorithm and write result to the output directory
     for name in Matrix.keys():
