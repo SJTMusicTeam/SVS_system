@@ -25,8 +25,7 @@ def DTW(template, sample,new_Map,name):
     
     #initial the first frame
     for key in sample[0].keys():
-        for ind in range(2):
-        #it should start with silence or the first phone
+        for ind in range(2):	 #only silence or the first phone
             if key == template[ind]:
                 before[ind] = sample[0][key]
         
@@ -59,8 +58,8 @@ def DTW(template, sample,new_Map,name):
          
             after [j] = before[j-delta] + cij
             record_a[j] = record_b[j-delta][:]      
-            record_a[j].append(template[j-delta])
-            if i == S_len - 1:  record_a[j].append(template[j])
+            record_a[j].append(new_Map[template[j-delta]])
+            if i == S_len - 1:  record_a[j].append(new_Map[template[j]])
         before = after[:]
         record_b = record_a[:]
         
@@ -107,7 +106,7 @@ def text_to_matrix_HMM(Map,file):
     return M
 
 def text_to_matrix_TDNN(Map,file):
-   
+    factor = 0.005   
     Min = 1e-300
     M = dict()
     name = ''
@@ -127,6 +126,8 @@ def text_to_matrix_TDNN(Map,file):
                 ind = i + 1
                 temp = float(line[i])
                 if temp < Min:  temp = Min      #Avoid taking the log of 0  
+                if Map[ind] == 'sil':
+                    temp = temp * factor
                 if Map[ind] in pos.keys():   
                     temp = 2**(-pos[Map[ind]]) + temp 
                     if temp > 1: temp = 1
@@ -237,17 +238,17 @@ if __name__ == "__main__":
     
     #run DTW algorithm and write result to the output directory
     for name in Matrix.keys():
-        
+        '''
         file = open(os.path.join(args.output_dir, name) + '.m', "w+")
         file.write(str(Matrix[name]))
         file.close()
-	        
+	'''        
         record,result = DTW(Template[name],Matrix[name],new_Map,name)
                
         file = open(os.path.join(args.output_dir, name), "w+")
-        file.write(str(result))
-        file.write(str(record))
-        file.write('\n')
+        for re in record:
+            file.write(str(re)+' ')
+        
         file.close()
      
     
