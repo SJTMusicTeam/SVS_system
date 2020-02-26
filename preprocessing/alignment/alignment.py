@@ -10,7 +10,7 @@ import math
 import os
 import argparse
 
-def DTW(template, sample,new_Map): 
+def DTW(template, sample,new_Map,name): 
     '''
     Alignment using DTW algorithm
     Return the record and distance of the shortest path 
@@ -25,10 +25,10 @@ def DTW(template, sample,new_Map):
     
     #initial the first frame
     for key in sample[0].keys():
-        for ind in range(len(template)):
+        for ind in range(2):	 #only silence or the first phone
             if key == template[ind]:
                 before[ind] = sample[0][key]
-            
+        
     for i in range(1, S_len):     
         '''
         calculate the probability of all phonemes 
@@ -39,7 +39,7 @@ def DTW(template, sample,new_Map):
             for ind in range(len(template)):
                 if key == template[ind]:
                     frame_pos[ind] = sample[i][key]
-                
+             
         for j in range(T_len):
             cij = frame_pos[j]
             delta = 0
@@ -55,14 +55,16 @@ def DTW(template, sample,new_Map):
                     delta = 0
                 else:
                     delta = 1
-                    
+         
             after [j] = before[j-delta] + cij
             record_a[j] = record_b[j-delta][:]      
-            record_a[j].append(template[j-delta])
+            record_a[j].append(new_Map[template[j-delta]])
+            #record_a[j].append(j-delta)
             if i == S_len - 1:  record_a[j].append(new_Map[template[j]])
         before = after[:]
         record_b = record_a[:]
         
+ 
     #either last phone or silence
     l = len(after)
     if after[l-2] < after[l-1]:
@@ -105,7 +107,7 @@ def text_to_matrix_HMM(Map,file):
     return M
 
 def text_to_matrix_TDNN(Map,file):
-    #print(Map)
+    factor = 0.005   
     Min = 1e-300
     M = dict()
     name = ''
@@ -125,6 +127,8 @@ def text_to_matrix_TDNN(Map,file):
                 ind = i + 1
                 temp = float(line[i])
                 if temp < Min:  temp = Min      #Avoid taking the log of 0  
+                if Map[ind] == 'sil':
+                    temp = temp * factor
                 if Map[ind] in pos.keys():   
                     temp = 2**(-pos[Map[ind]]) + temp 
                     if temp > 1: temp = 1
@@ -134,7 +138,7 @@ def text_to_matrix_TDNN(Map,file):
                     possi = -math.log(temp,2)
                     pos[Map[ind]] = possi
             M[name].append(pos)
-    #print(M)
+    
     return M
     
 def index_to_phone(args):
@@ -172,13 +176,10 @@ def index_to_phone(args):
 def check_phones(Phone_table,text):
     '''Check whether the text corresponds to the phone table'''     
     Phone_set = set(Phone_table)
-    phone_text = Phone_set - text
+    #phone_text = Phone_set - text
     text_phone = text - Phone_set
-    if phone_text | text_phone is not None:
+    if len(text_phone) > 0:
         print('The phonemes in the text is not corresponds to the phonemes in the phone table!')
-        if phone_text is not None:
-            print('These phonemes are in the phone table but not in the text:')
-            print(phone_text)
         if text_phone is not None:
             print('These phonemes are in the text but not in the phone table:')
             print(text_phone)
@@ -202,24 +203,22 @@ if __name__ == "__main__":
     text = set()
     text.add('sil')
     text.add('eps')
-    for root, dirs, files in os.walk(args.template_path):
-        for f in files:
-            if f == 'text':
-                file = open(os.path.join(root, f), "r")
-                while True:
-                    line = file.readline()
-                    if not line:
-                        break
-                    line = line.split()
-                    #add silence between each phone
-                    temp = []
-                    for i in range(1,len(line)):
-                        temp.append('sil')
-                        temp.append(line[i])
-                        text.add(line[i])
-                    temp.append('sil')
-                    Template[line[0]] = temp
-                file.close()
+
+    file = open(args.template_path, "r")
+    while True:
+        line = file.readline()
+        if not line:
+            break
+        line = line.split()
+        #add silence between each phone
+        temp = []
+        for i in range(1,len(line)):
+            temp.append('sil')
+            temp.append(line[i])
+            text.add(line[i])
+        temp.append('sil')
+        Template[line[0]] = temp
+    file.close()
     
     check_phones(new_Map.keys(),text)
     
@@ -241,16 +240,17 @@ if __name__ == "__main__":
     
     #run DTW algorithm and write result to the output directory
     for name in Matrix.keys():
-        
+        '''
         file = open(os.path.join(args.output_dir, name) + '.m', "w+")
         file.write(str(Matrix[name]))
         file.close()
-        
-        record,result = DTW(Template[name],Matrix[name],new_Map)
+	'''        
+        record,result = DTW(Template[name],Matrix[name],new_Map,name)
+               
         file = open(os.path.join(args.output_dir, name), "w+")
-        file.write(str(result))
-        file.write(str(record))
-        file.write('\n')
+        for re in record:
+            file.write(str(re)+' ')
+        
         file.close()
      
     
