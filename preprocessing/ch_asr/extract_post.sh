@@ -4,7 +4,7 @@
 . ./path.sh || exit 1;
 . ./cmd.sh || exit 1;
 
-stage=3
+stage=1
 nj=10
 model=TDNN # or HMM is end with HMM training
 workspace="aishell_try/"
@@ -19,7 +19,6 @@ if [ $stage -le 1 ]; then
     utils/fix_data_dir.sh data/${datadir}
   done
 fi
-
 # Now make MFCC plus pitch features.
 # mfccdir should be some place with a largish disk where you
 # want to store MFCC features.
