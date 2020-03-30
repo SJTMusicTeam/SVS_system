@@ -25,14 +25,27 @@ def text_refactor(text):
         if units[i] in single_pron:
             begin = units[i][0]
             units[i] = begin + begin + units[i]
+        elif units[i] == "jue":
+            units[i] = "jve"
+        elif units[i] == "que":
+            units[i] = "qve"
+        elif units[i] == "wen":
+            units[i] = "uuun"
+        elif units[i] == "wei":
+            units[i] = "uuui"
         elif "w" == units[i][0]:
             units[i] = "uuu" + units[i][1:]
-        elif len(units[i]) > 1 and "yu" == units[i][:2]:
+        elif len(units[i]) > 1 and ("yu" == units[i][:2] or "yv" == units[i][:2]):
             units[i] = "vvv" + units[i][2:]
         elif "y" == units[i][0]:
             units[i] = "iii" + units[i][1:]
+        # further refine
         if units[i] == "iiiou":
             units[i] = "iiiu"
+        elif units[i] == "iiiin":
+            units[i] = "iiin"
+        elif units[i] == "iiiing":
+            units[i] = "iiing"
     spe = []
     for unit in units:
         if unit[:2] in double_starter:
