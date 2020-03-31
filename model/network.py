@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import hyperparams as hp
+import math
+import glu
 
 class Encoder(nn.Module):
     """
@@ -14,22 +16,22 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
         #self.alpha = nn.Parameter(t.ones(1))
         
-        self.emb_phone = nn.Embedding(para.input_dim, para.emb_dim)
+        self.emb_phone = nn.Embedding(para['phone_size'], para['emb_dim'])
         #full connected
-        self.fc_1 = nn.Linear(para.emb_dim, para.GLU_in_dim)
+        self.fc_1 = nn.Linear(para['emb_dim'], para['GLU_in_dim'])
         
-        self.conv = nn.Conv1d(para.GLU_in_dim, para.GLU_out_dim, para.kernel_size, para.stride, para.padding)
+        self.GLU = GLU(para['num_layers'], para['hidden_size'], para['kernel_size'], para['dropout'], para['GLU_in_dim'])
         
-        self.fc_2 = nn.Linear(para.GLU_out_dim, para.GLU_out_dim)
+        self.fc_2 = nn.Linear(para['GLU_out_dim'], para['emb_dim'])
         
 
     def forward(self, input):
 
         embedded_phone = self.emb_phone(input)    # [src len, batch size, emb dim]
-        glu_out = self.fc_2(F.glu(self.conv(self.fc_1(embedded_phone)), dim = 1))
+        glu_out = self.fc_2(self.GLU(self.fc_1(embedded_phone)))
         
         out = embedded_phone + glu_out
-        
+        out = out *  math.sqrt(0.5)
 
         return out
 
