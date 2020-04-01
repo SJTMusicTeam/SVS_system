@@ -117,7 +117,7 @@ class Encoder_Postnet(nn.Module):
         pitch = self.fc_pitch(torch.tensor(pitch).unsqueeze(0))
         out = aligner_out + pitch
         
-        beats = self.fc_pitch(torch.tensor(beats).unsqueeze(0))
+        beats = self.fc_beats(torch.tensor(beats).unsqueeze(0))
         out = out + beats
         
         pos = positional_encoding.PositionalEncoding(embedded_dim)
