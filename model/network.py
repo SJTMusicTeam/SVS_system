@@ -132,44 +132,59 @@ class Decoder(nn.Module):
     """
     Decoder Network
     """
-    def __init__(self):
+    def __init__(self, num_block, hidden_size, output_dim, nhead=4, dropout=0.1, activation="relu",
+        glu_kernel=3):
         super(Decoder, self).__init__()
+        self.input_norm = module.LayerNorm(hidden_size)
+        decoder_layer = module.TransformerGLULayer(hidden_size, nhead, dropout, activation,
+            glu_kernel)
+        self.decoder = module.TransformerEncoderLayer(decoder_layer, num_block)
+        self.output_fc = nn.Linear(hidden_state, output_dim)
 
-    def forward(self):
-        return
+        self.hidden_size=hidden_size
+
+    def forward(self, src, src_mask=None, src_key_padding_mask=None):
+        src = self.input_norm(src)
+        memory, att_weght = self.decoder(src, mask=src_mask, src_key_padding_mask=src_key_padding_mask)
+        output = self.output_fc(memory)
+        return output
 
 class Model(nn.Module):
     """
     Transformer Network
     """
-    def __init__(self):
-        super(Model, self, para).__init__()
+    def __init__(self, para):
+        super(Model, self).__init__()
         self.encoder = Encoder(para)
         self.enc_postnet = Encoder_Postnet(para['embedded_size'])
-        self.decoder = Decoder()
+        # TODO: standard input arguments
+        self.decoder = Decoder(6, para['embedded_size'], para['output_dim'])
+        self.postnet = ModelPostNet(para['output_dim'], para['output_dim'], para['output_dim'])
 
     def forward(self, characters, mel_input, pos_text, pos_mel):
-        memory, c_mask, attns_enc = self.encoder.forward(characters, pos=pos_text)
-        mel_output, postnet_output, attn_probs, stop_preds, attns_dec = self.decoder.forward(memory, mel_input, c_mask,
-                                                                                             pos=pos_mel)
-
-        return mel_output, postnet_output, attn_probs, stop_preds, attns_enc, attns_dec
+        # TODO add encoder and encoder postnet
+        # memory = self.encoder(characters, pos=pos_text)
+        mel_output, att_weight = self.decoder(memory)
+        mel_output = self.postnet(mel_output)
+        return mel_output
 
 
 class ModelPostNet(nn.Module):
     """
     CBHG Network (mel --> linear)
     """
-    def __init__(self):
+    def __init__(self, input_channel, output_channel, hidden_state):
         super(ModelPostNet, self).__init__()
-        self.pre_projection = Conv(hp.n_mels, hp.hidden_size)
-        self.cbhg = CBHG(hp.hidden_size)
-        self.post_projection = Conv(hp.hidden_size, (hp.n_fft // 2) + 1)
+        self.pre_projection = nn.Conv1d(input_channel, hidden_state, kernel_size=1, stride=1, padding=0,
+            dilation=1, bias=True)
+        self.cbhg = CBHG(hidden_state, projection_size=hidden_state)
+        self.post_projection = nn.Conv1d(hidden_state, output_channel, kernel_size=1, stride=1, padding=0,
+            dilation=1, bias=True)
 
-    def forward(self, mel):
-        mel = mel.transpose(1, 2)
-        mel = self.pre_projection(mel)
-        mel = self.cbhg(mel).transpose(1, 2)
-        mag_pred = self.post_projection(mel).transpose(1, 2)
+    def forward(self, x):
+        x = x.transpose(1, 2)
+        x = self.pre_projection(x)
+        x = self.cbhg(x).transpose(1, 2)
+        output = self.post_projection(x).transpose(1, 2)
 
-        return mag_pred
+        return output
