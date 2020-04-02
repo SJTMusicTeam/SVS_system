@@ -23,12 +23,19 @@ def refine(align_phone):
         before = 0
         for j in range(max_length):
             if align_phone[i][j] == 0:      #filter padding
+                if j == max_length - 1:     #add 0 at the end of text
+                    line.append(0)
                 continue
             elif align_phone[i][j] == before:   #the same with the former phone
+                if j == max_length - 1:     #add 0 at the end of text
+                    line.append(0)
                 continue
             else:
                 before = align_phone[i][j]
                 line.append(before)
+                if j == max_length - 1:     #add 0 at the end of text
+                    line.append(0)
+                
         out.append(line)
         length.append(len(line))
 
@@ -149,7 +156,7 @@ if __name__ == "__main__":
     dataloader = DataLoader(dataset, batch_size= 2, shuffle = False, num_workers= 0)
     for i, item in enumerate(dataloader):
         print('i:', i)
-        data, label = item
-        print('data:', data)
-        print('text:', text_phone_list[i])
+        Pitch, Beats, Align_phone, Text_phone, Label = item
+        print('text_phone:', Text_phone)
+        print('label:', label)
 
