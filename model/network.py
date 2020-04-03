@@ -56,29 +56,30 @@ class Encoder_Postnet(nn.Module):
         self.fc_pos = nn.Linear(1, hidden_size)
         self.fc_beats = nn.Linear(1, hidden_size)
         
-    def aligner(self, encoder_out, align_phone):
+    def aligner(self, encoder_out, align_phone, text_phone):
         """padding 的情况还未解决"""
         #out = []
         for i in range(align_phone.shape(0)):
-            before_phone = 0
+            before_text_phone = 0
             encoder_ind = 0
             for j in range(align_phone.shape(1)):
-                if align_phone[i][j] == before_phone:
-                    line.append(encoder_out[i][encoder_ind])
+                if align_phone[i][j] == before_text_phone:
+                    temp = encoder_out[i][encoder_ind]
+                    line = torch.cat((line,temp.unsqueeze(0)),dim = 0)
                 else:
                     if j == 0:
                         line = encoder_out[i][encoder_ind].unsqueeze(0)
-                        encoder_ind += 1
+                        before_phone = before_text_phone[i][j]
                     else:
-                        before_phone = align_phone[i][j]
                         encoder_ind += 1
-                        line = torch.cat((line,b.unsqueeze(0)),dim = 0)
+                        before_phone = before_text_phone[i][encoder_ind]
+                        temp = encoder_out[i][encoder_ind]
+                        line = torch.cat((line,temp.unsqueeze(0)),dim = 0)
                         #line.append(encoder_out[i][encoder_ind])
             if i == 0:
                 out = line.unsqueeze(0)
             else:
                 out = torch.cat((out,line.unsqueeze(0)),dim = 0)
-            #out.append(line)
             
         return out
          
