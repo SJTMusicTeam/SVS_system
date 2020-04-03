@@ -26,37 +26,7 @@ class Encoder(nn.Module):
         
         self.fc_2 = nn.Linear(para['hidden_size'], para['emb_dim'])
         
-    def refine(self, align_phone):
-        '''filter repeat phone and padding'''
-        out = []
-        length = []
-        batch_size = align_phone.shape[0]
-        max_length = align_phone.shape[1]
-    
-        for i in range(batch_size):
-            line = []
-            before = 0
-            for j in range(max_length):
-                if align_phone[i][j] == 0:      #filter padding
-                    continue
-                elif align_phone[i][j] == before:   #the same with the former phone
-                    continue
-                else:
-                    before = align_phone[i][j]
-                    line.append(before)
-            out.append(line)
-            length.append(len(line))
-        
-        #pad 0
-        seq_length = max(length)
-        Data = np.zeros((batch_size, seq_length))
-        for i in range(batch_size):
-            for j in range(seq_length):
-                if j < len(out[i]):
-                    Data[i][j] = out[i][j]
-                    
-        return torch.from_numpy(Data).type(torch.LongTensor)
-        
+
     def forward(self, input):
         """
         input dim: [batch_size, text_phone_length]
@@ -86,23 +56,32 @@ class Encoder_Postnet(nn.Module):
         self.fc_pos = nn.Linear(1, hidden_size)
         self.fc_beats = nn.Linear(1, hidden_size)
         
-    def aligner(self, encoder_out, align_phone):
+    def aligner(self, encoder_out, align_phone, text_phone):
         """padding 的情况还未解决"""
-        out = []
+        #out = []
         for i in range(align_phone.shape(0)):
-            line = []
-            before_phone = 0
+            before_text_phone = 0
             encoder_ind = 0
             for j in range(align_phone.shape(1)):
-                if align_phone[i][j] == before_phone:
-                    line.append(encoder_out[i][encoder_ind])
+                if align_phone[i][j] == before_text_phone:
+                    temp = encoder_out[i][encoder_ind]
+                    line = torch.cat((line,temp.unsqueeze(0)),dim = 0)
                 else:
-                    before_phone = align_phone[i][j]
-                    encoder_ind += 1
-                    line.append(encoder_out[i][encoder_ind])
-            out.append(line)
+                    if j == 0:
+                        line = encoder_out[i][encoder_ind].unsqueeze(0)
+                        before_phone = before_text_phone[i][j]
+                    else:
+                        encoder_ind += 1
+                        before_phone = before_text_phone[i][encoder_ind]
+                        temp = encoder_out[i][encoder_ind]
+                        line = torch.cat((line,temp.unsqueeze(0)),dim = 0)
+                        #line.append(encoder_out[i][encoder_ind])
+            if i == 0:
+                out = line.unsqueeze(0)
+            else:
+                out = torch.cat((out,line.unsqueeze(0)),dim = 0)
             
-        return torch.tensor(out)
+        return out
          
     def forward(self, encoder_out, align_phone, pitch, beats):
         """
@@ -117,7 +96,7 @@ class Encoder_Postnet(nn.Module):
         pitch = self.fc_pitch(torch.tensor(pitch).unsqueeze(0))
         out = aligner_out + pitch
         
-        beats = self.fc_pitch(torch.tensor(beats).unsqueeze(0))
+        beats = self.fc_beats(torch.tensor(beats).unsqueeze(0))
         out = out + beats
         
         pos = positional_encoding.PositionalEncoding(embedded_dim)
