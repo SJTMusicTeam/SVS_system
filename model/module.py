@@ -1,13 +1,24 @@
-#!/usr/bin/env python
-# coding: utf-8
+#!/usr/bin/env python3
+
+# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi, Hailan Lin)
 
 import torch
 import torch.nn as nn
 from torch.nn import Parameter
-import torch.nn.init as init
 from torch.nn import functional as F
+import torch.nn.init as init
 from torch.autograd import Variable
+from torch.nn import functional as F
+from torch.nn import Module
+from torch.nn.functional import MultiheadAttention
+from torch.nn import ModuleList
+from torch.nn.init import xavier_uniform_
+from torch.nn import Dropout
+from torch.nn import Linear
+from torch.nn import LayerNorm
+import numpy as np
 import math
+import copy
 
 SCALE_WEIGHT = 0.5 ** 0.5
 
@@ -49,10 +60,6 @@ class StackedCNN(nn.Module):
         return x
 
 
-def shape_transform(x):
-    """ Tranform the size of the tensors to fit for conv input. """
-    return torch.unsqueeze(torch.transpose(x, 1, 2), 3)
-
 class GLU(nn.Module):
     def __init__(self, num_layers, hidden_size,
                  cnn_kernel_width, dropout, input_size):
@@ -66,7 +73,7 @@ class GLU(nn.Module):
         emb_remap = self.linear(emb_reshape)
         emb_remap = emb_remap.view(emb.size(0), emb.size(1), -1)
 
-        emb_remap = shape_transform(emb_remap)
+        emb_remap = _shape_transform(emb_remap)
         out = self.cnn(emb_remap)
         
         return out.squeeze(3).contiguous()
@@ -106,20 +113,6 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
 
-import torch
-import copy
-import torch.nn as nn
-from torch.nn import functional as F
-from torch.nn import Module
-from torch.nn import MultiheadAttention
-from torch.nn import ModuleList
-from torch.nn.init import xavier_uniform_
-from torch.nn import Dropout
-from torch.nn import Linear
-from torch.nn import LayerNorm
-from torch.nn import TransformerEncoder
-import numpy as np
-import math
 
 class CBHG(nn.Module):
     """
@@ -260,11 +253,6 @@ class TransformerEncoderLayer(Module):
         dim_feedforward: the dimension of the feedforward network model (default=2048).
         dropout: the dropout value (default=0.1).
         activation: the activation function of intermediate layer, relu or gelu (default=relu).
-
-    Examples::
-        >>> encoder_layer = nn.TransformerEncoderLayer(d_model=512, nhead=8)
-        >>> src = torch.rand(10, 32, 512)
-        >>> out = encoder_layer(src)
     """
 
     def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1, activation="relu"):
@@ -299,6 +287,7 @@ class TransformerEncoderLayer(Module):
         Shape:
             see the docs in Transformer class.
         """
+
         src2, att_weight = self.self_attn(src, src, src, attn_mask=src_mask,
                               key_padding_mask=src_key_padding_mask)
         src = src + self.dropout1(src2)
@@ -319,10 +308,6 @@ class TransformerGLULayer(Module):
         activation: the activation function of intermediate layer, relu or gelu (default=relu).
         glu_kernel: the kernel size of glu block
 
-    Examples::
-        >>> encoder_layer = nn.TransformerGLULayer(d_model=512, nhead=8)
-        >>> src = torch.rand(10, 32, 512)
-        >>> out = encoder_layer(src)
     """
 
     def __init__(self, d_model, nhead, dropout=0.1, activation="relu",
@@ -330,7 +315,7 @@ class TransformerGLULayer(Module):
         super(TransformerGLULayer, self).__init__()
         self.self_attn = MultiheadAttention(d_model, nhead, dropout=dropout)
         # Implementation of Feedforward model
-        self.GLU = module.GLU(1, d_model, glu_kernel, dropout, dmodel)
+        self.GLU = GLU(1, d_model, glu_kernel, dropout, d_model)
 
         self.norm1 = LayerNorm(d_model)
         self.norm2 = LayerNorm(d_model)
@@ -406,7 +391,7 @@ class TransformerEncoder(Module):
 
 
 class Transformer(nn.Module):
-    """Transformer encoder based CI
+    """Transformer encoder based Singing Voice synthesis
     Args:
         hidden_state: the number of expected features in the encoder/decoder inputs.
         nhead: the number of heads in the multiheadattention models.
@@ -458,3 +443,42 @@ class Transformer(nn.Module):
         output = self.postnet(memory)
         output = torch.transpose(output, 0, 1)
         return output, att_weight
+
+
+class PostNet(nn.Module):
+    """
+    CBHG Network (mel --> linear)
+    """
+    def __init__(self, input_channel, output_channel, hidden_state):
+        super(PostNet, self).__init__()
+        self.pre_projection = nn.Conv1d(input_channel, hidden_state, kernel_size=1, stride=1, padding=0,
+            dilation=1, bias=True)
+        self.cbhg = CBHG(hidden_state, projection_size=hidden_state)
+        self.post_projection = nn.Conv1d(hidden_state, output_channel, kernel_size=1, stride=1, padding=0,
+            dilation=1, bias=True)
+
+    def forward(self, x):
+        x = x.transpose(1, 2)
+        x = self.pre_projection(x)
+        x = self.cbhg(x).transpose(1, 2)
+        output = self.post_projection(x).transpose(1, 2)
+
+        return output
+
+
+def _get_activation_fn(activation):
+    if activation == "relu":
+        return F.relu
+    elif activation == "gelu":
+        return F.gelu
+    else:
+        raise RuntimeError("activation should be relu/gelu, not %s." % activation)
+
+
+def _get_clones(module, N):
+    return ModuleList([copy.deepcopy(module) for i in range(N)])
+
+
+def _shape_transform(x):
+    """ Tranform the size of the tensors to fit for conv input. """
+    return torch.unsqueeze(torch.transpose(x, 1, 2), 3)
