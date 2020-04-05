@@ -1,11 +1,14 @@
+#!/usr/bin/env python3
+
+# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi, Hailan Lin)
+
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import hyperparams as hp
 import numpy as np
 import math
-import glu
-import positional_encoding
+from module import *
 
 class Encoder(nn.Module):
     """
@@ -148,22 +151,4 @@ class Model(nn.Module):
         return mel_output
 
 
-class ModelPostNet(nn.Module):
-    """
-    CBHG Network (mel --> linear)
-    """
-    def __init__(self, input_channel, output_channel, hidden_state):
-        super(ModelPostNet, self).__init__()
-        self.pre_projection = nn.Conv1d(input_channel, hidden_state, kernel_size=1, stride=1, padding=0,
-            dilation=1, bias=True)
-        self.cbhg = CBHG(hidden_state, projection_size=hidden_state)
-        self.post_projection = nn.Conv1d(hidden_state, output_channel, kernel_size=1, stride=1, padding=0,
-            dilation=1, bias=True)
 
-    def forward(self, x):
-        x = x.transpose(1, 2)
-        x = self.pre_projection(x)
-        x = self.cbhg(x).transpose(1, 2)
-        output = self.post_projection(x).transpose(1, 2)
-
-        return output
