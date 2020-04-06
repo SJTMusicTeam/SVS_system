@@ -4,10 +4,7 @@
 
 import torch
 import torch.nn as nn
-from torch.nn import Parameter
-from torch.nn import functional as F
 import torch.nn.init as init
-from torch.autograd import Variable
 from torch.nn import functional as F
 from torch.nn import Module
 from torch.nn.functional import MultiheadAttention
