@@ -13,18 +13,20 @@ class Encoder(nn.Module):
     """
     Encoder Network
     """
-    def __init__(self, phone_size, embed_size, hidden_size, num_layers, dropout, glu_kernel=3):
+    def __init__(self, phone_size, embed_size, hidden_size, num_layers=1, dropout, glu_kernel=3, GLU_num):
         """
         :param para: dictionary that contains all parameters
         """
         super(Encoder, self).__init__()
-        #self.alpha = nn.Parameter(t.ones(1))
         
         self.emb_phone = nn.Embedding(phone_size, embed_size)
         #full connected
         self.fc_1 = nn.Linear(embed_size, hidden_size)
         
-        self.GLU = module.GLU(num_layers, hidden_size, glu_kernel, dropout, hidden_size)
+        self.GLU_list = nn.ModuleList()
+        for i in range(GLU_num):
+            self.GLU_list.append(module.GLU(num_layers, hidden_size, glu_kernel, dropout, hidden_size))
+        #self.GLU = module.GLU(num_layers, hidden_size, glu_kernel, dropout, hidden_size)
         
         self.fc_2 = nn.Linear(hidden_size, embed_size)
         
@@ -34,11 +36,14 @@ class Encoder(nn.Module):
         input dim: [batch_size, text_phone_length]
         output dim : [batch_size, text_phone_length, embedded_dim]
         """
-        embedded_phone = self.emb_phone(input)    # [src len, batch size, emb dim]
+        embedded_phone = self.emb_phone(input)
+        glu_data = self.fc_1(embedded_phone)
         
-        glu_out = self.GLU(self.fc_1(embedded_phone))
+        '''这里记得改一下！'''
+        for glu in enumerate(self.GLU_list):
+            glu_data = glu(glu_data)
         
-        glu_out = self.fc_2(torch.transpose(glu_out, 1, 2))
+        glu_out = self.fc_2(torch.transpose(glu_data, 1, 2))
         
         out = embedded_phone + glu_out
         
@@ -46,66 +51,70 @@ class Encoder(nn.Module):
         return out
 
 class Encoder_Postnet(nn.Module):
-    """
-    Encoder Postnet
-    """
-    def __init__(self, hidden_size):
-        super(Encoder_Postnet, self).__init__()
-        
-        self.fc_pitch = nn.Linear(1, hidden_size)
-        self.fc_pos = nn.Linear(1, hidden_size)
-        self.fc_beats = nn.Linear(1, hidden_size)
-        
-    def aligner(self, encoder_out, align_phone, text_phone):
-        """padding 的情况还未解决"""
-        #out = []
-        for i in range(align_phone.shape(0)):
-            before_text_phone = 0
-            encoder_ind = 0
-            for j in range(align_phone.shape(1)):
-                if align_phone[i][j] == before_text_phone:
+"""
+Encoder Postnet
+"""
+def __init__(self, embedded_dim):
+    super(Encoder_Postnet, self).__init__()
+    
+    self.fc_pitch = nn.Linear(1, embedded_dim)
+    self.fc_pos = nn.Linear(1, embedded_dim)
+    self.fc_beats = nn.Linear(1, embedded_dim)
+    
+def aligner(self, encoder_out, align_phone, text_phone):
+    '''
+    align_phone = [batch_size, align_phone_length]
+    text_phone = [batch_size, text_phone_length]
+    align_phone_length( = frame_num) > text_phone_length
+    '''
+    for i in range(align_phone.shape[0]):
+        before_text_phone = 0
+        encoder_ind = 0
+        for j in range(align_phone.shape[1]):
+            if align_phone[i][j] == before_text_phone:
+                temp = encoder_out[i][encoder_ind]
+                line = torch.cat((line,temp.unsqueeze(0)),dim = 0)
+            else:
+                if j == 0:
+                    line = encoder_out[i][encoder_ind].unsqueeze(0)
+                    before_text_phone = text_phone[i][j]
+                else:
+                    encoder_ind += 1
+                    before_text_phone = text_phone[i][encoder_ind]
                     temp = encoder_out[i][encoder_ind]
                     line = torch.cat((line,temp.unsqueeze(0)),dim = 0)
-                else:
-                    if j == 0:
-                        line = encoder_out[i][encoder_ind].unsqueeze(0)
-                        before_phone = before_text_phone[i][j]
-                    else:
-                        encoder_ind += 1
-                        before_phone = before_text_phone[i][encoder_ind]
-                        temp = encoder_out[i][encoder_ind]
-                        line = torch.cat((line,temp.unsqueeze(0)),dim = 0)
-                        #line.append(encoder_out[i][encoder_ind])
-            if i == 0:
-                out = line.unsqueeze(0)
-            else:
-                out = torch.cat((out,line.unsqueeze(0)),dim = 0)
-            
-        return out
-         
-    def forward(self, encoder_out, align_phone, pitch, beats):
-        """
-        pitch/beats : [batch_size, frame_num] -> [batch_size, frame_num，1]
-        """
-        batch_size = pitch.shape(0)
-        frame_num = pitch.shape(1)
-        embedded_dim = encoder_out.shape(2)
-        
-        aligner_out = self.aligner(encoder_out, align_phone)
-        
-        pitch = self.fc_pitch(torch.tensor(pitch).unsqueeze(0))
-        out = aligner_out + pitch
-        
-        beats = self.fc_beats(torch.tensor(beats).unsqueeze(0))
-        out = out + beats
-        
-        pos = module.PositionalEncoding(embedded_dim)
-        pos_out = self.fc_pos(pos(torch.transpose(aligner_out, 0, 1)))
-        out = out + torch.transpose(pos_out,0,1)
-        
-        return out
+        if i == 0:
+            out = line.unsqueeze(0)
+        else:
+            out = torch.cat((out,line.unsqueeze(0)),dim = 0)
 
-
+    return out
+     
+def forward(self, encoder_out, align_phone, text_phone, pitch, beats):
+    """
+    pitch/beats : [batch_size, frame_num] -> [batch_size, frame_num，1]
+    """
+    batch_size = pitch.shape[0]
+    frame_num = pitch.shape[1]
+    embedded_dim = encoder_out.shape[2]
+    
+    aligner_out = self.aligner(encoder_out, align_phone, text_phone)
+    
+    #pitch = pitch.type(torch.LongTensor)
+    #print(aligner_out, pitch, pitch.type())
+    pitch = self.fc_pitch(pitch.unsqueeze(0))
+    #print(pitch, type(pitch))
+    out = aligner_out + pitch
+    
+    beats = self.fc_beats(beats.unsqueeze(0))
+    out = out + beats
+    
+    pos = module.PositionalEncoding(embedded_dim)
+    pos_out = self.fc_pos(pos(torch.transpose(aligner_out, 0, 1)))
+    out = out + torch.transpose(pos_out,0,1)
+    
+    return out
+    
 
 class Decoder(nn.Module):
     """
