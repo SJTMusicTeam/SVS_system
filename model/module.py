@@ -372,7 +372,7 @@ class TransformerGLULayer(Module):
     def __init__(self, d_model, nhead, dropout=0.1, activation="relu",
         glu_kernel=3):
         super(TransformerGLULayer, self).__init__()
-        self.self_attn = MultiheadAttention(d_model, nhead, dropout=dropout)
+        self.self_attn = MultiheadAttention(d_model, nhead)
         # Implementation of Feedforward model
         self.GLU = GLU(1, d_model, glu_kernel, dropout, d_model)
 
