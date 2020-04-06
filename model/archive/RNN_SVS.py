@@ -9,6 +9,7 @@ import librosa.display
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 
@@ -255,8 +256,8 @@ class Decoder(nn.Module):
         self.attention = attention
         self.rnn = nn.GRU((enc_hid_dim * 2) + emb_dim, dec_hid_dim)
         self.fc_hid1 = nn.Linear((enc_hid_dim * 2) + dec_hid_dim + emb_dim, 2048)
-        self.fc_hid2 = nn.Linear(2048, 1600)
-        self.fc_out = nn.Linear(1600, output_dim)
+        # self.fc_hid2 = nn.Linear(2048, 1600)
+        self.fc_out = nn.Linear(2048, output_dim)
         self.dropout = nn.Dropout(dropout)
         
     def forward(self, input, hidden, encoder_outputs):
@@ -314,7 +315,7 @@ class Decoder(nn.Module):
         weighted = weighted.squeeze(0)
         
         prediction = self.dropout(F.relu(self.fc_hid1(torch.cat((output, weighted, embedded), dim = 1))))
-        prediction = self.dropout(F.relu(self.fc_hid2(prediction)))
+        # prediction = self.dropout(F.relu(self.fc_hid2(prediction)))
         prediction = F.relu(self.fc_out(prediction))
 
         #prediction = [batch size, output dim]
@@ -381,6 +382,13 @@ def init_weights(m):
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
+def adjust_learning_rate(optimizer, epoch):
+    """Sets the learning rate to the initial LR decayed by 10 every 10 epochs"""
+    lr = args.lr * (0.1 ** (epoch // 10))
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+
+
 def train(model, iterator, optimizer, criterion, clip):
     
     model.train()
@@ -407,8 +415,10 @@ def train(model, iterator, optimizer, criterion, clip):
         epoch_loss += loss.item()
 	
         if i == 0:
-            output_filename = "result/output.npy"
+            output_filename = "result/output_0.npy"
             np.save(output_filename, output.cpu().detach().numpy())
+            trg_filename = "result/trg_0.npy"
+            np.save(trg_filename, trg.cpu().detach().numpy())
         print("batch_i", i, max_seqLength, loss.item())
 
     return epoch_loss / len(iterator), output, trg
@@ -548,11 +558,14 @@ if __name__ == "__main__":
     model.apply(init_weights)
     print(model)
     print(f'The model has {count_parameters(model):,} trainable parameters')
-    optimizer = optim.Adam(model.parameters(),lr = 0.001)
-    criterion = nn.MSELoss(reduction = 'sum')
+    optimizer = optim.Adam(model.parameters(),lr = 0.0001)
+
+    scheduler = ReduceLROnPlateau(optimizer, 'min',verbose=True,patience=2)
+
+    criterion = nn.MSELoss(reduction = 'mean')
 
 
-    N_EPOCHS = 12
+    N_EPOCHS = 1000
     CLIP = 1
 
     best_valid_loss = float('inf')
@@ -563,11 +576,14 @@ if __name__ == "__main__":
         
         train_loss, output, trg = train(model, dataloader, optimizer, criterion, CLIP)
         # valid_loss = evaluate(model, valid_iterator, criterion)
+         
+        scheduler.step(train_loss)
+
         output_filename = "result/output_epoch_" + str(epoch) + ".npy"
         np.save(output_filename, output.cpu().detach().numpy())	
         
         if epoch == N_EPOCHS-1:
-            trg_filename = "result/trg.npy"
+            trg_filename = "result/trg_short.npy"
             np.save(trg_filename, trg.cpu().detach().numpy()) 
 
         end_time = time.time()
@@ -579,7 +595,7 @@ if __name__ == "__main__":
         #     torch.save(model.state_dict(), 'tut4-model.pt')
         
         print(f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s')
-        print(f'\tTrain Loss: {train_loss:.3f}')
+        print(f'\tTrain Loss: {train_loss:.15f}')
 
 
 
