@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.init as init
 from torch.nn import functional as F
 from torch.nn import Module
-from torch.nn.functional import MultiheadAttention
+from torch.nn import MultiheadAttention
 from torch.nn import ModuleList
 from torch.nn.init import xavier_uniform_
 from torch.nn import Dropout
