@@ -8,7 +8,7 @@ def add_zero(number, size):
         out = "0" + out
     return out
 
-single_pron=["a", "ai", "ao", "an", "ang", "o", "ou", "e", "ei", "er", "en", "eng"]
+single_pron=["a", "ai", "ao", "an", "ang", "o", "ou", "ong", "e", "ei", "er", "en", "eng"]
 double_starter = ["zh", "ch", "sh", "ii", "aa", "ee", "oo", "vv", "uu"]
 starter = ["b", "p", "m", "f", "d", "t", "n", "l", "g", "k", "h", "j", "q", "x",
            "r", "z", "c", "s"]
@@ -29,6 +29,8 @@ def text_refactor(text):
             units[i] = "jve"
         elif units[i] == "que":
             units[i] = "qve"
+        elif units[i] == "xue":
+            units[i] = "xve"
         elif units[i] == "wen":
             units[i] = "uuun"
         elif units[i] == "wei":

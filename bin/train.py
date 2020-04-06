@@ -19,7 +19,7 @@ parser.add_argument('--val_pitch',
                     help='pitch data dir used for validation.')
 parser.add_argument('--val_wav',
                     help="wave data dir used for validation")
-parser.add_argument('--model_save_dir',
+parser.add_argument('--model-save-dir',
                     help='output directory which model file will be saved in.')
 parser.add_argument('--model-type', default='GLU_Transformer',
                     help='Type of model (New_Transformer or GLU_Transformer or LSTM)')
