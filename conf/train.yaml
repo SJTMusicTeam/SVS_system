@@ -13,12 +13,13 @@ frame_shift: 0.03
 model_type: GLU_Transformer
 max_epochs: 10
 gradclip: 5
-batchsize: 64
+batchsize: 2
 hidden_size: 256
 num_frames: 500
 optimizer: noam
 noam_scale: 1.0
 gradient_accumulation_steps: 1
 noam_warmup_steps: 25000
+phone_size: 67
 seed: 777
 gpu: 0
