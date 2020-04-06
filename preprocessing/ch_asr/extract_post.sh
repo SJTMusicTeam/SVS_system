@@ -19,9 +19,11 @@ if [ $stage -le 1 ]; then
     utils/fix_data_dir.sh data/${datadir}
   done
 fi
+
 # Now make MFCC plus pitch features.
 # mfccdir should be some place with a largish disk where you
 # want to store MFCC features.
+
 if [ $model == "TDNN" ] &&[ $stage -le 2 ]; then
   echo ============================================================================
   echo "                MFCC Extraction                     "
@@ -106,3 +108,4 @@ if [ $model == "HMM" ] && [ ${stage} -le 3]; then
   done
 
 fi
+
