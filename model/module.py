@@ -372,7 +372,7 @@ class TransformerGLULayer(Module):
     def __init__(self, d_model, nhead, dropout=0.1, activation="relu",
         glu_kernel=3):
         super(TransformerGLULayer, self).__init__()
-        self.self_attn = MultiheadAttention(d_model, nhead)
+        self.self_attn = MultiheadAttention(nhead, d_model)
         # Implementation of Feedforward model
         self.GLU = GLU(1, d_model, glu_kernel, dropout, d_model)
 
@@ -386,7 +386,7 @@ class TransformerGLULayer(Module):
     def __setstate__(self, state):
         if 'activation' not in state:
             state['activation'] = F.relu
-        super(TransformerEncoderLayer, self).__setstate__(state)
+        super(TransformerGLULayer, self).__setstate__(state)
 
     def forward(self, src, src_mask=None, src_key_padding_mask=None):
         # type: (Tensor, Optional[Tensor], Optional[Tensor]) -> Tensor

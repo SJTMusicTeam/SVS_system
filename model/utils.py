@@ -10,7 +10,7 @@ def create_src_key_padding_mask(src_len, max_len):
     mask = np.zeros((bs, max_len))
     for i in range(bs):
         mask[i, src_len[i]:] = 1
-    return torch.from_numpy(mask).bool()
+    return torch.from_numpy(mask).float()
 
 
 def train_one_epoch(train_loader, model, device, optimizer, criterion, args):
@@ -23,18 +23,11 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, args):
         pitch = pitch.to(device).float()
         spec = spec.to(device).float()
         chars = chars.to(device).float()
+        length = length.to(device).float()
+        char_len_list = char_len_list.to(device).float()
 
-        src_key_padding_mask = create_src_key_padding_mask(
-            length, phone.size(1)
-        )
-        char_key_padding_mask = create_src_key_padding_mask(
-            char_len_list, chars.size(1)
-        )
-        src_key_padding_mask = src_key_padding_mask.to(device)
-        char_key_padding_mask = char_key_padding_mask.to(device)
-
-        output = model(phone, beat, pitch, spec, length, chars, src_key_padding_mask=src_key_padding_mask,
-                       char_key_padding_mask=char_key_padding_mask)
+        output = model(phone, beat, pitch, spec, length, chars, src_key_padding_mask=length,
+                       char_key_padding_mask=char_len_list)
 
         train_loss = criterion(output, spec, length)
 

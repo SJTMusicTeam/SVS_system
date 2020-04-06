@@ -117,7 +117,7 @@ class Decoder(nn.Module):
         self.input_norm = module.LayerNorm(hidden_size)
         decoder_layer = module.TransformerGLULayer(hidden_size, nhead, dropout, activation,
             glu_kernel)
-        self.decoder = module.TransformerEncoderLayer(decoder_layer, num_block)
+        self.decoder = module.TransformerEncoder(decoder_layer, num_block)
         self.output_fc = nn.Linear(hidden_size, output_dim)
 
         self.hidden_size=hidden_size
@@ -141,7 +141,8 @@ class GLU_Transformer(nn.Module):
         self.decoder = Decoder(dec_num_block, embed_size, output_dim, dec_nhead, dropout)
         self.postnet = module.PostNet(output_dim, output_dim, output_dim)
 
-    def forward(self, characters, phone, pitch, beat, pos_text=True):
+    def forward(self, characters, phone, pitch, beat, pos_text=True, src_key_padding_mask=None,
+                char_key_padding_mask=None):
         # TODO add encoder and encoder postnet
         memory = self.encoder(characters, pos=pos_text)
         mel_output, att_weight = self.decoder(memory)
@@ -154,7 +155,7 @@ def create_src_key_padding_mask(src_len, max_len):
     mask = np.zeros((bs, max_len))
     for i in range(bs):
         mask[i, src_len[i]:] = 1
-    return torch.from_numpy(mask).bool()
+    return torch.from_numpy(mask).float()
 
 
 def _test():

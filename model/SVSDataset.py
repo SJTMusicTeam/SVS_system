@@ -45,7 +45,7 @@ def _get_spectrograms(fpath, require_sr, preemphasis, n_fft, hop_length, win_len
     mag = np.clip((mag - ref_db + max_db) / max_db, 1e-8, 1)
 
     # Transpose
-    mag = mag.astype(np.float32)  # (T, 1+n_fft//2)
+    mag = mag.T.astype(np.float32)  # (T, 1+n_fft//2)
 
     return mag
 
@@ -146,7 +146,9 @@ class SVSDataset(Dataset):
                 beat_path = os.path.join(pitch_beat_root_path, filename_list[i][1:4],
                                          filename_list[i][4:] + "_beats.txt")
                 with open(beat_path, 'r') as f:
-                    beat = f.read().strip().split(" ")
+                    beat_index = list(map(lambda x : int(x), f.read().strip().split(" ")))
+                    beat = np.zeros(len(phone))
+                    beat[beat_index] = 1
                     f.close()
                 pitch_path = os.path.join(pitch_beat_root_path, filename_list[i][1:4],
                                           filename_list[i][4:] + "_pitches.txt")
@@ -159,6 +161,7 @@ class SVSDataset(Dataset):
                                                 self.max_db, self.ref_db)
 
                 # length check
+                
                 if np.abs(len(phone) - np.shape(spectrogram)[0]) > 3:
                     print("error file: %s" %filename_list[i])
                     continue
