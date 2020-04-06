@@ -45,7 +45,7 @@ def _get_spectrograms(fpath, require_sr, preemphasis, n_fft, hop_length, win_len
     mag = np.clip((mag - ref_db + max_db) / max_db, 1e-8, 1)
 
     # Transpose
-    mag = mag.T.astype(np.float32)  # (T, 1+n_fft//2)
+    mag = mag.astype(np.float32)  # (T, 1+n_fft//2)
 
     return mag
 
@@ -133,6 +133,7 @@ class SVSDataset(Dataset):
 
         for i in range(len(filename_list)):
             # TODO: reload data for each get_item to handle large data
+            # TODO： pre-compute the feature
             if filename_list[i][-1] != 'm' and filename_list[i][-1] != 'e':
                 path = os.path.join(align_root_path, filename_list[i])
                 path_list.append(path)
