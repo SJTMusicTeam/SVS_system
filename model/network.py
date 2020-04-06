@@ -13,7 +13,7 @@ class Encoder(nn.Module):
     """
     Encoder Network
     """
-    def __init__(self, phone_size, embed_size, hidden_size, num_layers, dropout):
+    def __init__(self, phone_size, embed_size, hidden_size, num_layers, dropout, glu_kernel=3):
         """
         :param para: dictionary that contains all parameters
         """
@@ -24,7 +24,7 @@ class Encoder(nn.Module):
         #full connected
         self.fc_1 = nn.Linear(embed_size, hidden_size)
         
-        self.GLU = module.GLU(num_layers, hidden_size, 3, dropout, hidden_size)
+        self.GLU = module.GLU(num_layers, hidden_size, glu_kernel, dropout, hidden_size)
         
         self.fc_2 = nn.Linear(hidden_size, embed_size)
         
@@ -34,7 +34,6 @@ class Encoder(nn.Module):
         input dim: [batch_size, text_phone_length]
         output dim : [batch_size, text_phone_length, embedded_dim]
         """
-        
         embedded_phone = self.emb_phone(input)    # [src len, batch size, emb dim]
         
         glu_out = self.GLU(self.fc_1(embedded_phone))
@@ -92,7 +91,7 @@ class Encoder_Postnet(nn.Module):
         frame_num = pitch.shape(1)
         embedded_dim = encoder_out.shape(2)
         
-        aligner_out = aligner(encoder_out, align_phone)
+        aligner_out = self.aligner(encoder_out, align_phone)
         
         pitch = self.fc_pitch(torch.tensor(pitch).unsqueeze(0))
         out = aligner_out + pitch
@@ -100,7 +99,7 @@ class Encoder_Postnet(nn.Module):
         beats = self.fc_beats(torch.tensor(beats).unsqueeze(0))
         out = out + beats
         
-        pos = positional_encoding.PositionalEncoding(embedded_dim)
+        pos = module.PositionalEncoding(embedded_dim)
         pos_out = self.fc_pos(pos(torch.transpose(aligner_out, 0, 1)))
         out = out + torch.transpose(pos_out,0,1)
         
@@ -133,17 +132,18 @@ class GLU_Transformer(nn.Module):
     """
     Transformer Network
     """
-    def __init__(self, para):
+    def __init__(self, phone_size, embed_size, hidden_size, glu_num_layers, dropout, dec_num_block,
+                 dec_nhead, output_dim):
         super(GLU_Transformer, self).__init__()
-        self.encoder = Encoder(para)
-        self.enc_postnet = Encoder_Postnet(para['embedded_size'])
+        self.encoder = Encoder(phone_size, embed_size, hidden_size, glu_num_layers, dropout)
+        self.enc_postnet = Encoder_Postnet(embed_size)
         # TODO: standard input arguments
-        self.decoder = Decoder(6, para['embedded_size'], para['output_dim'])
-        self.postnet = module.PostNet(para['output_dim'], para['output_dim'], para['output_dim'])
+        self.decoder = Decoder(dec_num_block, embed_size, output_dim, dec_nhead, dropout)
+        self.postnet = module.PostNet(output_dim, output_dim, output_dim)
 
     def forward(self, characters, mel_input, pos_text, pos_mel):
         # TODO add encoder and encoder postnet
-        # memory = self.encoder(characters, pos=pos_text)
+        memory = self.encoder(characters, pos=pos_text)
         mel_output, att_weight = self.decoder(memory)
         mel_output = self.postnet(mel_output)
         return mel_output

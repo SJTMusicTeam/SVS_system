@@ -50,33 +50,53 @@ def _get_spectrograms(fpath, require_sr, preemphasis, n_fft, hop_length, win_len
     return mag
 
 
+def _phone2char(phone_list):
+    char_list = []
+    for phones in phone_list:
+        ini = -1
+        chars = []
+        for phone in phones:
+            if phone != ini:
+                chars.append(phone)
+                ini = phone
+        char_list.append(chars)
+    return char_list
+
+
+
 class SVSCollator(object):
-    def __init__(self, max_len):
+    def __init__(self, max_len, char_max_len=50):
         self.max_len = max_len
+        self.char_max_len = char_max_len
 
     def __call__(self, batch):
         batch_size = len(batch)
         # get spectrum dim
         spec_dim = len(batch[0][3][0])
         len_list = [len(batch[i][0]) for i in range(batch_size)]
+        char_len_list = [len(batch[i][4]) for i in range(batch_size)]
         spec = np.zeros((batch_size, self.max_len, spec_dim))
         phone = np.zeros((batch_size, self.max_len))
         pitch = np.zeros((batch_size, self.max_len))
         beat = np.zeros((batch_size, self.max_len))
-        align = np.zeros((batch_size, self.max_len))
+        chars = np.zeros((batch_size, self.char_max_len))
         for i in range(batch_size):
             length = len_list[i]
             spec[i, :length, :] = batch[i][3]
             pitch[i, :length] = batch[i][2]
             beat[i, :length] = batch[i][1]
             phone[i, :length] = batch[i][0]
+            chars[i, :len(batch[i][4])] = batch[i][4]
 
         length = np.array(len_list)
+        char_len_list = np.array(char_len_list)
         spec = torch.from_numpy(spec)
         pitch = torch.from_numpy(pitch)
         beat = torch.from_numpy(beat)
         phone = torch.from_numpy(phone)
-        return phone, beat, pitch, spec, length
+        chars = torch.from_numpy(chars)
+        char_len_list = torch.from_numpy(char_len_list)
+        return phone, beat, pitch, spec, length, chars, char_len_list
 
 
 class SVSDataset(Dataset):
@@ -135,6 +155,7 @@ class SVSDataset(Dataset):
                                                 self.max_db, self.ref_db).T
 
                 # length check
+                assert np.abs(len(phone) - np.shape(spectrogram)[1]) < 5
                 min_length = min(len(phone), np.shape(spectrogram)[1])
                 phone_list.append(phone[:min_length])
                 beat_list.append(beat[:min_length])
@@ -150,12 +171,13 @@ class SVSDataset(Dataset):
         self.beat_list = [x for _, x in sorted(zip(length, beat_list), reverse=True)]
         self.pitch_list = [x for _, x in sorted(zip(length, pitch_list), reverse=True)]
         self.spectrogram_list = [x for _, x in sorted(zip(length, spectrogram_list), key=lambda x: x[0], reverse=True)]
+        self.char_list = _phone2char(self.phone_list)
 
 
     def __len__(self):
         return len(self.phone_list)
 
     def __getitem__(self, i):
-        return self.phone_list[i], self.beat_list[i], self.pitch_list[i], self.spectrogram_list[i]
+        return self.phone_list[i], self.beat_list[i], self.pitch_list[i], self.spectrogram_list[i], self.char_list[i]
 
 
