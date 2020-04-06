@@ -5,29 +5,28 @@
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import numpy as np
 import math
-from module import *
+import model.module as module
 
 class Encoder(nn.Module):
     """
     Encoder Network
     """
-    def __init__(self, para):
+    def __init__(self, phone_size, embed_size, hidden_size, num_layers, dropout):
         """
         :param para: dictionary that contains all parameters
         """
         super(Encoder, self).__init__()
         #self.alpha = nn.Parameter(t.ones(1))
         
-        self.emb_phone = nn.Embedding(para['phone_size'], para['emb_dim'])
+        self.emb_phone = nn.Embedding(phone_size, embed_size)
         #full connected
-        self.fc_1 = nn.Linear(para['emb_dim'], para['GLU_in_dim'])
+        self.fc_1 = nn.Linear(embed_size, hidden_size)
         
-        self.GLU = glu.GLU(para['num_layers'], para['hidden_size'], para['kernel_size'], para['dropout'], para['GLU_in_dim'])
+        self.GLU = module.GLU(num_layers, hidden_size, 3, dropout, hidden_size)
         
-        self.fc_2 = nn.Linear(para['hidden_size'], para['emb_dim'])
+        self.fc_2 = nn.Linear(hidden_size, embed_size)
         
 
     def forward(self, input):
@@ -35,7 +34,6 @@ class Encoder(nn.Module):
         input dim: [batch_size, text_phone_length]
         output dim : [batch_size, text_phone_length, embedded_dim]
         """
-        input = self.refine(input)
         
         embedded_phone = self.emb_phone(input)    # [src len, batch size, emb dim]
         
@@ -45,15 +43,15 @@ class Encoder(nn.Module):
         
         out = embedded_phone + glu_out
         
-        out = out *  math.sqrt(0.5)
+        out = out * math.sqrt(0.5)
         return out
 
 class Encoder_Postnet(nn.Module):
     """
     Encoder Postnet
     """
-    def __init__(self):
-        super(Encoder_Postnet, self, hidden_size).__init__()
+    def __init__(self, hidden_size):
+        super(Encoder_Postnet, self).__init__()
         
         self.fc_pitch = nn.Linear(1, hidden_size)
         self.fc_pos = nn.Linear(1, hidden_size)
@@ -121,7 +119,7 @@ class Decoder(nn.Module):
         decoder_layer = module.TransformerGLULayer(hidden_size, nhead, dropout, activation,
             glu_kernel)
         self.decoder = module.TransformerEncoderLayer(decoder_layer, num_block)
-        self.output_fc = nn.Linear(hidden_state, output_dim)
+        self.output_fc = nn.Linear(hidden_size, output_dim)
 
         self.hidden_size=hidden_size
 
@@ -131,17 +129,17 @@ class Decoder(nn.Module):
         output = self.output_fc(memory)
         return output
 
-class Model(nn.Module):
+class GLU_Transformer(nn.Module):
     """
     Transformer Network
     """
     def __init__(self, para):
-        super(Model, self).__init__()
+        super(GLU_Transformer, self).__init__()
         self.encoder = Encoder(para)
         self.enc_postnet = Encoder_Postnet(para['embedded_size'])
         # TODO: standard input arguments
         self.decoder = Decoder(6, para['embedded_size'], para['output_dim'])
-        self.postnet = ModelPostNet(para['output_dim'], para['output_dim'], para['output_dim'])
+        self.postnet = module.PostNet(para['output_dim'], para['output_dim'], para['output_dim'])
 
     def forward(self, characters, mel_input, pos_text, pos_mel):
         # TODO add encoder and encoder postnet
