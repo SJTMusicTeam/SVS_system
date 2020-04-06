@@ -1,0 +1,15 @@
+sampling_rate: 44100
+frame_size: 0.06
+frame_shift: 0.03
+model_type: GLU_Transformer
+max_epochs: 10
+gradclip: 5
+batchsize: 64
+hidden_size: 256
+num_frames: 500
+optimizer: noam
+noam_scale: 1.0
+gradient_accumulation_steps: 1
+noam_warmup_steps: 25000
+seed: 777
+gpu: 0
