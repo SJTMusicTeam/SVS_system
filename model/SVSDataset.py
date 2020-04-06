@@ -91,10 +91,11 @@ class SVSCollator(object):
         length = np.array(len_list)
         char_len_list = np.array(char_len_list)
         spec = torch.from_numpy(spec)
-        pitch = torch.from_numpy(pitch)
-        beat = torch.from_numpy(beat)
-        phone = torch.from_numpy(phone)
-        chars = torch.from_numpy(chars)
+        length = torch.from_numpy(length)
+        pitch = torch.from_numpy(pitch).unsqueeze(dim=-1)
+        beat = torch.from_numpy(beat).unsqueeze(dim=-1)
+        phone = torch.from_numpy(phone).unsqueeze(dim=-1)
+        chars = torch.from_numpy(chars).unsqueeze(dim=-1)
         char_len_list = torch.from_numpy(char_len_list)
         return phone, beat, pitch, spec, length, chars, char_len_list
 

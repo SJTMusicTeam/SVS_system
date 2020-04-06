@@ -141,12 +141,63 @@ class GLU_Transformer(nn.Module):
         self.decoder = Decoder(dec_num_block, embed_size, output_dim, dec_nhead, dropout)
         self.postnet = module.PostNet(output_dim, output_dim, output_dim)
 
-    def forward(self, characters, mel_input, pos_text, pos_mel):
+    def forward(self, characters, phone, pitch, beat, pos_text=True):
         # TODO add encoder and encoder postnet
         memory = self.encoder(characters, pos=pos_text)
         mel_output, att_weight = self.decoder(memory)
         mel_output = self.postnet(mel_output)
         return mel_output
+
+
+def create_src_key_padding_mask(src_len, max_len):
+    bs = len(src_len)
+    mask = np.zeros((bs, max_len))
+    for i in range(bs):
+        mask[i, src_len[i]:] = 1
+    return torch.from_numpy(mask).bool()
+
+
+def _test():
+    # debug test
+    import random
+    random.seed(7)
+    batch_size = 16
+    max_length = 500
+    char_max_length = 50
+    feat_dim = 1324
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    seq_len_list = []
+    for i in range(batch_size):
+        seq_len_list.append(random.randint(0, max_length))
+
+    char_seq_len_list = []
+    for i in range(batch_size):
+        char_seq_len_list.append(random.randint(0, char_max_length))
+    spec = torch.zeros(batch_size, max_length, feat_dim)
+    phone = torch.zeros(batch_size, max_length, 1)
+    pitch = torch.zeros(batch_size, max_length, 1)
+    beat = torch.zeros(batch_size, max_length, 1)
+    char = torch.zeros([batch_size, char_max_length, 1])
+    for i in range(batch_size):
+        length = seq_len_list[i]
+        char_length = char_seq_len_list[i]
+        spec[i, :length, :] = torch.randn(length, feat_dim)
+        phone[i, :length, :] = torch.randn(length, 1)
+        pitch[i, :length, :] = torch.randn(length, 1)
+        beat[i, :length, :] = torch.randn(length, 1)
+        char[i, :length, :] = torch.randn(char_length, 1)
+
+    seq_len = torch.from_numpy(np.array(seq_len_list)).to(device)
+    char_seq_len = torch.from_numpy(np.array(char_seq_len_list)).to(device)
+    spec = torch.from_numpy(spec).to(device)
+    phone = torch.from_numpy(phone).to(device)
+    pitch = torch.from_numpy(pitch).to(device)
+    beat = torch.from_numpy(beat).to(device)
+
+    model = GLU_Transformer(67, 256, 256, 1, 0.1, 3, 4, 10)
+
+    spec_pred = model(char, phone, pitch, beat)
 
 
 
