@@ -60,18 +60,11 @@ def validate(dev_loader, model, device, criterion):
             pitch = pitch.to(device).float()
             spec = spec.to(device).float()
             chars = chars.to(device).float()
+            length = length.to(device).float()
+            char_len_list = char_len_list.to(device).float()
 
-            src_key_padding_mask = create_src_key_padding_mask(
-                length, phone.size(1)
-            )
-            char_key_padding_mask = create_src_key_padding_mask(
-                char_len_list, chars.size(1)
-            )
-            src_key_padding_mask = src_key_padding_mask.to(device)
-            char_key_padding_mask = char_key_padding_mask.to(device)
-
-            output = model(phone, beat, pitch, spec, length, chars, src_key_padding_mask=src_key_padding_mask,
-                           char_key_padding_mask=char_key_padding_mask)
+            output = model(phone, beat, pitch, spec, length, chars, src_key_padding_mask=length,
+                           char_key_padding_mask=char_len_list)
 
             train_loss = criterion(output, spec, length)
             losses.update(train_loss.item(), phone.size(0))
