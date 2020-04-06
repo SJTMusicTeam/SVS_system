@@ -67,6 +67,7 @@ def train(args):
                                                num_workers=args.num_workers,
                                                collate_fn=collate_fn_svs,
                                                pin_memory=True)
+    print(dev_set[0][3].shape)
     assert args.feat_dim == dev_set[0][3].shape[1]
 
     # prepare model

@@ -128,6 +128,8 @@ class SVSDataset(Dataset):
         # TODO: sum up the data source to one directory
         # get file_list
         filename_list = os.listdir(align_root_path)
+        # fast debug
+        filename_list = filename_list[:10]
         path_list = []
         phone_list, beat_list, pitch_list, spectrogram_list = [], [], [], []
 
@@ -154,27 +156,29 @@ class SVSDataset(Dataset):
                 wav_path = os.path.join(wav_root_path, filename_list[i][1:4], filename_list[i][4:] + ".wav")
                 spectrogram = _get_spectrograms(wav_path, self.sr, self.preemphasis,
                                                 self.frame_length, self.frame_shift, self.frame_length,
-                                                self.max_db, self.ref_db).T
+                                                self.max_db, self.ref_db)
 
                 # length check
-                assert np.abs(len(phone) - np.shape(spectrogram)[1]) < 5
-                min_length = min(len(phone), np.shape(spectrogram)[1])
+                if np.abs(len(phone) - np.shape(spectrogram)[0]) > 3:
+                    print("error file: %s" %filename_list[i])
+                    continue
+                # assert np.abs(len(phone) - np.shape(spectrogram)[0]) < 5
+                min_length = min(len(phone), np.shape(spectrogram)[0])
                 phone_list.append(phone[:min_length])
                 beat_list.append(beat[:min_length])
                 pitch_list.append(pitch[:min_length])
-                spectrogram_list.append(spectrogram[:, :min_length])
+                spectrogram_list.append(spectrogram[:min_length, :])
 
         # sort by length desc
         length = []
-        for i in range(len(self.phone_list)):
-            length.append(len(self.phone_list[i]))
+        for i in range(len(phone_list)):
+            length.append(len(phone_list[i]))
 
         self.phone_list = [x for _, x in sorted(zip(length, phone_list), reverse=True)]
         self.beat_list = [x for _, x in sorted(zip(length, beat_list), reverse=True)]
         self.pitch_list = [x for _, x in sorted(zip(length, pitch_list), reverse=True)]
         self.spectrogram_list = [x for _, x in sorted(zip(length, spectrogram_list), key=lambda x: x[0], reverse=True)]
         self.char_list = _phone2char(self.phone_list)
-
 
     def __len__(self):
         return len(self.phone_list)
