@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright 2019 Hitachi, Ltd. (author: Yusuke Fujita)
-# Licensed under the MIT license.
+# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
 import os
 import subprocess
@@ -66,7 +65,7 @@ def use_single_gpu():
 
 
 if __name__ == '__main__':
-    from eend.system_info import print_system_info
+    from system_info import print_system_info
     print_system_info()
     cvd = use_single_gpu()
     print(f"PID {os.getpid()} uses GPU {cvd}")
