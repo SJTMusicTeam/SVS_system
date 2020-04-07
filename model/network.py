@@ -2,6 +2,9 @@
 
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi, Hailan Lin)
 
+# debug only
+import sys
+sys.path.append("/Users/jiatongshi/projects/svs_system/SVS_system")
 
 import torch
 import torch.nn as nn
@@ -9,11 +12,12 @@ import numpy as np
 import math
 import model.module as module
 
+
 class Encoder(nn.Module):
     """
     Encoder Network
     """
-    def __init__(self, phone_size, embed_size, hidden_size, num_layers=1, dropout, glu_kernel=3, GLU_num):
+    def __init__(self, phone_size, embed_size, hidden_size, num_layers=1, dropout=0.1, glu_kernel=3, GLU_num=3):
         """
         :param para: dictionary that contains all parameters
         """
@@ -29,18 +33,17 @@ class Encoder(nn.Module):
         #self.GLU = module.GLU(num_layers, hidden_size, glu_kernel, dropout, hidden_size)
         
         self.fc_2 = nn.Linear(hidden_size, embed_size)
-        
 
-    def forward(self, input):
+    def forward(self, x):
         """
         input dim: [batch_size, text_phone_length]
         output dim : [batch_size, text_phone_length, embedded_dim]
         """
-        embedded_phone = self.emb_phone(input)
+        embedded_phone = self.emb_phone(x)
         glu_data = self.fc_1(embedded_phone)
         
         '''这里记得改一下！'''
-        for glu in enumerate(self.GLU_list):
+        for glu in self.GLU_list:
             glu_data = glu(glu_data)
         
         glu_out = self.fc_2(torch.transpose(glu_data, 1, 2))
@@ -50,70 +53,71 @@ class Encoder(nn.Module):
         out = out * math.sqrt(0.5)
         return out
 
+
 class Encoder_Postnet(nn.Module):
-"""
-Encoder Postnet
-"""
-def __init__(self, embedded_dim):
-    super(Encoder_Postnet, self).__init__()
+    """
+    Encoder Postnet
+    """
+    def __init__(self, embedded_dim):
+        super(Encoder_Postnet, self).__init__()
+
+        self.fc_pitch = nn.Linear(1, embedded_dim)
+        self.fc_pos = nn.Linear(1, embedded_dim)
+        self.fc_beats = nn.Linear(1, embedded_dim)
     
-    self.fc_pitch = nn.Linear(1, embedded_dim)
-    self.fc_pos = nn.Linear(1, embedded_dim)
-    self.fc_beats = nn.Linear(1, embedded_dim)
-    
-def aligner(self, encoder_out, align_phone, text_phone):
-    '''
-    align_phone = [batch_size, align_phone_length]
-    text_phone = [batch_size, text_phone_length]
-    align_phone_length( = frame_num) > text_phone_length
-    '''
-    for i in range(align_phone.shape[0]):
-        before_text_phone = 0
-        encoder_ind = 0
-        for j in range(align_phone.shape[1]):
-            if align_phone[i][j] == before_text_phone:
-                temp = encoder_out[i][encoder_ind]
-                line = torch.cat((line,temp.unsqueeze(0)),dim = 0)
-            else:
-                if j == 0:
-                    line = encoder_out[i][encoder_ind].unsqueeze(0)
-                    before_text_phone = text_phone[i][j]
-                else:
-                    encoder_ind += 1
-                    before_text_phone = text_phone[i][encoder_ind]
+    def aligner(self, encoder_out, align_phone, text_phone):
+        '''
+        align_phone = [batch_size, align_phone_length]
+        text_phone = [batch_size, text_phone_length]
+        align_phone_length( = frame_num) > text_phone_length
+        '''
+        for i in range(align_phone.shape[0]):
+            before_text_phone = 0
+            encoder_ind = 0
+            for j in range(align_phone.shape[1]):
+                if align_phone[i][j] == before_text_phone:
                     temp = encoder_out[i][encoder_ind]
                     line = torch.cat((line,temp.unsqueeze(0)),dim = 0)
-        if i == 0:
-            out = line.unsqueeze(0)
-        else:
-            out = torch.cat((out,line.unsqueeze(0)),dim = 0)
+                else:
+                    if j == 0:
+                        line = encoder_out[i][encoder_ind].unsqueeze(0)
+                        before_text_phone = text_phone[i][j]
+                    else:
+                        encoder_ind += 1
+                        before_text_phone = text_phone[i][encoder_ind]
+                        temp = encoder_out[i][encoder_ind]
+                        line = torch.cat((line,temp.unsqueeze(0)),dim = 0)
+            if i == 0:
+                out = line.unsqueeze(0)
+            else:
+                out = torch.cat((out,line.unsqueeze(0)),dim = 0)
 
-    return out
-     
-def forward(self, encoder_out, align_phone, text_phone, pitch, beats):
-    """
-    pitch/beats : [batch_size, frame_num] -> [batch_size, frame_num，1]
-    """
-    batch_size = pitch.shape[0]
-    frame_num = pitch.shape[1]
-    embedded_dim = encoder_out.shape[2]
-    
-    aligner_out = self.aligner(encoder_out, align_phone, text_phone)
-    
-    #pitch = pitch.type(torch.LongTensor)
-    #print(aligner_out, pitch, pitch.type())
-    pitch = self.fc_pitch(pitch.unsqueeze(0))
-    #print(pitch, type(pitch))
-    out = aligner_out + pitch
-    
-    beats = self.fc_beats(beats.unsqueeze(0))
-    out = out + beats
-    
-    pos = module.PositionalEncoding(embedded_dim)
-    pos_out = self.fc_pos(pos(torch.transpose(aligner_out, 0, 1)))
-    out = out + torch.transpose(pos_out,0,1)
-    
-    return out
+        return out
+
+    def forward(self, encoder_out, align_phone, text_phone, pitch, beats):
+        """
+        pitch/beats : [batch_size, frame_num] -> [batch_size, frame_num，1]
+        """
+        batch_size = pitch.shape[0]
+        frame_num = pitch.shape[1]
+        embedded_dim = encoder_out.shape[2]
+
+        aligner_out = self.aligner(encoder_out, align_phone, text_phone)
+
+        #pitch = pitch.type(torch.LongTensor)
+        #print(aligner_out, pitch, pitch.type())
+        pitch = self.fc_pitch(pitch.unsqueeze(0))
+        #print(pitch, type(pitch))
+        out = aligner_out + pitch
+
+        beats = self.fc_beats(beats.unsqueeze(0))
+        out = out + beats
+
+        pos = module.PositionalEncoding(embedded_dim)
+        pos_out = self.fc_pos(pos(torch.transpose(aligner_out, 0, 1)))
+        out = out + torch.transpose(pos_out,0,1)
+
+        return out
     
 
 class Decoder(nn.Module):
@@ -153,7 +157,7 @@ class GLU_Transformer(nn.Module):
     def forward(self, characters, phone, pitch, beat, pos_text=True, src_key_padding_mask=None,
                 char_key_padding_mask=None):
         # TODO add encoder and encoder postnet
-        memory = self.encoder(characters, pos=pos_text)
+        # memory = self.encoder(characters)
         mel_output, att_weight = self.decoder(memory)
         mel_output = self.postnet(mel_output)
         return mel_output
@@ -169,12 +173,14 @@ def create_src_key_padding_mask(src_len, max_len):
 
 def _test():
     # debug test
+
     import random
     random.seed(7)
     batch_size = 16
     max_length = 500
     char_max_length = 50
     feat_dim = 1324
+    phone_size = 67
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     seq_len_list = []
@@ -184,30 +190,43 @@ def _test():
     char_seq_len_list = []
     for i in range(batch_size):
         char_seq_len_list.append(random.randint(0, char_max_length))
+
     spec = torch.zeros(batch_size, max_length, feat_dim)
-    phone = torch.zeros(batch_size, max_length, 1)
-    pitch = torch.zeros(batch_size, max_length, 1)
-    beat = torch.zeros(batch_size, max_length, 1)
-    char = torch.zeros([batch_size, char_max_length, 1])
+    phone = torch.zeros(batch_size, max_length, 1).long()
+    pitch = torch.zeros(batch_size, max_length, 1).long()
+    beat = torch.zeros(batch_size, max_length, 1).long()
+    char = torch.zeros([batch_size, char_max_length, 1]).long()
     for i in range(batch_size):
         length = seq_len_list[i]
         char_length = char_seq_len_list[i]
         spec[i, :length, :] = torch.randn(length, feat_dim)
-        phone[i, :length, :] = torch.randn(length, 1)
-        pitch[i, :length, :] = torch.randn(length, 1)
-        beat[i, :length, :] = torch.randn(length, 1)
-        char[i, :length, :] = torch.randn(char_length, 1)
+        phone[i, :length, :] = torch.randint(0, phone_size, (length, 1)).long()
+        pitch[i, :length, :] = torch.randint(0, 200, (length, 1)).long()
+        beat[i, :length, :] = torch.randint(0, 2, (length, 1)).long()
+        char[i, :char_length, :] = torch.randint(0, phone_size, (char_length, 1)).long()
 
     seq_len = torch.from_numpy(np.array(seq_len_list)).to(device)
     char_seq_len = torch.from_numpy(np.array(char_seq_len_list)).to(device)
-    spec = torch.from_numpy(spec).to(device)
-    phone = torch.from_numpy(phone).to(device)
-    pitch = torch.from_numpy(pitch).to(device)
-    beat = torch.from_numpy(beat).to(device)
+    spec = spec.to(device)
+    phone = phone.to(device)
+    pitch = pitch.to(device)
+    beat = beat.to(device)
+    print(seq_len.size())
+    print(char_seq_len.size())
+    print(spec.size())
+    print(phone.size())
+    print(pitch.size())
+    print(beat.size())
+    print(type(beat))
 
-    model = GLU_Transformer(67, 256, 256, 1, 0.1, 3, 4, 10)
+    model = GLU_Transformer(phone_size, 256, 256, 1, 0.1, 3, 4, 10)
 
-    spec_pred = model(char, phone, pitch, beat)
+    spec_pred = model(char, phone, pitch, beat, src_key_padding_mask=seq_len, char_key_padding_mask=char_seq_len)
+    print(spec_pred)
+
+
+if __name__ == "__main__":
+    _test()
 
 
 
