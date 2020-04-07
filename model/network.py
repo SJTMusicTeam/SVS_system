@@ -124,6 +124,7 @@ class Decoder(nn.Module):
     """
     Decoder Network
     """
+    # TODO： frame smoothing (triple the time resolution)
     def __init__(self, num_block, hidden_size, output_dim, nhead=4, dropout=0.1, activation="relu",
         glu_kernel=3):
         super(Decoder, self).__init__()
@@ -137,9 +138,9 @@ class Decoder(nn.Module):
 
     def forward(self, src, src_mask=None, src_key_padding_mask=None):
         src = self.input_norm(src)
-        memory, att_weght = self.decoder(src, mask=src_mask, src_key_padding_mask=src_key_padding_mask)
+        memory, att_weight = self.decoder(src, mask=src_mask, src_key_padding_mask=src_key_padding_mask)
         output = self.output_fc(memory)
-        return output
+        return output, att_weight
 
 class GLU_Transformer(nn.Module):
     """
@@ -157,7 +158,7 @@ class GLU_Transformer(nn.Module):
     def forward(self, characters, phone, pitch, beat, pos_text=True, src_key_padding_mask=None,
                 char_key_padding_mask=None):
         # TODO add encoder and encoder postnet
-        # memory = self.encoder(characters)
+        memory = self.encoder(characters)
         mel_output, att_weight = self.decoder(memory)
         mel_output = self.postnet(mel_output)
         return mel_output
@@ -219,10 +220,29 @@ def _test():
     print(beat.size())
     print(type(beat))
 
-    model = GLU_Transformer(phone_size, 256, 256, 1, 0.1, 3, 4, 10)
+    hidden_size = 256
+    embed_size = 256
+    nhead = 4
+    dropout = 0.1
+    activation = 'relu'
+    glu_kernel = 3
+    num_dec_block = 3
+    glu_num_layers = 1
+    # test model as a whole
+    # model = GLU_Transformer(phone_size, hidden_size, embed_size, glu_num_layers, dropout, num_dec_block, nhead, feat_dim)
+    # spec_pred = model(char, phone, pitch, beat, src_key_padding_mask=seq_len, char_key_padding_mask=char_seq_len)
+    # print(spec_pred)
 
-    spec_pred = model(char, phone, pitch, beat, src_key_padding_mask=seq_len, char_key_padding_mask=char_seq_len)
-    print(spec_pred)
+    # test decoder
+    out_from_encoder = torch.zeros(batch_size, max_length, hidden_size)
+    for i in range(batch_size):
+        length = seq_len_list[i]
+        out_from_encoder[i, :length, :] = torch.randn(length, hidden_size)
+    decoder = Decoder(num_dec_block, embed_size, feat_dim, nhead, dropout)
+    decoder_out, att = decoder(out_from_encoder, src_key_padding_mask=seq_len)
+    print(decoder_out.size())
+    print(att.size())
+
 
 
 if __name__ == "__main__":
