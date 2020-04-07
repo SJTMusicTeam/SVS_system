@@ -293,14 +293,14 @@ class MultiheadAttention(nn.Module):
             key=key,
             value=value,
             unseen_mask=unseen_mask,
-            src_lengths=src_lengths,
+            src_lengths=src_lengths
         )
 
         # 5. Combine heads
         x = combine_heads(x)
 
         # 6. Fully-connected layer for output
-        return self.output_fc(x)
+        return self.output_fc(x), self.attn
 
 
 class TransformerEncoderLayer(Module):
@@ -347,7 +347,7 @@ class TransformerEncoderLayer(Module):
             see the docs in Transformer class.
         """
 
-        src2, att_weight = self.self_attn(src, src, src, attn_mask=src_mask,
+        src2, att_weight = self.self_attn(src, src, src, unseen_mask=src_mask,
                               src_lengths=src_key_padding_mask)
         src = src + self.dropout1(src2)
         src = self.norm1(src)
@@ -400,13 +400,17 @@ class TransformerGLULayer(Module):
         Shape:
             see the docs in Transformer class.
         """
-        src2, att_weight = self.self_attn(src, src, src, attn_mask=src_mask,
-                              key_padding_mask=src_key_padding_mask)
-        src = src + self.dropout1(src2)
         src = self.norm1(src)
-        src2 = self.GLU(src)
-        src = src + self.dropout2(src2)
+        src2, att_weight = self.self_attn(src, src, src, unseen_mask=src_mask,
+                              src_lengths=src_key_padding_mask)
+
+        src = src + self.dropout1(src2)
+        src = src * SCALE_WEIGHT
         src = self.norm2(src)
+        src2 = self.GLU(src)
+        src2 = src2.transpose(1, 2)
+        src = src + self.dropout2(src2)
+        src = src * SCALE_WEIGHT
         return src, att_weight
 
 
@@ -526,8 +530,10 @@ class PostNet(nn.Module):
         return output
 
 
-def create_src_lengths_mask(batch_size, src_lengths):
-    max_srclen = src_lengths.max()
+def create_src_lengths_mask(batch_size, src_lengths, max_srclen=None):
+    if max_srclen is None:
+        max_srclen = src_lengths.max()
+
     src_indices = torch.arange(0, max_srclen).unsqueeze(0).type_as(src_lengths)
     src_indices = src_indices.expand(batch_size, max_srclen)
     src_lengths = src_lengths.unsqueeze(dim=1).expand(batch_size, max_srclen)
@@ -549,7 +555,7 @@ def apply_masks(scores, batch_size, unseen_mask, src_lengths):
     if src_lengths is not None:
         # [batch_size, 1, seq_len]
         src_lengths_mask = create_src_lengths_mask(
-            batch_size=batch_size, src_lengths=src_lengths
+            batch_size=batch_size, src_lengths=src_lengths, max_srclen=seq_len
         ).unsqueeze(-2)
 
         # [batch_size, seq_len, seq_len]
