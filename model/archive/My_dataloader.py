@@ -47,7 +47,7 @@ def refine(align_phone):
             if j < len(out[i]):
                 Data[i][j] = out[i][j]
 
-    return Data
+    return torch.LongTensor(Data)
 
 
 
