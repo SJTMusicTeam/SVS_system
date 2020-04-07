@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+
+# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
+
+
 '''A wrapper class for optimizer '''
 import numpy as np
 
