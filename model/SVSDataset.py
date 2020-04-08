@@ -92,10 +92,10 @@ class SVSCollator(object):
         char_len_list = np.array(char_len_list)
         spec = torch.from_numpy(spec)
         length = torch.from_numpy(length)
-        pitch = torch.from_numpy(pitch).unsqueeze(dim=-1)
-        beat = torch.from_numpy(beat).unsqueeze(dim=-1)
-        phone = torch.from_numpy(phone).unsqueeze(dim=-1)
-        chars = torch.from_numpy(chars).unsqueeze(dim=-1)
+        pitch = torch.from_numpy(pitch).unsqueeze(dim=-1).long()
+        beat = torch.from_numpy(beat).unsqueeze(dim=-1).long()
+        phone = torch.from_numpy(phone).unsqueeze(dim=-1).long()
+        chars = torch.from_numpy(chars).unsqueeze(dim=-1).long()
         char_len_list = torch.from_numpy(char_len_list)
         return phone, beat, pitch, spec, length, chars, char_len_list
 
@@ -129,7 +129,7 @@ class SVSDataset(Dataset):
         # get file_list
         filename_list = os.listdir(align_root_path)
         # fast debug
-        filename_list = filename_list[:10]
+        # filename_list = filename_list[:10]
         path_list = []
         phone_list, beat_list, pitch_list, spectrogram_list = [], [], [], []
 
@@ -143,19 +143,19 @@ class SVSDataset(Dataset):
                 with open(path, 'r') as f:
                     phone = f.read().strip().split(" ")
                     f.close()
-                beat_path = os.path.join(pitch_beat_root_path, filename_list[i][1:4],
+                beat_path = os.path.join(pitch_beat_root_path, str(int(filename_list[i][1:4])),
                                          filename_list[i][4:] + "_beats.txt")
                 with open(beat_path, 'r') as f:
                     beat_index = list(map(lambda x : int(x), f.read().strip().split(" ")))
                     beat = np.zeros(len(phone))
                     beat[beat_index] = 1
                     f.close()
-                pitch_path = os.path.join(pitch_beat_root_path, filename_list[i][1:4],
+                pitch_path = os.path.join(pitch_beat_root_path, str(int(filename_list[i][1:4])),
                                           filename_list[i][4:] + "_pitches.txt")
                 with open(pitch_path, 'r') as f:
                     pitch = f.read().strip().split(" ")
                     f.close()
-                wav_path = os.path.join(wav_root_path, filename_list[i][1:4], filename_list[i][4:] + ".wav")
+                wav_path = os.path.join(wav_root_path, str(int(filename_list[i][1:4])), filename_list[i][4:] + ".wav")
                 spectrogram = _get_spectrograms(wav_path, self.sr, self.preemphasis,
                                                 self.frame_length, self.frame_shift, self.frame_length,
                                                 self.max_db, self.ref_db)

@@ -162,9 +162,8 @@ class GLU_Transformer(nn.Module):
     def forward(self, characters, phone, pitch, beat, pos_text=True, src_key_padding_mask=None,
                 char_key_padding_mask=None):
         # TODO add encoder and encoder postnet
-        encoder_out, text_phone = self.encoder(characters)
+        encoder_out, text_phone = self.encoder(characters.squeeze(2))
         post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch.float(), beat)
-        print(post_out.size())
         mel_output, att_weight = self.decoder(post_out)
         mel_output = self.postnet(mel_output)
         return mel_output
