@@ -94,7 +94,7 @@ def infer(args):
         length = length.to(device).float()
         char_len_list = char_len_list.to(device).float()
 
-        output = model(phone, beat, pitch, spec, length, chars, src_key_padding_mask=length,
+        output = model(chars, phone, pitch, beat, src_key_padding_mask=length,
                        char_key_padding_mask=char_len_list)
 
         test_loss = loss(output, spec, length)
