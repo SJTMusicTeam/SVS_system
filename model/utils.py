@@ -25,18 +25,22 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, args):
     model.train()
 
     for step, (phone, beat, pitch, spec, length, chars, char_len_list) in enumerate(train_loader, 1):
-        phone = phone.to(device).float()
-        beat = beat.to(device).float()
+        phone = phone.to(device)
+        beat = beat.to(device)
         pitch = pitch.to(device).float()
         spec = spec.to(device).float()
-        chars = chars.to(device).float()
-        length = length.to(device).float()
-        char_len_list = char_len_list.to(device).float()
+        chars = chars.to(device)
+        length_mask = create_src_key_padding_mask(length, args.num_frames)
+        length_mask = length_mask.unsqueeze(2)
+        length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
+        length_mask = length_mask.to(device)
+        length = length.to(device)
+        char_len_list = char_len_list.to(device)
 
         output = model(chars, phone, pitch, beat, src_key_padding_mask=length,
                        char_key_padding_mask=char_len_list)
 
-        train_loss = criterion(output, spec, length)
+        train_loss = criterion(output, spec, length_mask)
 
         optimizer.zero_grad()
         train_loss.backward()
@@ -49,25 +53,31 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, args):
     return info
 
 
-def validate(dev_loader, model, device, criterion):
+def validate(dev_loader, model, device, criterion, args):
     losses = AverageMeter()
     model.eval()
 
     with torch.no_grad():
         for step, (phone, beat, pitch, spec, length, chars, char_len_list) in enumerate(dev_loader, 1):
-            phone = phone.to(device).float()
-            beat = beat.to(device).float()
+            phone = phone.to(device)
+            beat = beat.to(device)
             pitch = pitch.to(device).float()
             spec = spec.to(device).float()
-            chars = chars.to(device).float()
-            length = length.to(device).float()
+            chars = chars.to(device)
+            length = length.to(device)
+            length_mask = create_src_key_padding_mask(length, args.num_frames)
+            length_mask = length_mask.unsqueeze(2)
+            length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
+            length_mask = length_mask.to(device)
             char_len_list = char_len_list.to(device).float()
 
             output = model(chars, phone, pitch, beat, src_key_padding_mask=length,
                            char_key_padding_mask=char_len_list)
 
-            train_loss = criterion(output, spec, length)
+            train_loss = criterion(output, spec, length_mask)
             losses.update(train_loss.item(), phone.size(0))
+            if step % 10 == 0:
+                print("step {}: {}".format(step, info))
 
     info = {'loss': losses.avg}
     return info

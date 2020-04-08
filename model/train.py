@@ -3,6 +3,7 @@
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
 
+import os
 import sys
 import numpy as np
 import torch
@@ -78,6 +79,8 @@ def train(args):
                                 dec_num_block=args.dec_num_block)
     else:
         raise ValueError('Not Support Model Type %s' % args.model_type)
+    model = model.to(device)
+    print(model)
 
     # load weights for pre-trained model
     if args.initmodel != '':
@@ -124,9 +127,9 @@ def train(args):
         logger = None
 
     if args.loss == "l1":
-        loss = MaskedLoss(torch.nn.L1Loss)
+        loss = MaskedLoss(torch.nn.L1Loss())
     elif args.loss == "mse":
-        loss = MaskedLoss(torch.nn.MSELoss)
+        loss = MaskedLoss(torch.nn.MSELoss())
     else:
         raise ValueError("Not Support Loss Type")
 
@@ -143,13 +146,16 @@ def train(args):
                 train_info['loss'], end_t_train - start_t_train))
 
         start_t_dev = time.time()
-        dev_info = validate(dev_loader, model, device, loss)
+        dev_info = validate(dev_loader, model, device, loss, args)
         end_t_dev = time.time()
 
         print("Valid loss: {:.4f}, time: {:.2f}s".format(
             dev_info['loss'], end_t_dev - start_t_dev))
         print("")
         sys.stdout.flush()
+        
+        if not os.path.exists(args.model_save_dir):
+            os.makedirs(args.model_save_dir)
 
         save_checkpoint({
             'epoch': epoch,

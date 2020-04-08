@@ -87,11 +87,12 @@ class PositionalEncoding(nn.Module):
         dropout: the dropout value (default=0.1).
         max_len: the max. length of the incoming sequence (default=5000).
     """
-    def __init__(self, d_model, dropout=0.1, max_len=5000):
+    def __init__(self, d_model, dropout=0.1, max_len=5000, device='cuda'):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
 
         pe = torch.zeros(max_len, d_model)
+        pe = pe.to(device)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(
             torch.arange(0, d_model, 2).float()
