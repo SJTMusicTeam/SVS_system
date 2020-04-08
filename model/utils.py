@@ -5,6 +5,9 @@
 
 import torch
 import numpy as np
+import copy
+import librosa
+from scipy import signal
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -99,3 +102,52 @@ def record_info(train_info, dev_info, epoch, logger):
         "dev_loss": dev_info['loss']}
     logger.add_scalars("losses", loss_info, epoch)
     return 0
+
+
+def invert_spectrogram(spectrogram, win_length, hop_length):
+    '''Applies inverse fft.
+    Args:
+      spectrogram: [1+n_fft//2, t]
+    '''
+    return librosa.istft(spectrogram, hop_length, win_length=win_length, window="hann")
+
+
+def griffin_lim(spectrogram, iter_vocoder, n_fft, hop_length, win_length):
+    '''Applies Griffin-Lim's raw.'''
+    X_best = copy.deepcopy(spectrogram)
+    for i in range(iter_vocoder):
+        X_t = invert_spectrogram(X_best, win_length, hop_length)
+        est = librosa.stft(X_t, n_fft, hop_length, win_length=win_length)
+        phase = est / np.maximum(1e-8, np.abs(est))
+        X_best = spectrogram * phase
+    X_t = invert_spectrogram(X_best, win_length, hop_length)
+    y = np.real(X_t)
+    return y
+
+
+def spectrogram2wav(mag, max_db, ref_db, preemphasis, power):
+    '''# Generate wave file from linear magnitude spectrogram
+    Args:
+      mag: A numpy array of (T, 1+n_fft//2)
+    Returns:
+      wav: A 1-D numpy array.
+    '''
+    # transpose
+    mag = mag.T
+
+    # de-noramlize
+    mag = (np.clip(mag, 0, 1) * max_db) - max_db + ref_db
+
+    # to amplitude
+    mag = np.power(10.0, mag * 0.05)
+
+    # wav reconstruction
+    wav = griffin_lim(mag** power)
+
+    # de-preemphasis
+    wav = signal.lfilter([1], [1, -preemphasis], wav)
+
+    # trim
+    wav, _ = librosa.effects.trim(wav)
+
+    return wav.astype(np.float32)

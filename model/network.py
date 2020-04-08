@@ -4,15 +4,14 @@
 
 # debug only
 import sys
-#sys.path.append("/Users/jiatongshi/projects/svs_system/SVS_system")
+sys.path.append("/Users/jiatongshi/projects/svs_system/SVS_system")
 
 import torch
 import torch.nn as nn
 import numpy as np
 import math
-#import model.module as module
-import module
-import archive.My_dataloader as DL
+import model.module as module
+
 
 class Encoder(nn.Module):
     """
@@ -36,13 +35,11 @@ class Encoder(nn.Module):
         self.fc_2 = nn.Linear(hidden_size, embed_size)
     
 
-    def forward(self, input):
+    def forward(self, text_phone):
         """
-        input dim: [batch_size, text_phone_length]
+        text_phone dim: [batch_size, text_phone_length]
         output dim : [batch_size, text_phone_length, embedded_dim]
         """
-        text_phone = torch.LongTensor(DL.refine(input))
-        
         embedded_phone = self.emb_phone(text_phone)
         glu_in = self.fc_1(embedded_phone)
         
@@ -59,7 +56,8 @@ class Encoder(nn.Module):
         out = embedded_phone + glu_out
         
         out = out * math.sqrt(0.5)
-        return out,text_phone
+        return out, text_phone
+
 
 class Encoder_Postnet(nn.Module):
     """
