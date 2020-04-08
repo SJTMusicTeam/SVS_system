@@ -3,14 +3,10 @@
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
 
-import yamlargparse
-import os
 import sys
 import numpy as np
 import torch
 import time
-import subprocess
-from argparse import ArgumentParser
 from model.gpu_util import use_single_gpu
 from model.SVSDataset import SVSDataset, SVSCollator
 from model.network import GLU_Transformer
@@ -131,6 +127,8 @@ def train(args):
         loss = MaskedLoss(torch.nn.L1Loss)
     elif args.loss == "mse":
         loss = MaskedLoss(torch.nn.MSELoss)
+    else:
+        raise ValueError("Not Support Loss Type")
 
     # Training
     for epoch in range(1, 1 + args.max_epochs):
