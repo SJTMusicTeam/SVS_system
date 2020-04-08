@@ -152,7 +152,8 @@ class GLU_Transformer(nn.Module):
     def __init__(self, phone_size, embed_size, hidden_size, glu_num_layers, dropout, dec_num_block,
                  dec_nhead, output_dim):
         super(GLU_Transformer, self).__init__()
-        self.encoder = Encoder(phone_size, embed_size, hidden_size, glu_num_layers, dropout)
+        self.encoder = Encoder(phone_size, embed_size, hidden_size, dropout, glu_num_layers,
+                               num_layers=1, glu_kernel=3)
         self.enc_postnet = Encoder_Postnet(embed_size)
         # TODO: standard input arguments
         self.decoder = Decoder(dec_num_block, embed_size, output_dim, dec_nhead, dropout)
@@ -161,8 +162,10 @@ class GLU_Transformer(nn.Module):
     def forward(self, characters, phone, pitch, beat, pos_text=True, src_key_padding_mask=None,
                 char_key_padding_mask=None):
         # TODO add encoder and encoder postnet
-        memory = self.encoder(characters)
-        mel_output, att_weight = self.decoder(memory)
+        encoder_out, text_phone = self.encoder(characters)
+        post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch.float(), beat)
+        print(post_out.size())
+        mel_output, att_weight = self.decoder(post_out)
         mel_output = self.postnet(mel_output)
         return mel_output
 
@@ -235,7 +238,7 @@ def _test():
     
     #test encoder and encoer_postnet
     encoder = Encoder(phone_size, embed_size, hidden_size, dropout, num_glu_block, num_layers=glu_num_layers, glu_kernel=glu_kernel)
-    encoder_out,text_phone = encoder(phone.squeeze(2))
+    encoder_out, text_phone = encoder(phone.squeeze(2))
     print('encoder_out.size():',encoder_out.size())
     
     post = Encoder_Postnet(embed_size)
