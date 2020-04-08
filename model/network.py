@@ -4,61 +4,62 @@
 
 # debug only
 import sys
-sys.path.append("/Users/jiatongshi/projects/svs_system/SVS_system")
+#sys.path.append("/Users/jiatongshi/projects/svs_system/SVS_system")
 
 import torch
 import torch.nn as nn
 import numpy as np
 import math
-import model.module as module
-
+#import model.module as module
+import module
+import archive.My_dataloader as DL
 
 class Encoder(nn.Module):
-"""
-Encoder Network
-"""
-def __init__(self, phone_size, embed_size, hidden_size, dropout, GLU_num, num_layers=1, glu_kernel=3):
     """
-    :param para: dictionary that contains all parameters
+    Encoder Network
     """
-    super(Encoder, self).__init__()
-    
-    self.emb_phone = nn.Embedding(phone_size, embed_size)
-    #full connected
-    self.fc_1 = nn.Linear(embed_size, hidden_size)
-    
-    self.GLU_list = nn.ModuleList()
-    for i in range(GLU_num):
-        self.GLU_list.append(module.GLU(num_layers, hidden_size, glu_kernel, dropout, hidden_size))
-    #self.GLU = module.GLU(num_layers, hidden_size, glu_kernel, dropout, hidden_size)
-    
-    self.fc_2 = nn.Linear(hidden_size, embed_size)
+    def __init__(self, phone_size, embed_size, hidden_size, dropout, GLU_num, num_layers=1, glu_kernel=3):
+        """
+        :param para: dictionary that contains all parameters
+        """
+        super(Encoder, self).__init__()
+        
+        self.emb_phone = nn.Embedding(phone_size, embed_size)
+        #full connected
+        self.fc_1 = nn.Linear(embed_size, hidden_size)
+        
+        self.GLU_list = nn.ModuleList()
+        for i in range(GLU_num):
+            self.GLU_list.append(module.GLU(num_layers, hidden_size, glu_kernel, dropout, hidden_size))
+        #self.GLU = module.GLU(num_layers, hidden_size, glu_kernel, dropout, hidden_size)
+        
+        self.fc_2 = nn.Linear(hidden_size, embed_size)
     
 
-def forward(self, input):
-    """
-    input dim: [batch_size, text_phone_length]
-    output dim : [batch_size, text_phone_length, embedded_dim]
-    """
-    text_phone = torch.LongTensor(DL.refine(input))
-    
-    embedded_phone = self.emb_phone(text_phone)
-    glu_in = self.fc_1(embedded_phone)
-    
-    batch_size = glu_in.shape[0]
-    text_phone_length = glu_in.shape[1]
-    embedded_dim = glu_in.shape[2]
-    
-    for glu in self.GLU_list:
-        glu_out = glu(glu_in)
-        glu_in = glu_out.reshape(batch_size, text_phone_length, embedded_dim)
-    
-    glu_out = self.fc_2(glu_in)
-    
-    out = embedded_phone + glu_out
-    
-    out = out * math.sqrt(0.5)
-    return out,text_phone
+    def forward(self, input):
+        """
+        input dim: [batch_size, text_phone_length]
+        output dim : [batch_size, text_phone_length, embedded_dim]
+        """
+        text_phone = torch.LongTensor(DL.refine(input))
+        
+        embedded_phone = self.emb_phone(text_phone)
+        glu_in = self.fc_1(embedded_phone)
+        
+        batch_size = glu_in.shape[0]
+        text_phone_length = glu_in.shape[1]
+        embedded_dim = glu_in.shape[2]
+        
+        for glu in self.GLU_list:
+            glu_out = glu(glu_in)
+            glu_in = glu_out.reshape(batch_size, text_phone_length, embedded_dim)
+        
+        glu_out = self.fc_2(glu_in)
+        
+        out = embedded_phone + glu_out
+        
+        out = out * math.sqrt(0.5)
+        return out,text_phone
 
 class Encoder_Postnet(nn.Module):
     """
