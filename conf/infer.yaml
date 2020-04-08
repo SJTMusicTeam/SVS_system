@@ -1,0 +1,20 @@
+test_align: /data1/gs/SVS_system/preprocessing/ch_asr/exp/alignment/clean_set/
+test_pitch: /data1/gs/SVS_system/preprocessing/ch_asr/exp/pitch_beat_extraction/clean/
+test_wav: /data1/gs/annotation/clean/
+model_file: exp/debug/final.ckpt
+prediction_path: exp/debug/result
+
+
+sampling_rate: 44100
+frame_length: 0.06
+frame_shift: 0.03
+model_type: GLU_Transformer
+gradclip: 5
+hidden_size: 256
+dec_nhead: 4
+dec_num_block: 6
+num_frames: 500
+gradient_accumulation_steps: 1
+phone_size: 67
+seed: 777
+gpu: 0
