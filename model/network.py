@@ -28,7 +28,7 @@ class Encoder(nn.Module):
         self.fc_1 = nn.Linear(embed_size, hidden_size)
         
         self.GLU_list = nn.ModuleList()
-        for i in range(GLU_num):
+        for i in range(int(GLU_num)):
             self.GLU_list.append(module.GLU(num_layers, hidden_size, glu_kernel, dropout, hidden_size))
         #self.GLU = module.GLU(num_layers, hidden_size, glu_kernel, dropout, hidden_size)
         
