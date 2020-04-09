@@ -142,19 +142,16 @@ class SVSDataset(Dataset):
 
                 with open(path, 'r') as f:
                     phone = f.read().strip().split(" ")
-                    f.close()
                 beat_path = os.path.join(pitch_beat_root_path, str(int(filename_list[i][1:4])),
                                          filename_list[i][4:] + "_beats.txt")
                 with open(beat_path, 'r') as f:
                     beat_index = list(map(lambda x : int(x), f.read().strip().split(" ")))
                     beat = np.zeros(len(phone))
                     beat[beat_index] = 1
-                    f.close()
                 pitch_path = os.path.join(pitch_beat_root_path, str(int(filename_list[i][1:4])),
                                           filename_list[i][4:] + "_pitches.txt")
                 with open(pitch_path, 'r') as f:
                     pitch = f.read().strip().split(" ")
-                    f.close()
                 wav_path = os.path.join(wav_root_path, str(int(filename_list[i][1:4])), filename_list[i][4:] + ".wav")
                 spectrogram = _get_spectrograms(wav_path, self.sr, self.preemphasis,
                                                 self.frame_length, self.frame_shift, self.frame_length,
