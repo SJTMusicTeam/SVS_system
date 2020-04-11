@@ -19,7 +19,7 @@ def _get_spectrograms(fpath, require_sr, preemphasis, n_fft, hop_length, win_len
       mag: A 2d array of shape (T, 1+n_fft/2) and dtype of float32.
     '''
     # Loading sound file
-    y, sr = librosa.load(fpath)
+    y, sr = librosa.load(fpath, sr=None)
     if sr != require_sr:
         y = librosa.resample(y, sr, require_sr)
 
@@ -136,26 +136,21 @@ class SVSDataset(Dataset):
         for i in range(len(filename_list)):
             # TODO: reload data for each get_item to handle large data
             # TODO： pre-compute the feature
+            print(filename_list[i])
             if filename_list[i][-1] != 'm' and filename_list[i][-1] != 'e':
                 path = os.path.join(align_root_path, filename_list[i])
                 path_list.append(path)
-
-                with open(path, 'r') as f:
-                    phone = f.read().strip().split(" ")
-                    f.close()
+                phone = np.load(path)
                 beat_path = os.path.join(pitch_beat_root_path, str(int(filename_list[i][1:4])),
-                                         filename_list[i][4:] + "_beats.txt")
-                with open(beat_path, 'r') as f:
-                    beat_index = list(map(lambda x : int(x), f.read().strip().split(" ")))
-                    beat = np.zeros(len(phone))
-                    beat[beat_index] = 1
-                    f.close()
+                                         filename_list[i][4:-4] + "_beats.npy")
+                beat_numpy = np.load(beat_path)
+                beat_index = list(map(lambda x : int(x), beat_numpy))
+                beat = np.zeros(len(phone))
+                beat[beat_index] = 1
                 pitch_path = os.path.join(pitch_beat_root_path, str(int(filename_list[i][1:4])),
-                                          filename_list[i][4:] + "_pitches.txt")
-                with open(pitch_path, 'r') as f:
-                    pitch = f.read().strip().split(" ")
-                    f.close()
-                wav_path = os.path.join(wav_root_path, str(int(filename_list[i][1:4])), filename_list[i][4:] + ".wav")
+                                          filename_list[i][4:-4] + "_pitch.npy")
+                pitch = np.load(pitch_path)
+                wav_path = os.path.join(wav_root_path, str(int(filename_list[i][1:4])), filename_list[i][4:-4] + ".wav")
                 spectrogram = _get_spectrograms(wav_path, self.sr, self.preemphasis,
                                                 self.frame_length, self.frame_shift, self.frame_length,
                                                 self.max_db, self.ref_db)
@@ -164,6 +159,8 @@ class SVSDataset(Dataset):
                 
                 if np.abs(len(phone) - np.shape(spectrogram)[0]) > 3:
                     print("error file: %s" %filename_list[i])
+                    print("spectrum_size: {}, alignment_size: {}, pitch_size: {}, beat_size: {}".format(np.shape(spectrogram)[0],
+                          len(phone), len(pitch), len(beat)))
                     continue
                 # assert np.abs(len(phone) - np.shape(spectrogram)[0]) < 5
                 min_length = min(len(phone), np.shape(spectrogram)[0])
