@@ -33,12 +33,13 @@ for root, dirs, files in os.walk(args.datadir):
         if suffix == "wav":
             y, sr = librosa.load(os.path.join(root, f),sr = None)
             hop_length = int(sr * frame_shift)
-            n_fft = int(sr * frame_length)
+            win_length = int(sr * frame_length)
+            n_fft = win_length
             
             '''extract beats'''
-            tempo, beats = librosa.beat.beat_track(y=y, sr=sr, hop_length=hop_length)
+            tempo, beats = librosa.beat.beat_track(y=y, sr=sr, hop_length=hop_length, win_length=win_length)
             times = librosa.frames_to_time(beats, sr=sr)
-            frames = librosa.time_to_frames(times,sr = sr, hop_length=hop_length, n_fft = n_fft)
+            frames = librosa.time_to_frames(times,sr = sr, hop_length=hop_length, n_fft = n_fft, win_length=win_length)
             #file = open((os.path.join(args.outdir, name))+'_beats.txt', "w+")
             #for beat in beats:
             #    file.write(str(beat)+' ')
@@ -46,7 +47,7 @@ for root, dirs, files in os.walk(args.datadir):
             np.save((os.path.join(args.outdir, name))+'_beats',np.array(beats))
            
             '''extract pitches'''
-            pitches, magnitudes = librosa.piptrack(y=y,sr=sr,n_fft=n_fft,hop_length=hop_length)
+            pitches, magnitudes = librosa.piptrack(y=y,sr=sr,n_fft=n_fft,hop_length=hop_length, win_length=win_length)
             pitches = pitches.T
             #file = open((os.path.join(args.outdir, name))+'_pitches.txt', "w+")
             pitch = np.zeros((pitches.shape[0]))

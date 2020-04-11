@@ -151,6 +151,7 @@ class SVSDataset(Dataset):
                                           filename_list[i][4:-4] + "_pitch.npy")
                 pitch = np.load(pitch_path)
                 wav_path = os.path.join(wav_root_path, str(int(filename_list[i][1:4])), filename_list[i][4:-4] + ".wav")
+
                 spectrogram = _get_spectrograms(wav_path, self.sr, self.preemphasis,
                                                 self.frame_length, self.frame_shift, self.frame_length,
                                                 self.max_db, self.ref_db)
