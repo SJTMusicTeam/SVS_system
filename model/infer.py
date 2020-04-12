@@ -60,6 +60,7 @@ def infer(args):
     test_set = SVSDataset(align_root_path=args.test_align,
                            pitch_beat_root_path=args.test_pitch,
                            wav_root_path=args.test_wav,
+                           char_max_len=args.char_max_len,
                            sr=args.sampling_rate,
                            preemphasis=args.preemphasis,
                            frame_shift=args.frame_shift,

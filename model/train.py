@@ -31,6 +31,7 @@ def train(args):
     train_set = SVSDataset(align_root_path=args.train_align,
                            pitch_beat_root_path=args.train_pitch,
                            wav_root_path=args.train_wav,
+                           char_max_len=args.char_max_len,
                            sr=args.sampling_rate,
                            preemphasis=args.preemphasis,
                            frame_shift=args.frame_shift,
@@ -43,6 +44,7 @@ def train(args):
     dev_set = SVSDataset(align_root_path=args.val_align,
                            pitch_beat_root_path=args.val_pitch,
                            wav_root_path=args.val_wav,
+                           char_max_len=args.char_max_len,
                            sr=args.sampling_rate,
                            preemphasis=args.preemphasis,
                            frame_shift=args.frame_shift,
@@ -51,7 +53,7 @@ def train(args):
                            power=args.power,
                            max_db=args.max_db,
                            ref_db=args.ref_db)
-    collate_fn_svs = SVSCollator(args.num_frames)
+    collate_fn_svs = SVSCollator(args.num_frames, args.char_max_len)
     train_loader = torch.utils.data.DataLoader(dataset=train_set,
                                                batch_size=args.batchsize,
                                                shuffle=True,
@@ -64,7 +66,7 @@ def train(args):
                                                num_workers=args.num_workers,
                                                collate_fn=collate_fn_svs,
                                                pin_memory=True)
-    print(dev_set[0][3].shape)
+    # print(dev_set[0][3].shape)
     assert args.feat_dim == dev_set[0][3].shape[1]
 
     # prepare model
@@ -79,8 +81,8 @@ def train(args):
                                 dec_num_block=args.dec_num_block)
     else:
         raise ValueError('Not Support Model Type %s' % args.model_type)
-    model = model.to(device)
     print(model)
+    model = model.to(device)
 
     # load weights for pre-trained model
     if args.initmodel != '':

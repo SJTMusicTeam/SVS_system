@@ -47,19 +47,23 @@ def _get_spectrograms(fpath, require_sr, preemphasis, n_fft, hop_length, win_len
     return mag
 
 
-def _phone2char(phone_list):
+def _phone2char(phones, char_max_len):
     ini = -1
     chars = []
+    phones_index = 0
     for phone in phones:
         if phone != ini:
             chars.append(phone)
             ini = phone
-    return chars
+        phones_index += 1
+        if len(chars) == char_max_len:
+            break
+    return chars, phones_index
 
 
 
 class SVSCollator(object):
-    def __init__(self, max_len, char_max_len=50):
+    def __init__(self, max_len, char_max_len=80):
         self.max_len = max_len
         self.char_max_len = char_max_len
 
@@ -75,12 +79,13 @@ class SVSCollator(object):
         beat = np.zeros((batch_size, self.max_len))
         chars = np.zeros((batch_size, self.char_max_len))
         for i in range(batch_size):
-            length = len_list[i]
-            spec[i, :length, :] = batch[i][3]
-            pitch[i, :length] = batch[i][2]
-            beat[i, :length] = batch[i][1]
-            phone[i, :length] = batch[i][0]
-            chars[i, :len(batch[i][4])] = batch[i][4]
+            length = min(len_list[i], self.max_len)
+            char_leng = min(len(batch[i][4]), self.char_max_len)
+            spec[i, :length, :] = batch[i][3][:length]
+            pitch[i, :length] = batch[i][2][:length]
+            beat[i, :length] = batch[i][1][:length]
+            phone[i, :length] = batch[i][0][:length]
+            chars[i, :char_leng] = batch[i][4][:char_leng]
 
         length = np.array(len_list)
         char_len_list = np.array(char_len_list)
@@ -99,6 +104,7 @@ class SVSDataset(Dataset):
                  align_root_path,
                  pitch_beat_root_path,
                  wav_root_path,
+                 char_max_len = 80,
                  sr = 44100,
                  preemphasis = 0.97,
                  frame_shift = 0.03,
@@ -110,6 +116,7 @@ class SVSDataset(Dataset):
         self.align_root_path = align_root_path
         self.pitch_beat_root_path = pitch_beat_root_path
         self.wav_root_path = wav_root_path
+        self.char_max_len = char_max_len
         self.sr = sr
         self.preemphasis = preemphasis
         self.frame_shift = int(frame_shift * sr)
@@ -157,13 +164,13 @@ class SVSDataset(Dataset):
             print("error file: %s" %self.filename_list[i])
             print("spectrum_size: {}, alignment_size: {}, pitch_size: {}, beat_size: {}".format(np.shape(spectrogram)[0],
                   len(phone), len(pitch), len(beat)))
-            continue
-        # assert np.abs(len(phone) - np.shape(spectrogram)[0]) < 5
-        min_length = min(len(phone), np.shape(spectrogram)[0])
+        assert np.abs(len(phone) - np.shape(spectrogram)[0]) < 5
+        char, trimed_length = _phone2char(phone, self.char_max_len)
+        min_length = min(len(phone), np.shape(spectrogram)[0], trimed_length)
         phone = phone[:min_length]
         beat = beat[:min_length]
         pitch = pitch[:min_length]
         spectrogram = spectrogram[:min_length, :]
 
-        return phone, beat, pitch, spectrogram, _phone2char[phone]
+        return phone, beat, pitch, spectrogram, char
 
