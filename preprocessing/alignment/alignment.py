@@ -9,6 +9,7 @@ Created on Sun Feb  9 10:51:15 2020
 import math
 import os
 import argparse
+import numpy as np
 
 def DTW(template, sample,new_Map,name): 
     '''
@@ -247,30 +248,11 @@ if __name__ == "__main__":
 	'''        
         record,result = DTW(Template[name],Matrix[name],new_Map,name)
                
-        file = open(os.path.join(args.output_dir, name), "w+")
-        for re in record:
-            file.write(str(re)+' ')
-        
-        file.close()
+        #file = open(os.path.join(args.output_dir, name), "w+")
+        #for re in record:
+        #    file.write(str(re)+' ')
+        #print(record,type(record))
+        record = np.array(record)
+        np.save(os.path.join(args.output_dir, name), record)
+        #file.close()
      
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
