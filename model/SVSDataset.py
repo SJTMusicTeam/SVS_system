@@ -65,7 +65,8 @@ def _phone2char(phones, char_max_len):
 class SVSCollator(object):
     def __init__(self, max_len, char_max_len=80):
         self.max_len = max_len
-        self.char_max_len = char_max_len
+        # plus 1 for aligner to consider padding char
+        self.char_max_len = char_max_len + 1
 
     def __call__(self, batch):
         batch_size = len(batch)
@@ -105,6 +106,7 @@ class SVSDataset(Dataset):
                  pitch_beat_root_path,
                  wav_root_path,
                  char_max_len = 80,
+                 max_len = 500,
                  sr = 44100,
                  preemphasis = 0.97,
                  frame_shift = 0.03,
@@ -117,6 +119,7 @@ class SVSDataset(Dataset):
         self.pitch_beat_root_path = pitch_beat_root_path
         self.wav_root_path = wav_root_path
         self.char_max_len = char_max_len
+        self.max_len = max_len
         self.sr = sr
         self.preemphasis = preemphasis
         self.frame_shift = int(frame_shift * sr)
@@ -165,12 +168,13 @@ class SVSDataset(Dataset):
             print("spectrum_size: {}, alignment_size: {}, pitch_size: {}, beat_size: {}".format(np.shape(spectrogram)[0],
                   len(phone), len(pitch), len(beat)))
         assert np.abs(len(phone) - np.shape(spectrogram)[0]) < 5
-        char, trimed_length = _phone2char(phone, self.char_max_len)
+        char, trimed_length = _phone2char(phone[:self.max_len], self.char_max_len)
         min_length = min(len(phone), np.shape(spectrogram)[0], trimed_length)
         phone = phone[:min_length]
         beat = beat[:min_length]
         pitch = pitch[:min_length]
         spectrogram = spectrogram[:min_length, :]
+        print("char len: {}, phone len: {}, spectrom: {}".format(len(char), len(phone), np.shape(spectrogram)[0]))
 
         return phone, beat, pitch, spectrogram, char
 

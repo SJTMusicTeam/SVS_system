@@ -61,6 +61,7 @@ def infer(args):
                            pitch_beat_root_path=args.test_pitch,
                            wav_root_path=args.test_wav,
                            char_max_len=args.char_max_len,
+                           max_len=args.num_frames,
                            sr=args.sampling_rate,
                            preemphasis=args.preemphasis,
                            frame_shift=args.frame_shift,
