@@ -90,8 +90,8 @@ class Encoder_Postnet(nn.Module):
                     line = torch.cat((line,temp.unsqueeze(0)),dim = 0)
                 else:
                     encoder_ind += 1
-                    if encoder_ind >= text_phone[i].size():
-                        continue
+                    if encoder_ind >= text_phone[i].size()[0]:
+                        break
                     before_text_phone = text_phone[i][encoder_ind]
                     temp = encoder_out[i][encoder_ind]
                     line = torch.cat((line,temp.unsqueeze(0)),dim = 0)

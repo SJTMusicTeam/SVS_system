@@ -1,4 +1,4 @@
-MAIN_ROOT=/home/jiatong/tools/espnet
+MAIN_ROOT=/export/c04/jiatong/tools/espnet
 KALDI_ROOT=$MAIN_ROOT/tools/kaldi
 
 [ -f $KALDI_ROOT/tools/env.sh ] && . $KALDI_ROOT/tools/env.sh
@@ -24,3 +24,16 @@ export OMP_NUM_THREADS=1
 
 # NOTE(kan-bayashi): Use UTF-8 in Python to avoid UnicodeDecodeError when LC_ALL=C
 export PYTHONIOENCODING=UTF-8
+
+
+# You need to change or unset NCCL_SOCKET_IFNAME according to your network environment
+# https://docs.nvidia.com/deeplearning/sdk/nccl-developer-guide/docs/env.html#nccl-socket-ifname
+export NCCL_SOCKET_IFNAME=^lo,docker,virbr,vmnet,vboxnet
+
+
+CUDAROOT=/opt/NVIDIA/cuda-9.0
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CUDAROOT/lib64:/usr/local/cuda/lib64
+export PATH=$PATH:$CUDAROOT/bin:/home/jiatong/tools/nkf/nkf-2.1.5
+export CFLAGS="-I$CUDAROOT/include $CFLAGS"
+export CUDA_HOME=$CUDAROOT
+export CUDA_PATH=$CUDAROOT
