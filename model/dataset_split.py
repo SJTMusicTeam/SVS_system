@@ -5,7 +5,7 @@ import os
 from sklearn.model_selection import train_test_split
 import numpy as np
 import shutil
-
+import argparse
 
 def other_divide(input_path, output_path):
     train_path = output_path+'/train'
@@ -118,8 +118,14 @@ def dataset_split(wav_path, split_output):
     clean_divide(os.path.join(wav_path,'clean'), os.path.join(split_output,'clean'))
     other_divide(os.path.join(wav_path,'other'), os.path.join(split_output,'other'))
     mixture_divide(os.path.join(split_output,'clean'),os.path.join(split_output,'other'),os.path.join(split_output,'mixture'))
-    
-#dataset_split('wav', 'exp')
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("wav_path", type=str, help="input wav path")
+    parser.add_argument("output_path", type=str, help="output directory path")
+    args = parser.parse_args()
+
+    dataset_split(args.wav_path, args.output_path)
 
 
 

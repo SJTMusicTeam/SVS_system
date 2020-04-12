@@ -11,10 +11,12 @@ frame_shift: 0.03
 model_type: GLU_Transformer
 gradclip: 5
 hidden_size: 256
+embedding_size: 256
 dec_nhead: 4
 dec_num_block: 6
 num_frames: 500
+char_max_len: 80
 gradient_accumulation_steps: 1
-phone_size: 67
+phone_size: 68
 seed: 777
 gpu: 0

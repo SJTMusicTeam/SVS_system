@@ -6,6 +6,7 @@
 import torch
 import numpy as np
 import copy
+import time
 import librosa
 from scipy import signal
 
@@ -23,7 +24,7 @@ def create_src_key_padding_mask(src_len, max_len):
 def train_one_epoch(train_loader, model, device, optimizer, criterion, args):
     losses = AverageMeter()
     model.train()
-
+    start = time.time()
     for step, (phone, beat, pitch, spec, length, chars, char_len_list) in enumerate(train_loader, 1):
         phone = phone.to(device)
         beat = beat.to(device)
@@ -48,6 +49,9 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, args):
             torch.nn.utils.clip_grad_norm_(model.parameters(), args.gradclip)
         optimizer.step_and_update_lr()
         losses.update(train_loss.item(), phone.size(0))
+        if step % 100 == 0:
+            end = time.time()
+            print("step {}: train_loss {} -- sum_time: {}s".format(step, losses.avg, end - start))
 
     info = {'loss': losses.avg}
     return info
@@ -77,7 +81,7 @@ def validate(dev_loader, model, device, criterion, args):
             train_loss = criterion(output, spec, length_mask)
             losses.update(train_loss.item(), phone.size(0))
             if step % 10 == 0:
-                print("step {}: {}".format(step, info))
+                print("step {}: {}".format(step, losses.avg))
 
     info = {'loss': losses.avg}
     return info

@@ -19,8 +19,10 @@ parser.add_argument('--prediction_path',
                     help='prediction result output (e.g. wav, png).')
 parser.add_argument('--model-type', default='GLU_Transformer',
                     help='Type of model (New_Transformer or GLU_Transformer or LSTM)')
-parser.add_argument('--num-frames', default=1000, type=int,
+parser.add_argument('--num-frames', default=500, type=int,
                     help='number of frames in one utterance')
+parser.add_argument('--char_max_len', default=100, type=int,
+                    help='max length for character')
 parser.add_argument('--num_workers', default=4, type=int,
                     help='number of cpu workers')
 parser.add_argument('--frame-length', default=0.06, type=float)
