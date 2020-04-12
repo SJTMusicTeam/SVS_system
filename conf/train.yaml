@@ -18,8 +18,8 @@ hidden_size: 256
 embedding_size: 256
 dec_nhead: 4
 dec_num_block: 6
-num_frames: 300
-char_max_len: 40
+num_frames: 500
+char_max_len: 80
 optimizer: noam
 noam_scale: 1.0
 gradient_accumulation_steps: 1
