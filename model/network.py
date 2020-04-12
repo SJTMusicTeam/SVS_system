@@ -78,16 +78,20 @@ class Encoder_Postnet(nn.Module):
         text_phone = [batch_size, text_phone_length]
         align_phone_length( = frame_num) > text_phone_length
         '''
+        # batch
         for i in range(align_phone.shape[0]):
             before_text_phone = text_phone[i][0]
             encoder_ind = 0
             line = encoder_out[i][0].unsqueeze(0)
+            # frame
             for j in range(1,align_phone.shape[1]):
                 if align_phone[i][j] == before_text_phone:
                     temp = encoder_out[i][encoder_ind]
                     line = torch.cat((line,temp.unsqueeze(0)),dim = 0)
                 else:
                     encoder_ind += 1
+                    if encoder_ind >= text_phone[i].size():
+                        continue
                     before_text_phone = text_phone[i][encoder_ind]
                     temp = encoder_out[i][encoder_ind]
                     line = torch.cat((line,temp.unsqueeze(0)),dim = 0)
