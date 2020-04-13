@@ -1,6 +1,7 @@
-test_align: /data1/gs/SVS_system/preprocessing/ch_asr/exp/alignment/clean_set/
-test_pitch: /data1/gs/SVS_system/preprocessing/ch_asr/exp/pitch_beat_extraction/clean/
-test_wav: /data1/gs/annotation/clean/
+test_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/clean_set/
+test_pitch: /export/c04/jiatong/project/svs/SVS_system/data/pitch_beat_extraction/clean/
+test_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/clean
+
 model_file: exp/debug/model/epoch_10.pth.tar
 prediction_path: exp/debug/result
 

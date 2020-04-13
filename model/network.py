@@ -79,6 +79,7 @@ class Encoder_Postnet(nn.Module):
         align_phone_length( = frame_num) > text_phone_length
         '''
         # batch
+        align_phone = align_phone.long()
         for i in range(align_phone.shape[0]):
             before_text_phone = text_phone[i][0]
             encoder_ind = 0
@@ -165,7 +166,7 @@ class GLU_Transformer(nn.Module):
     def forward(self, characters, phone, pitch, beat, pos_text=True, src_key_padding_mask=None,
                 char_key_padding_mask=None):
         encoder_out, text_phone = self.encoder(characters.squeeze(2))
-        post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch.float(), beat)
+        post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat)
         mel_output, att_weight = self.decoder(post_out)
         # mel_output = self.postnet(mel_output)
         return mel_output
