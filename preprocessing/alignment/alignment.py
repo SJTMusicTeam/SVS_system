@@ -253,6 +253,11 @@ if __name__ == "__main__":
         #    file.write(str(re)+' ')
         #print(record,type(record))
         record = np.array(record)
-        np.save(os.path.join(args.output_dir, name), record)
+        dir = str(int(name[:4]))
+        ind = name[4:]
+        dir_path = os.path.join(args.output_dir, dir)
+        if not os.path.exists(dir_path):
+            os.mkdir(dir_path)
+        np.save(os.path.join(dir_path, ind), record)
         #file.close()
      
