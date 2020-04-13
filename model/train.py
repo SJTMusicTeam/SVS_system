@@ -80,7 +80,8 @@ def train(args):
                                 dropout=args.dropout,
                                 output_dim=args.feat_dim,
                                 dec_nhead=args.dec_nhead,
-                                dec_num_block=args.dec_num_block)
+                                dec_num_block=args.dec_num_block,
+                                device=device)
     else:
         raise ValueError('Not Support Model Type %s' % args.model_type)
     print(model)

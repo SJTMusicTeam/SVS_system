@@ -6,6 +6,7 @@
 
 import torch
 import os
+import numpy as np
 import matplotlib.pyplot as plt
 from librosa.output import write_wav
 from librosa.display import specshow
@@ -92,6 +93,8 @@ def infer(args):
         os.makedirs(args.prediction_path)
 
     for step, (phone, beat, pitch, spec, length, chars, char_len_list) in enumerate(test_loader, 1):
+        if step >= args.decode_sample:
+            break
         phone = phone.to(device)
         beat = beat.to(device)
         pitch = pitch.to(device).float()
@@ -109,20 +112,18 @@ def infer(args):
                        char_key_padding_mask=char_len_list)
 
         test_loss = loss(output, spec, length_mask)
-
         if step % 1 == 0:
             # save wav and plot spectrogram
             output = output.cpu().detach().numpy()[0]
             out_spec = spec.cpu().detach().numpy()[0]
             length = length.cpu().detach().numpy()[0]
             att = att.cpu().detach().numpy()[0]
-            import numpy as np
             # np.save("output.npy", output)
             # np.save("out_spec.npy", out_spec)
-            np.save("att.npy", att)
+            # np.save("att.npy", att)
             output = output[:length]
             out_spec = out_spec[:length]
-            # att = att[:length, :length]
+            att = att[:, :length, :length]
             wav = spectrogram2wav(output, args.max_db, args.ref_db, args.preemphasis, args.power, args.sampling_rate, args.frame_shift, args.frame_length)
             wav_true = spectrogram2wav(out_spec, args.max_db, args.ref_db, args.preemphasis, args.power, args.sampling_rate, args.frame_shift, args.frame_length)
             write_wav(os.path.join(args.prediction_path, '{}.wav'.format(step)), wav, args.sampling_rate)
@@ -143,6 +144,5 @@ def infer(args):
             plt.subplot(1, 4, 4)
             specshow(att[3])
             plt.savefig(os.path.join(args.prediction_path, '{}_att.png'.format(step)))
-            break
         losses.update(test_loss.item(), phone.size(0))
     print("loss avg for test is {}".format(losses.avg))
