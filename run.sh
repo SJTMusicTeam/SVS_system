@@ -2,6 +2,8 @@
 
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
+. ./path.sh
 
-# TODO: split train-dev-test
-python ./bin/train.py -c conf/train.yaml
+# python bin/train.py -c conf/train.yaml
+
+python bin/infer.py -c conf/infer.yaml
