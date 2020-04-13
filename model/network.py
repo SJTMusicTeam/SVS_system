@@ -161,15 +161,15 @@ class GLU_Transformer(nn.Module):
                                num_layers=1, glu_kernel=3)
         self.enc_postnet = Encoder_Postnet(embed_size)
         self.decoder = Decoder(dec_num_block, embed_size, output_dim, dec_nhead, dropout)
-        # self.postnet = module.PostNet(output_dim, output_dim, output_dim)
+        self.postnet = module.PostNet(output_dim, output_dim, output_dim)
 
     def forward(self, characters, phone, pitch, beat, pos_text=True, src_key_padding_mask=None,
                 char_key_padding_mask=None):
         encoder_out, text_phone = self.encoder(characters.squeeze(2))
         post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat)
-        mel_output, att_weight = self.decoder(post_out)
-        # mel_output = self.postnet(mel_output)
-        return mel_output
+        mel_output, att_weight = self.decoder(post_out, src_key_padding_mask=src_key_padding_mask)
+        mel_output = self.postnet(mel_output)
+        return mel_output, att_weight
 
 
 def create_src_key_padding_mask(src_len, max_len):

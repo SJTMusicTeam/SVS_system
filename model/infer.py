@@ -17,7 +17,7 @@ from model.utils import AverageMeter, spectrogram2wav, create_src_key_padding_ma
 
 def infer(args):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
+    
     # prepare model
     if args.model_type == "GLU_Transformer":
         model = GLU_Transformer(phone_size=args.phone_size,
@@ -52,7 +52,7 @@ def infer(args):
         print("Not loading {} because of different sizes".format(", ".join(para_list)))
     model_dict.update(state_dict_new)
     model.load_state_dict(model_dict)
-    print("Loaded checkpoint {}",format(args.model_file))
+    print("Loaded checkpoint {}".format(args.model_file))
     model = model.to(device)
     model.eval()
     
@@ -80,9 +80,9 @@ def infer(args):
                                                pin_memory=True)
 
     if args.loss == "l1":
-        loss = MaskedLoss(torch.nn.L1Loss())
+        loss = MaskedLoss("l1")
     elif args.loss == "mse":
-        loss = MaskedLoss(torch.nn.MSELoss())
+        loss = MaskedLoss("mse")
     else:
         raise ValueError("Not Support Loss Type")
 
@@ -96,8 +96,8 @@ def infer(args):
         beat = beat.to(device)
         pitch = pitch.to(device).float()
         spec = spec.to(device).float()
+
         chars = chars.to(device)
-        print(phone.size())
         length_mask = create_src_key_padding_mask(length, args.num_frames)
         length_mask = length_mask.unsqueeze(2)
         length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
@@ -105,7 +105,7 @@ def infer(args):
         length = length.to(device)
         char_len_list = char_len_list.to(device)
 
-        output = model(chars, phone, pitch, beat, src_key_padding_mask=length,
+        output, att = model(chars, phone, pitch, beat, src_key_padding_mask=length,
                        char_key_padding_mask=char_len_list)
 
         test_loss = loss(output, spec, length_mask)
@@ -113,17 +113,36 @@ def infer(args):
         if step % 1 == 0:
             # save wav and plot spectrogram
             output = output.cpu().detach().numpy()[0]
-            print(output.shape)
+            out_spec = spec.cpu().detach().numpy()[0]
+            length = length.cpu().detach().numpy()[0]
+            att = att.cpu().detach().numpy()[0]
+            import numpy as np
+            # np.save("output.npy", output)
+            # np.save("out_spec.npy", out_spec)
+            np.save("att.npy", att)
+            output = output[:length]
+            out_spec = out_spec[:length]
+            # att = att[:length, :length]
             wav = spectrogram2wav(output, args.max_db, args.ref_db, args.preemphasis, args.power, args.sampling_rate, args.frame_shift, args.frame_length)
-            
+            wav_true = spectrogram2wav(out_spec, args.max_db, args.ref_db, args.preemphasis, args.power, args.sampling_rate, args.frame_shift, args.frame_length)
             write_wav(os.path.join(args.prediction_path, '{}.wav'.format(step)), wav, args.sampling_rate)
+            write_wav(os.path.join(args.prediction_path, '{}_true.wav'.format(step)), wav_true, args.sampling_rate)
             plt.subplot(1, 2, 1)
-            specshow(output)
+            specshow(output.T)
             plt.title("prediction")
             plt.subplot(1, 2, 2)
-            specshow(spec.cpu().detach().numpy()[0])
+            specshow(out_spec.T)
             plt.title("ground_truth")
             plt.savefig(os.path.join(args.prediction_path, '{}.png'.format(step)))
+            plt.subplot(1, 4, 1)
+            specshow(att[0])
+            plt.subplot(1, 4, 2)
+            specshow(att[1])
+            plt.subplot(1, 4, 3)
+            specshow(att[2])
+            plt.subplot(1, 4, 4)
+            specshow(att[3])
+            plt.savefig(os.path.join(args.prediction_path, '{}_att.png'.format(step)))
+            break
         losses.update(test_loss.item(), phone.size(0))
-        break
     print("loss avg for test is {}".format(losses.avg))
