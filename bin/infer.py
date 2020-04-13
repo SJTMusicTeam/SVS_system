@@ -28,6 +28,8 @@ parser.add_argument('--char_max_len', default=100, type=int,
                     help='max length for character')
 parser.add_argument('--num_workers', default=4, type=int,
                     help='number of cpu workers')
+parser.add_argument('--decode_sample', default=-1, type=int,
+                    help='samples to decode')
 parser.add_argument('--frame-length', default=0.06, type=float)
 parser.add_argument('--frame-shift', default=0.03, type=float)
 parser.add_argument('--sampling-rate', default=44100, type=int)

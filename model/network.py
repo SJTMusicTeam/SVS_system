@@ -134,11 +134,11 @@ class Decoder(nn.Module):
     """
     # TODO： frame smoothing (triple the time resolution)
     def __init__(self, num_block, hidden_size, output_dim, nhead=4, dropout=0.1, activation="relu",
-        glu_kernel=3):
+        glu_kernel=3, device="cuda"):
         super(Decoder, self).__init__()
         self.input_norm = module.LayerNorm(hidden_size)
         decoder_layer = module.TransformerGLULayer(hidden_size, nhead, dropout, activation,
-            glu_kernel)
+            glu_kernel, device=device)
         self.decoder = module.TransformerEncoder(decoder_layer, num_block)
         self.output_fc = nn.Linear(hidden_size, output_dim)
 
@@ -155,12 +155,12 @@ class GLU_Transformer(nn.Module):
     Transformer Network
     """
     def __init__(self, phone_size, embed_size, hidden_size, glu_num_layers, dropout, dec_num_block,
-                 dec_nhead, output_dim):
+                 dec_nhead, output_dim, device="cuda"):
         super(GLU_Transformer, self).__init__()
         self.encoder = Encoder(phone_size, embed_size, hidden_size, dropout, glu_num_layers,
                                num_layers=1, glu_kernel=3)
         self.enc_postnet = Encoder_Postnet(embed_size)
-        self.decoder = Decoder(dec_num_block, embed_size, output_dim, dec_nhead, dropout)
+        self.decoder = Decoder(dec_num_block, embed_size, output_dim, dec_nhead, dropout, device=device)
         self.postnet = module.PostNet(output_dim, output_dim, output_dim)
 
     def forward(self, characters, phone, pitch, beat, pos_text=True, src_key_padding_mask=None,
@@ -170,14 +170,6 @@ class GLU_Transformer(nn.Module):
         mel_output, att_weight = self.decoder(post_out, src_key_padding_mask=src_key_padding_mask)
         mel_output = self.postnet(mel_output)
         return mel_output, att_weight
-
-
-def create_src_key_padding_mask(src_len, max_len):
-    bs = len(src_len)
-    mask = np.zeros((bs, max_len))
-    for i in range(bs):
-        mask[i, src_len[i]:] = 1
-    return torch.from_numpy(mask).float()
 
 
 def _test():

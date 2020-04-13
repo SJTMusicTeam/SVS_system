@@ -2,10 +2,12 @@ test_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/clean_set/
 test_pitch: /export/c04/jiatong/project/svs/SVS_system/data/pitch_beat_extraction/clean/
 test_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/clean
 
-model_file: exp/debug/model/epoch_10.pth.tar
-prediction_path: exp/debug/result
+model_file: exp/debug1/model/epoch_2.pth.tar
+prediction_path: exp/debug1/result_cbhg
 
 
+decode_sample: 10
+glu_num_layers: 3
 sampling_rate: 44100
 frame_length: 0.06
 frame_shift: 0.03

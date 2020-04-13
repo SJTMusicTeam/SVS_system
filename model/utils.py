@@ -17,7 +17,7 @@ def create_src_key_padding_mask(src_len, max_len):
     bs = len(src_len)
     mask = np.zeros((bs, max_len))
     for i in range(bs):
-        mask[i, src_len[i]:] = 1
+        mask[i, :src_len[i]] = 1
     return torch.from_numpy(mask).float()
 
 
@@ -38,7 +38,7 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, args):
         length = length.to(device)
         char_len_list = char_len_list.to(device)
 
-        output = model(chars, phone, pitch, beat, src_key_padding_mask=length,
+        output, att = model(chars, phone, pitch, beat, src_key_padding_mask=length,
                        char_key_padding_mask=char_len_list)
 
         train_loss = criterion(output, spec, length_mask)
@@ -75,7 +75,7 @@ def validate(dev_loader, model, device, criterion, args):
             length_mask = length_mask.to(device)
             char_len_list = char_len_list.to(device)
 
-            output = model(chars, phone, pitch, beat, src_key_padding_mask=length,
+            output, att = model(chars, phone, pitch, beat, src_key_padding_mask=length,
                            char_key_padding_mask=char_len_list)
 
             train_loss = criterion(output, spec, length_mask)

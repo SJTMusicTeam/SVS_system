@@ -4,7 +4,7 @@ train_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/other
 val_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/clean_set/
 val_pitch: /export/c04/jiatong/project/svs/SVS_system/data/pitch_beat_extraction/clean/
 val_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/clean
-model_save_dir: exp/debug/model
+model_save_dir: exp/debug1/model
 
 
 sampling_rate: 44100
