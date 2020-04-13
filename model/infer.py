@@ -12,7 +12,7 @@ from librosa.display import specshow
 from model.SVSDataset import SVSDataset, SVSCollator
 from model.network import GLU_Transformer
 from model.loss import MaskedLoss
-from model.utils import AverageMeter, spectrogram2wav
+from model.utils import AverageMeter, spectrogram2wav, create_src_key_padding_mask
 
 
 def infer(args):
@@ -31,7 +31,6 @@ def infer(args):
     else:
         raise ValueError('Not Support Model Type %s' % args.model_type)
 
-    model = model.to(device)
 
     # Load model weights
     print("Loading pretrained weights from {}".format(args.model_file))
@@ -54,7 +53,9 @@ def infer(args):
     model_dict.update(state_dict_new)
     model.load_state_dict(model_dict)
     print("Loaded checkpoint {}",format(args.model_file))
+    model = model.to(device)
     model.eval()
+    
 
     # Decode
     test_set = SVSDataset(align_root_path=args.test_align,
@@ -70,7 +71,7 @@ def infer(args):
                            power=args.power,
                            max_db=args.max_db,
                            ref_db=args.ref_db)
-    collate_fn_svs = SVSCollator(args.num_frames)
+    collate_fn_svs = SVSCollator(args.num_frames, args.char_max_len)
     test_loader = torch.utils.data.DataLoader(dataset=test_set,
                                                batch_size=1,
                                                shuffle=False,
@@ -79,40 +80,50 @@ def infer(args):
                                                pin_memory=True)
 
     if args.loss == "l1":
-        loss = MaskedLoss(torch.nn.L1Loss)
+        loss = MaskedLoss(torch.nn.L1Loss())
     elif args.loss == "mse":
-        loss = MaskedLoss(torch.nn.MSELoss)
+        loss = MaskedLoss(torch.nn.MSELoss())
     else:
         raise ValueError("Not Support Loss Type")
 
     losses = AverageMeter()
 
+    if not os.path.exists(args.prediction_path):
+        os.makedirs(args.prediction_path)
+
     for step, (phone, beat, pitch, spec, length, chars, char_len_list) in enumerate(test_loader, 1):
-        phone = phone.to(device).float()
-        beat = beat.to(device).float()
+        phone = phone.to(device)
+        beat = beat.to(device)
         pitch = pitch.to(device).float()
         spec = spec.to(device).float()
-        chars = chars.to(device).float()
-        length = length.to(device).float()
-        char_len_list = char_len_list.to(device).float()
+        chars = chars.to(device)
+        print(phone.size())
+        length_mask = create_src_key_padding_mask(length, args.num_frames)
+        length_mask = length_mask.unsqueeze(2)
+        length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
+        length_mask = length_mask.to(device)
+        length = length.to(device)
+        char_len_list = char_len_list.to(device)
 
         output = model(chars, phone, pitch, beat, src_key_padding_mask=length,
                        char_key_padding_mask=char_len_list)
 
-        test_loss = loss(output, spec, length)
+        test_loss = loss(output, spec, length_mask)
 
-        if step % 10 == 0:
+        if step % 1 == 0:
             # save wav and plot spectrogram
-            output = output.cpu().numpy()[0]
-            wav = spectrogram2wav(output, args.max_db, args.ref_db, args.preemphasis, args.power)
+            output = output.cpu().detach().numpy()[0]
+            print(output.shape)
+            wav = spectrogram2wav(output, args.max_db, args.ref_db, args.preemphasis, args.power, args.sampling_rate, args.frame_shift, args.frame_length)
+            
             write_wav(os.path.join(args.prediction_path, '{}.wav'.format(step)), wav, args.sampling_rate)
             plt.subplot(1, 2, 1)
-            specshow(output, y_axis="frequency")
+            specshow(output)
             plt.title("prediction")
             plt.subplot(1, 2, 2)
-            specshow(spec.cpu().numpy(), y_axis="frequency")
+            specshow(spec.cpu().detach().numpy()[0])
             plt.title("ground_truth")
             plt.savefig(os.path.join(args.prediction_path, '{}.png'.format(step)))
         losses.update(test_loss.item(), phone.size(0))
-
+        break
     print("loss avg for test is {}".format(losses.avg))

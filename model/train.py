@@ -153,8 +153,8 @@ def train(args):
         dev_info = validate(dev_loader, model, device, loss, args)
         end_t_dev = time.time()
 
-        print("Valid loss: {:.4f}, time: {:.2f}s".format(
-            dev_info['loss'], end_t_dev - start_t_dev))
+        print("Epoch: {:04d}, Valid loss: {:.4f}, time: {:.2f}s".format(
+            epoch, dev_info['loss'], end_t_dev - start_t_dev))
         print("")
         sys.stdout.flush()
         

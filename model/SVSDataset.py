@@ -95,7 +95,7 @@ class SVSCollator(object):
         pitch = torch.from_numpy(pitch).unsqueeze(dim=-1).long()
         beat = torch.from_numpy(beat).unsqueeze(dim=-1).long()
         phone = torch.from_numpy(phone).unsqueeze(dim=-1).long()
-        chars = torch.from_numpy(chars).unsqueeze(dim=-1).long()
+        chars = torch.from_numpy(chars).unsqueeze(dim=-1).to(torch.int64)
         char_len_list = torch.from_numpy(char_len_list)
         return phone, beat, pitch, spec, length, chars, char_len_list
 
@@ -174,7 +174,7 @@ class SVSDataset(Dataset):
         beat = beat[:min_length]
         pitch = pitch[:min_length]
         spectrogram = spectrogram[:min_length, :]
-        print("char len: {}, phone len: {}, spectrom: {}".format(len(char), len(phone), np.shape(spectrogram)[0]))
+        # print("char len: {}, phone len: {}, spectrom: {}".format(len(char), len(phone), np.shape(spectrogram)[0]))
 
         return phone, beat, pitch, spectrogram, char
 
