@@ -131,9 +131,9 @@ def train(args):
         logger = None
 
     if args.loss == "l1":
-        loss = MaskedLoss(torch.nn.L1Loss())
+        loss = MaskedLoss("l1")
     elif args.loss == "mse":
-        loss = MaskedLoss(torch.nn.MSELoss())
+        loss = MaskedLoss("mse")
     else:
         raise ValueError("Not Support Loss Type")
 
