@@ -4,6 +4,7 @@
 import os
 import librosa
 import numpy as np
+import argparse
 
 
 def _get_spectrograms(fpath, require_sr, preemphasis, n_fft, hop_length, win_length, max_db, ref_db):
@@ -47,25 +48,19 @@ def _get_spectrograms(fpath, require_sr, preemphasis, n_fft, hop_length, win_len
     return mag
 
 
-def save_spectrograms(wav_path, save_path, sr, preemphasis, frame_shift, frame_length, max_db, ref_db):
-    os.mkdir(save_path)
-    for root, dirs, files in os.walk(wav_root_path):
-        for d in dirs:
-            os.mkdir(os.path.join(save_path,d))
+def save_spectrograms(wav_path, sr, preemphasis, frame_shift, frame_length, max_db, ref_db):
+    for root, dirs, files in os.walk(wav_path):
         for f in files:
             if f[-4:] == '.wav':
-                wav_path = os.path.join(root,f)
-                #print(wav_path)
-                spectrogram = _get_spectrograms(wav_path, sr, preemphasis,
+                spectrogram = _get_spectrograms(os.path.join(root,f), sr, preemphasis,
                                             int(frame_length * sr), int(frame_shift * sr), int(frame_length * sr),
                                             max_db, ref_db)
-                save_file_path = os.path.join(save_path,os.path.split(root)[1])
-                save_file_path = os.path.join(save_file_path, f[:-4]+'.npy')
-                print(save_file_path)
+                save_file_path = os.path.join(root, f[:-4])
+                #print(save_file_path)
                 np.save(save_file_path, spectrogram)
 
+
 '''
-wav_root_path = 'wav_clean'
 sr = 44100
 preemphasis = 0.97
 frame_shift = 0.03
@@ -75,10 +70,14 @@ power = 1.2
 max_db = 100
 ref_db = 20
 '''
-
 if __name__ == "__main__":
-    wav_path = 'wav_clean'
-    save_path = os.path.join('spectrograms',wav_path)
-    os.mkdir('spectrograms')
-    save_spectrograms(wav_path = 'wav_clean', save_path = save_path, sr = 44100, preemphasis = 0.97, frame_shift = 0.03, frame_length = 0.06, max_db = 100,ref_db = 20)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("wav_path", type=str, help="input wav path")
+    args = parser.parse_args()
+
+    #wav_path = 'exp/other'
+    save_spectrograms(wav_path = args.wav_path, sr = 44100, preemphasis = 0.97, frame_shift = 0.03, frame_length = 0.06, max_db = 100,ref_db = 20)
+
+
+
 
