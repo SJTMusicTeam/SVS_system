@@ -4,6 +4,9 @@
 
 import yamlargparse
 
+import sys
+sys.path.append("/export/c04/jiatong/project/svs/SVS_system")
+
 parser = yamlargparse.ArgumentParser(description='SVS training')
 parser.add_argument('-c', '--config', help='config file path',
                     action=yamlargparse.ActionConfigFile)
