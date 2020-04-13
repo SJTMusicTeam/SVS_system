@@ -66,7 +66,6 @@ def dataset_split(split_output, wav_path):
     divide(os.path.join(wav_path,'other'), os.path.join(split_output,'other_div'))
     mixture_divide(os.path.join(split_output,'clean_div'),os.path.join(split_output,'other_div'),os.path.join(split_output,'mixture_div'))
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("wav_path", type=str, help="input wav path")

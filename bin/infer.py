@@ -10,40 +10,22 @@ sys.path.append("/export/c04/jiatong/project/svs/SVS_system")
 parser = yamlargparse.ArgumentParser(description='SVS training')
 parser.add_argument('-c', '--config', help='config file path',
                     action=yamlargparse.ActionConfigFile)
-parser.add_argument('--train_align',
-                    help='alignment data dir used for training.')
-parser.add_argument('--train_pitch',
-                    help='pitch data dir used for training.')
-parser.add_argument('--train_wav',
-                    help="wave data dir used for training")
-parser.add_argument('--val_align',
+parser.add_argument('--test_align',
                     help='alignment data dir used for validation.')
-parser.add_argument('--val_pitch',
+parser.add_argument('--test_pitch',
                     help='pitch data dir used for validation.')
-parser.add_argument('--val_wav',
+parser.add_argument('--test_wav',
                     help="wave data dir used for validation")
-parser.add_argument('--model-save-dir',
-                    help='output directory which model file will be saved in.')
+parser.add_argument('--model_file',
+                    help='model file for prediction.')
+parser.add_argument('--prediction_path',
+                    help='prediction result output (e.g. wav, png).')
 parser.add_argument('--model-type', default='GLU_Transformer',
                     help='Type of model (New_Transformer or GLU_Transformer or LSTM)')
-parser.add_argument('--initmodel', '-m', default='',
-                    help='Initialize the model from given file')
-parser.add_argument('--resume', '-r', default='',
-                    help='Resume the optimization from snapshot')
-parser.add_argument('--gpu', '-g', default=-1, type=int,
-                    help='GPU ID (negative value indicates CPU)')
-parser.add_argument('--max-epochs', default=20, type=int,
-                    help='Max. number of epochs to train')
-parser.add_argument('--lr', default=0.001, type=float)
-parser.add_argument('--optimizer', default='noam', type=str)
-parser.add_argument('--gradclip', default=-1, type=int,
-                    help='gradient clipping. if < 0, no clipping')
-parser.add_argument('--num-frames', default=100, type=int,
+parser.add_argument('--num-frames', default=500, type=int,
                     help='number of frames in one utterance')
-parser.add_argument('--char_max_len', default=500, type=int,
+parser.add_argument('--char_max_len', default=100, type=int,
                     help='max length for character')
-parser.add_argument('--batchsize', default=1, type=int,
-                    help='number of utterances in one batch')
 parser.add_argument('--num_workers', default=4, type=int,
                     help='number of cpu workers')
 parser.add_argument('--frame-length', default=0.06, type=float)
@@ -67,8 +49,6 @@ parser.add_argument('--seed', default=666, type=int)
 parser.add_argument('--use_tfb', dest='use_tfboard',
                     help='whether use tensorboard',
                     action='store_true')
-parser.add_argument('--noam-scale', default=1.0, type=float)
-parser.add_argument('--noam-warmup-steps', default=25000, type=float)
 parser.add_argument('--loss', default="l1", type=str)
 parser.add_argument('--use-pos-enc', default=0, type=int)
 parser.add_argument('--gradient-accumulation-steps', default=1, type=int)
@@ -79,5 +59,5 @@ import system_info
 system_info.print_system_info()
 
 print(args)
-from model.train import train
-train(args)
+from model.infer import infer
+infer(args)

@@ -11,6 +11,6 @@ class MaskedLoss(torch.nn.Module):
         self.loss = loss
 
     def forward(self, output, target, length):
-        output = output.narrow(dim=1, start=0, length=length)
-        target = target.narrow(dim=1, start=0, length=length)
+        output = output.flatten() * length.flatten()
+        target = target.flatten() * length.flatten()
         return self.loss(output, target)

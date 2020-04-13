@@ -4,6 +4,4 @@
 
 . ./path.sh
 
-# python bin/train.py -c conf/train.yaml
-
 python bin/infer.py -c conf/infer.yaml

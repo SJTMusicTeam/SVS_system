@@ -3,14 +3,11 @@
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
 
-import yamlargparse
 import os
 import sys
 import numpy as np
 import torch
 import time
-import subprocess
-from argparse import ArgumentParser
 from model.gpu_util import use_single_gpu
 from model.SVSDataset import SVSDataset, SVSCollator
 from model.network import GLU_Transformer
@@ -34,6 +31,8 @@ def train(args):
     train_set = SVSDataset(align_root_path=args.train_align,
                            pitch_beat_root_path=args.train_pitch,
                            wav_root_path=args.train_wav,
+                           char_max_len=args.char_max_len,
+                           max_len=args.num_frames,
                            sr=args.sampling_rate,
                            preemphasis=args.preemphasis,
                            frame_shift=args.frame_shift,
@@ -46,6 +45,8 @@ def train(args):
     dev_set = SVSDataset(align_root_path=args.val_align,
                            pitch_beat_root_path=args.val_pitch,
                            wav_root_path=args.val_wav,
+                           char_max_len=args.char_max_len,
+                           max_len=args.num_frames,
                            sr=args.sampling_rate,
                            preemphasis=args.preemphasis,
                            frame_shift=args.frame_shift,
@@ -54,7 +55,7 @@ def train(args):
                            power=args.power,
                            max_db=args.max_db,
                            ref_db=args.ref_db)
-    collate_fn_svs = SVSCollator(args.num_frames)
+    collate_fn_svs = SVSCollator(args.num_frames, args.char_max_len)
     train_loader = torch.utils.data.DataLoader(dataset=train_set,
                                                batch_size=args.batchsize,
                                                shuffle=True,
@@ -67,7 +68,7 @@ def train(args):
                                                num_workers=args.num_workers,
                                                collate_fn=collate_fn_svs,
                                                pin_memory=True)
-    print(dev_set[0][3].shape)
+    # print(dev_set[0][3].shape)
     assert args.feat_dim == dev_set[0][3].shape[1]
 
     # prepare model
@@ -82,6 +83,8 @@ def train(args):
                                 dec_num_block=args.dec_num_block)
     else:
         raise ValueError('Not Support Model Type %s' % args.model_type)
+    print(model)
+    model = model.to(device)
 
     # load weights for pre-trained model
     if args.initmodel != '':
@@ -128,9 +131,11 @@ def train(args):
         logger = None
 
     if args.loss == "l1":
-        loss = MaskedLoss(torch.nn.L1Loss)
+        loss = MaskedLoss(torch.nn.L1Loss())
     elif args.loss == "mse":
-        loss = MaskedLoss(torch.nn.MSELoss)
+        loss = MaskedLoss(torch.nn.MSELoss())
+    else:
+        raise ValueError("Not Support Loss Type")
 
     # Training
     for epoch in range(1, 1 + args.max_epochs):
@@ -145,13 +150,16 @@ def train(args):
                 train_info['loss'], end_t_train - start_t_train))
 
         start_t_dev = time.time()
-        dev_info = validate(dev_loader, model, device, loss)
+        dev_info = validate(dev_loader, model, device, loss, args)
         end_t_dev = time.time()
 
-        print("Valid loss: {:.4f}, time: {:.2f}s".format(
-            dev_info['loss'], end_t_dev - start_t_dev))
+        print("Epoch: {:04d}, Valid loss: {:.4f}, time: {:.2f}s".format(
+            epoch, dev_info['loss'], end_t_dev - start_t_dev))
         print("")
         sys.stdout.flush()
+        
+        if not os.path.exists(args.model_save_dir):
+            os.makedirs(args.model_save_dir)
 
         save_checkpoint({
             'epoch': epoch,

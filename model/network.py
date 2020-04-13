@@ -4,15 +4,14 @@
 
 # debug only
 import sys
-#sys.path.append("/Users/jiatongshi/projects/svs_system/SVS_system")
+sys.path.append("/Users/jiatongshi/projects/svs_system/SVS_system")
 
 import torch
 import torch.nn as nn
 import numpy as np
 import math
-#import model.module as module
-import module
-import archive.My_dataloader as DL
+import model.module as module
+
 
 class Encoder(nn.Module):
     """
@@ -29,20 +28,18 @@ class Encoder(nn.Module):
         self.fc_1 = nn.Linear(embed_size, hidden_size)
         
         self.GLU_list = nn.ModuleList()
-        for i in range(GLU_num):
+        for i in range(int(GLU_num)):
             self.GLU_list.append(module.GLU(num_layers, hidden_size, glu_kernel, dropout, hidden_size))
         #self.GLU = module.GLU(num_layers, hidden_size, glu_kernel, dropout, hidden_size)
         
         self.fc_2 = nn.Linear(hidden_size, embed_size)
     
 
-    def forward(self, input):
+    def forward(self, text_phone):
         """
-        input dim: [batch_size, text_phone_length]
+        text_phone dim: [batch_size, text_phone_length]
         output dim : [batch_size, text_phone_length, embedded_dim]
         """
-        text_phone = torch.LongTensor(DL.refine(input))
-        
         embedded_phone = self.emb_phone(text_phone)
         glu_in = self.fc_1(embedded_phone)
         
@@ -59,7 +56,8 @@ class Encoder(nn.Module):
         out = embedded_phone + glu_out
         
         out = out * math.sqrt(0.5)
-        return out,text_phone
+        return out, text_phone
+
 
 class Encoder_Postnet(nn.Module):
     """
@@ -80,16 +78,21 @@ class Encoder_Postnet(nn.Module):
         text_phone = [batch_size, text_phone_length]
         align_phone_length( = frame_num) > text_phone_length
         '''
+        # batch
+        align_phone = align_phone.long()
         for i in range(align_phone.shape[0]):
             before_text_phone = text_phone[i][0]
             encoder_ind = 0
             line = encoder_out[i][0].unsqueeze(0)
+            # frame
             for j in range(1,align_phone.shape[1]):
                 if align_phone[i][j] == before_text_phone:
                     temp = encoder_out[i][encoder_ind]
                     line = torch.cat((line,temp.unsqueeze(0)),dim = 0)
                 else:
                     encoder_ind += 1
+                    if encoder_ind >= text_phone[i].size()[0]:
+                        break
                     before_text_phone = text_phone[i][encoder_ind]
                     temp = encoder_out[i][encoder_ind]
                     line = torch.cat((line,temp.unsqueeze(0)),dim = 0)
@@ -154,18 +157,18 @@ class GLU_Transformer(nn.Module):
     def __init__(self, phone_size, embed_size, hidden_size, glu_num_layers, dropout, dec_num_block,
                  dec_nhead, output_dim):
         super(GLU_Transformer, self).__init__()
-        self.encoder = Encoder(phone_size, embed_size, hidden_size, glu_num_layers, dropout)
+        self.encoder = Encoder(phone_size, embed_size, hidden_size, dropout, glu_num_layers,
+                               num_layers=1, glu_kernel=3)
         self.enc_postnet = Encoder_Postnet(embed_size)
-        # TODO: standard input arguments
         self.decoder = Decoder(dec_num_block, embed_size, output_dim, dec_nhead, dropout)
-        self.postnet = module.PostNet(output_dim, output_dim, output_dim)
+        # self.postnet = module.PostNet(output_dim, output_dim, output_dim)
 
     def forward(self, characters, phone, pitch, beat, pos_text=True, src_key_padding_mask=None,
                 char_key_padding_mask=None):
-        # TODO add encoder and encoder postnet
-        memory = self.encoder(characters)
-        mel_output, att_weight = self.decoder(memory)
-        mel_output = self.postnet(mel_output)
+        encoder_out, text_phone = self.encoder(characters.squeeze(2))
+        post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat)
+        mel_output, att_weight = self.decoder(post_out)
+        # mel_output = self.postnet(mel_output)
         return mel_output
 
 
@@ -237,7 +240,7 @@ def _test():
     
     #test encoder and encoer_postnet
     encoder = Encoder(phone_size, embed_size, hidden_size, dropout, num_glu_block, num_layers=glu_num_layers, glu_kernel=glu_kernel)
-    encoder_out,text_phone = encoder(phone.squeeze(2))
+    encoder_out, text_phone = encoder(phone.squeeze(2))
     print('encoder_out.size():',encoder_out.size())
     
     post = Encoder_Postnet(embed_size)
