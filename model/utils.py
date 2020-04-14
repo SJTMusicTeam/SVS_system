@@ -21,15 +21,19 @@ def create_src_key_padding_mask(src_len, max_len):
     return torch.from_numpy(mask).float()
 
 
-def train_one_epoch(train_loader, model, device, optimizer, criterion, args):
+def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptual_entropy, args):
     losses = AverageMeter()
+    if args.perceptual_loss > 0:
+        pe_losses = AverageMeter()
     model.train()
     start = time.time()
-    for step, (phone, beat, pitch, spec, length, chars, char_len_list) in enumerate(train_loader, 1):
+    for step, (phone, beat, pitch, spec, real, imag, length, chars, char_len_list) in enumerate(train_loader, 1):
         phone = phone.to(device)
         beat = beat.to(device)
         pitch = pitch.to(device).float()
         spec = spec.to(device).float()
+        real = real.to(device).float()
+        imag = imag.to(device).float()
         chars = chars.to(device)
         length_mask = create_src_key_padding_mask(length, args.num_frames)
         length_mask = length_mask.unsqueeze(2)
@@ -42,31 +46,48 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, args):
                        char_key_padding_mask=char_len_list)
 
         train_loss = criterion(output, spec, length_mask)
+        if args.perceptual_loss > 0:
+            pe_loss = perceptual_entropy(output, real, imag)
+            final_loss = args.perceptual_loss * pe_loss + (1 - args.perceptual_loss) * train_loss
+        else:
+            final_loss = train_loss
 
         optimizer.zero_grad()
-        train_loss.backward()
+        final_loss.backward()
         if args.gradclip > 0:
             torch.nn.utils.clip_grad_norm_(model.parameters(), args.gradclip)
         optimizer.step_and_update_lr()
         losses.update(train_loss.item(), phone.size(0))
+        if args.perceptual_loss > 0:
+            pe_losses.update(pe_loss.item(), phone.size(0))
         if step % 100 == 0:
             end = time.time()
-            print("step {}: train_loss {} -- sum_time: {}s".format(step, losses.avg, end - start))
+            if args.perceptual_loss > 0:
+                print("step {}: train_loss {}; pe_loss {}-- sum_time: {}s".format(step, losses.avg, pe_losses.avg, end - start))
+            else:
+                print("step {}: train_loss {} -- sum_time: {}s".format(step, losses.avg, end - start))
 
-    info = {'loss': losses.avg}
+    if args.perceptual_loss > 0:
+        info = {'loss': losses.avg, 'pe_loss': pe_losses.avg}
+    else:
+        info = {'loss': losses.avg}
     return info
 
 
-def validate(dev_loader, model, device, criterion, args):
+def validate(dev_loader, model, device, criterion, perceptual_entropy, args):
     losses = AverageMeter()
+    if args.perceptual_loss > 0:
+        pe_losses = AverageMeter()
     model.eval()
 
     with torch.no_grad():
-        for step, (phone, beat, pitch, spec, length, chars, char_len_list) in enumerate(dev_loader, 1):
+        for step, (phone, beat, pitch, spec, real, imag, length, chars, char_len_list) in enumerate(dev_loader, 1):
             phone = phone.to(device).to(torch.int64)
             beat = beat.to(device).to(torch.int64)
             pitch = pitch.to(device).float()
             spec = spec.to(device).float()
+            real = real.to(device).float()
+            imag = imag.to(device).float()
             chars = chars.to(device)
             length = length.to(device)
             length_mask = create_src_key_padding_mask(length, args.num_frames)
@@ -78,12 +99,20 @@ def validate(dev_loader, model, device, criterion, args):
             output, att = model(chars, phone, pitch, beat, src_key_padding_mask=length,
                            char_key_padding_mask=char_len_list)
 
-            train_loss = criterion(output, spec, length_mask)
-            losses.update(train_loss.item(), phone.size(0))
+            dev_loss = criterion(output, spec, length_mask)
+            losses.update(dev_loss.item(), phone.size(0))
+            if args.perceptual_loss > 0:
+                pe_loss = perceptual_entropy(output, real, imag)
+                pe_losses.update(pe_loss.item(), phone.size(0))
             if step % 10 == 0:
-                print("step {}: {}".format(step, losses.avg))
-
-    info = {'loss': losses.avg}
+                if args.perceptual_loss > 0:
+                    print("step {}: loss {} ; pe_loss {}".format(step, losses.avg, pe_losses.avg))
+                else:
+                    print("step {}: loss {}".format(step, losses.avg))
+    if args.perceptual_loss > 0:
+        info = {'loss': losses.avg, 'pe_loss': pe_losses.avg}
+    else:
+        info = {'loss': losses.avg}
     return info
 
 
