@@ -92,7 +92,7 @@ def infer(args):
     if not os.path.exists(args.prediction_path):
         os.makedirs(args.prediction_path)
 
-    for step, (phone, beat, pitch, spec, length, chars, char_len_list) in enumerate(test_loader, 1):
+    for step, (phone, beat, pitch, spec, real, imag, length, chars, char_len_list) in enumerate(test_loader, 1):
         if step >= args.decode_sample:
             break
         phone = phone.to(device)
