@@ -10,11 +10,11 @@ and then install torch by conda
 For usage: \
 `. tools/env.sh`
 
-Followings are my sample environment:
-python version: 3.7.3 (default, Mar 27 2019, 22:11:17)  [GCC 7.3.0]
-pytorch version: 1.1.0
-cupy version: 7.3.0
-cuda version: 9000
+Followings are my sample environment: \
+python version: 3.7.3 (default, Mar 27 2019, 22:11:17)  [GCC 7.3.0] \
+pytorch version: 1.1.0 \
+cupy version: 7.3.0 \
+cuda version: 9000 \
 cudnn version: 7501
 
 ## Running Instruction
