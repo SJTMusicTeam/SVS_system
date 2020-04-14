@@ -138,10 +138,16 @@ def train(args):
     else:
         raise ValueError("Not Support Loss Type")
 
+    if args.perceptual_loss > 0:
+        psd_dict, bark_num = cal_psd2bark_dict(fs=fs, win_len=win_len)
+        sf = cal_spread_function(bark_num)
+        loss_perceptual_entropy = PerceptualEntropy(bark_num, sf, fs, win_len, psd_dict)
+    else:
+        loss_perceptual_entropy = None
     # Training
     for epoch in range(1, 1 + args.max_epochs):
         start_t_train = time.time()
-        train_info = train_one_epoch(train_loader, model, device, optimizer, loss, args)
+        train_info = train_one_epoch(train_loader, model, device, optimizer, loss, loss_perceptual_entropy, args)
         end_t_train = time.time()
 
         print(
@@ -151,7 +157,7 @@ def train(args):
                 train_info['loss'], end_t_train - start_t_train))
 
         start_t_dev = time.time()
-        dev_info = validate(dev_loader, model, device, loss, args)
+        dev_info = validate(dev_loader, model, device, loss, loss_perceptual_entropy, args)
         end_t_dev = time.time()
 
         print("Epoch: {:04d}, Valid loss: {:.4f}, time: {:.2f}s".format(

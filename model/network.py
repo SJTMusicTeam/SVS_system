@@ -3,8 +3,8 @@
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi, Hailan Lin)
 
 # debug only
-import sys
-sys.path.append("/Users/jiatongshi/projects/svs_system/SVS_system")
+# import sys
+# sys.path.append("/Users/jiatongshi/projects/svs_system/SVS_system")
 
 import torch
 import torch.nn as nn

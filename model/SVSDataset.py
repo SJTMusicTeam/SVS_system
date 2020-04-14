@@ -33,7 +33,8 @@ def _get_spectrograms(fpath, require_sr, preemphasis, n_fft, hop_length, win_len
                           win_length=win_length)
 
     # magnitude spectrogram
-    mag = np.abs(linear)  # (1+n_fft//2, T)
+    mag, phase = librosa.magphase(linear)
+    # mag = np.abs(linear)  # (1+n_fft//2, T)
 
     # to decibel
     mag = 20 * np.log10(np.maximum(1e-5, mag))
@@ -43,8 +44,9 @@ def _get_spectrograms(fpath, require_sr, preemphasis, n_fft, hop_length, win_len
 
     # Transpose
     mag = mag.T.astype(np.float32)  # (T, 1+n_fft//2)
+    phase = phase.T
 
-    return mag
+    return mag, phase
 
 
 def _phone2char(phones, char_max_len):
@@ -75,6 +77,7 @@ class SVSCollator(object):
         len_list = [len(batch[i][0]) for i in range(batch_size)]
         char_len_list = [len(batch[i][4]) for i in range(batch_size)]
         spec = np.zeros((batch_size, self.max_len, spec_dim))
+        phase = np.zeros((batch_size, self.max_len, spec_dim))
         phone = np.zeros((batch_size, self.max_len))
         pitch = np.zeros((batch_size, self.max_len))
         beat = np.zeros((batch_size, self.max_len))
@@ -83,6 +86,7 @@ class SVSCollator(object):
             length = min(len_list[i], self.max_len)
             char_leng = min(len(batch[i][4]), self.char_max_len)
             spec[i, :length, :] = batch[i][3][:length]
+            phase[i, :length, :] = batch[i][5][:length]
             pitch[i, :length] = batch[i][2][:length]
             beat[i, :length] = batch[i][1][:length]
             phone[i, :length] = batch[i][0][:length]
@@ -91,13 +95,15 @@ class SVSCollator(object):
         length = np.array(len_list)
         char_len_list = np.array(char_len_list)
         spec = torch.from_numpy(spec)
+        imag = torch.from_numpy(phase.imag)
+        real = torch.from_numpy(phase.real)
         length = torch.from_numpy(length)
         pitch = torch.from_numpy(pitch).unsqueeze(dim=-1).long()
         beat = torch.from_numpy(beat).unsqueeze(dim=-1).long()
         phone = torch.from_numpy(phone).unsqueeze(dim=-1).long()
         chars = torch.from_numpy(chars).unsqueeze(dim=-1).to(torch.int64)
         char_len_list = torch.from_numpy(char_len_list)
-        return phone, beat, pitch, spec, length, chars, char_len_list
+        return phone, beat, pitch, spec, real, imag, length, chars, char_len_list
 
 
 class SVSDataset(Dataset):
@@ -157,7 +163,7 @@ class SVSDataset(Dataset):
         pitch = np.load(pitch_path)
         wav_path = os.path.join(self.wav_root_path, str(int(self.filename_list[i][1:4])), self.filename_list[i][4:-4] + ".wav")
 
-        spectrogram = _get_spectrograms(wav_path, self.sr, self.preemphasis,
+        spectrogram, phase = _get_spectrograms(wav_path, self.sr, self.preemphasis,
                                         self.frame_length, self.frame_shift, self.frame_length,
                                         self.max_db, self.ref_db)
 
@@ -174,7 +180,8 @@ class SVSDataset(Dataset):
         beat = beat[:min_length]
         pitch = pitch[:min_length]
         spectrogram = spectrogram[:min_length, :]
+        phase = phase[:min_length, :]
         # print("char len: {}, phone len: {}, spectrom: {}".format(len(char), len(phone), np.shape(spectrogram)[0]))
 
-        return phone, beat, pitch, spectrogram, char
+        return phone, beat, pitch, spectrogram, char, phase
 
