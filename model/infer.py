@@ -6,14 +6,10 @@
 
 import torch
 import os
-import numpy as np
-import matplotlib.pyplot as plt
-from librosa.output import write_wav
-from librosa.display import specshow
 from model.SVSDataset import SVSDataset, SVSCollator
 from model.network import GLU_Transformer
 from model.loss import MaskedLoss
-from model.utils import AverageMeter, spectrogram2wav, create_src_key_padding_mask
+from model.utils import AverageMeter, create_src_key_padding_mask, log_figure
 
 
 def infer(args):
@@ -113,36 +109,6 @@ def infer(args):
 
         test_loss = loss(output, spec, length_mask)
         if step % 1 == 0:
-            # save wav and plot spectrogram
-            output = output.cpu().detach().numpy()[0]
-            out_spec = spec.cpu().detach().numpy()[0]
-            length = length.cpu().detach().numpy()[0]
-            att = att.cpu().detach().numpy()[0]
-            # np.save("output.npy", output)
-            # np.save("out_spec.npy", out_spec)
-            # np.save("att.npy", att)
-            output = output[:length]
-            out_spec = out_spec[:length]
-            att = att[:, :length, :length]
-            wav = spectrogram2wav(output, args.max_db, args.ref_db, args.preemphasis, args.power, args.sampling_rate, args.frame_shift, args.frame_length)
-            wav_true = spectrogram2wav(out_spec, args.max_db, args.ref_db, args.preemphasis, args.power, args.sampling_rate, args.frame_shift, args.frame_length)
-            write_wav(os.path.join(args.prediction_path, '{}.wav'.format(step)), wav, args.sampling_rate)
-            write_wav(os.path.join(args.prediction_path, '{}_true.wav'.format(step)), wav_true, args.sampling_rate)
-            plt.subplot(1, 2, 1)
-            specshow(output.T)
-            plt.title("prediction")
-            plt.subplot(1, 2, 2)
-            specshow(out_spec.T)
-            plt.title("ground_truth")
-            plt.savefig(os.path.join(args.prediction_path, '{}.png'.format(step)))
-            plt.subplot(1, 4, 1)
-            specshow(att[0])
-            plt.subplot(1, 4, 2)
-            specshow(att[1])
-            plt.subplot(1, 4, 3)
-            specshow(att[2])
-            plt.subplot(1, 4, 4)
-            specshow(att[3])
-            plt.savefig(os.path.join(args.prediction_path, '{}_att.png'.format(step)))
+        	log_figure(step, output, spec, att, length, args.prediction_path, args)
         losses.update(test_loss.item(), phone.size(0))
     print("loss avg for test is {}".format(losses.avg))
