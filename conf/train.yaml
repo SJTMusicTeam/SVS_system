@@ -1,9 +1,9 @@
-train_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/other_set/
-train_pitch: /export/c04/jiatong/project/svs/SVS_system/data/pitch_beat_extraction/other/
-train_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/other
-val_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/clean_set/
-val_pitch: /export/c04/jiatong/project/svs/SVS_system/data/pitch_beat_extraction/clean/
-val_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/clean
+train_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/train/
+train_pitch: /export/c04/jiatong/project/svs/SVS_system/data/pitch_beat_extraction/train/
+train_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/train
+val_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/dev/
+val_pitch: /export/c04/jiatong/project/svs/SVS_system/data/pitch_beat_extraction/dev/
+val_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/dev
 model_save_dir: exp/debug1/model
 
 
