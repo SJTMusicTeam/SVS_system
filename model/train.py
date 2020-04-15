@@ -11,6 +11,7 @@ import time
 from model.gpu_util import use_single_gpu
 from model.SVSDataset import SVSDataset, SVSCollator
 from model.network import GLU_Transformer
+from model.network import Transformer_Transformer
 from model.transformer_optim import ScheduledOptim
 from model.loss import MaskedLoss
 from model.utils import train_one_epoch, save_checkpoint, validate, record_info
@@ -82,6 +83,16 @@ def train(args):
                                 dec_nhead=args.dec_nhead,
                                 dec_num_block=args.dec_num_block,
                                 device=device)
+    elif args.model_type == "Transformer_Transformer":
+        model = Transformer_Transformer(phone_size=args.phone_size,
+                                embed_size=args.embedding_size,
+                                hidden_size=args.hidden_size,
+                                glu_num_layers=args.glu_num_layers,
+                                dropout=args.dropout,
+                                output_dim=args.feat_dim,
+                                dec_nhead=args.dec_nhead,
+                                dec_num_block=args.dec_num_block,
+                                device=device)
     else:
         raise ValueError('Not Support Model Type %s' % args.model_type)
     print(model)
@@ -138,16 +149,10 @@ def train(args):
     else:
         raise ValueError("Not Support Loss Type")
 
-    if args.perceptual_loss > 0:
-        psd_dict, bark_num = cal_psd2bark_dict(fs=fs, win_len=win_len)
-        sf = cal_spread_function(bark_num)
-        loss_perceptual_entropy = PerceptualEntropy(bark_num, sf, fs, win_len, psd_dict)
-    else:
-        loss_perceptual_entropy = None
     # Training
     for epoch in range(1, 1 + args.max_epochs):
         start_t_train = time.time()
-        train_info = train_one_epoch(train_loader, model, device, optimizer, loss, loss_perceptual_entropy, args)
+        train_info = train_one_epoch(train_loader, model, device, optimizer, loss, args)
         end_t_train = time.time()
 
         print(
@@ -157,7 +162,7 @@ def train(args):
                 train_info['loss'], end_t_train - start_t_train))
 
         start_t_dev = time.time()
-        dev_info = validate(dev_loader, model, device, loss, loss_perceptual_entropy, args)
+        dev_info = validate(dev_loader, model, device, loss, args)
         end_t_dev = time.time()
 
         print("Epoch: {:04d}, Valid loss: {:.4f}, time: {:.2f}s".format(

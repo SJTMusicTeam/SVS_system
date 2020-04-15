@@ -3,15 +3,15 @@
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi, Hailan Lin)
 
 # debug only
-# import sys
-# sys.path.append("/Users/jiatongshi/projects/svs_system/SVS_system")
+import sys
+sys.path.append("/Users/jiatongshi/projects/svs_system/SVS_system")
 
 import torch
 import torch.nn as nn
 import numpy as np
 import math
 import model.module as module
-
+from model.pretrain_module import clones,FFN,Attention
 
 class Encoder(nn.Module):
     """
@@ -56,7 +56,47 @@ class Encoder(nn.Module):
         out = embedded_phone + glu_out
         
         out = out * math.sqrt(0.5)
+        #print(f"out shape: {out.shape}")
+        #print(f"text_phone shape {text_phone.shape}")
+        #input()
         return out, text_phone
+
+
+class SA_Encoder(nn.Module):
+    def __init__(self,phone_size, embed_size, hidden_size,dropout,num_blocks=3,nheads=4):
+        """ nheads,dropout no use for now"""
+        super(SA_Encoder, self).__init__()  #FIX ME:yuekai
+        self.layers = clones(Attention(hidden_size), int(num_blocks))
+        self.ffns = clones(FFN(hidden_size), int(num_blocks))
+        self.emb_phone = nn.Embedding(phone_size, embed_size)
+        self.fc_1 = nn.Linear(embed_size, hidden_size)
+
+    def forward(self,text_phone):
+        embedded_phone = self.emb_phone(text_phone)
+        x = self.fc_1(embedded_phone)
+
+        # Fix me: Yuekai
+        mask = None
+        c_mask = None
+        attns=list()
+        for layer, ffn in zip(self.layers, self.ffns):
+            x, attn = layer(x, x, mask=mask, query_mask=c_mask)
+            x = ffn(x)
+            attns.append(attn)   # no use for tmp
+
+        return x,text_phone
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 class Encoder_Postnet(nn.Module):
@@ -170,6 +210,16 @@ class GLU_Transformer(nn.Module):
         mel_output, att_weight = self.decoder(post_out, src_key_padding_mask=src_key_padding_mask)
         mel_output = self.postnet(mel_output)
         return mel_output, att_weight
+
+class Transformer_Transformer(GLU_Transformer):
+    """replace GLU with transformer """
+    def __init__(self, phone_size, embed_size, hidden_size, glu_num_layers, dropout, dec_num_block,
+                dec_nhead, output_dim, device="cuda"):
+        super(Transformer_Transformer, self).__init__(phone_size, embed_size, hidden_size, glu_num_layers, dropout, dec_num_block,dec_nhead, output_dim, device="cuda")
+        self.encoder = SA_Encoder(phone_size, embed_size, hidden_size,dropout)
+
+
+
 
 
 def _test():
