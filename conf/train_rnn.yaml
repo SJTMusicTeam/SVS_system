@@ -1,0 +1,26 @@
+train_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/train/
+train_pitch: /export/c04/jiatong/project/svs/SVS_system/data/pitch_beat_extraction/train/
+train_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/train
+val_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/dev/
+val_pitch: /export/c04/jiatong/project/svs/SVS_system/data/pitch_beat_extraction/dev/
+val_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/dev
+model_save_dir: exp/debug1/model
+
+
+sampling_rate: 44100
+frame_length: 0.06
+frame_shift: 0.03
+model_type: LSTM
+max_epochs: 100
+batchsize: 4
+num_workers: 10
+hidden_size: 512
+embedding_size: 512
+num_rnn_layers: 3
+num_frames: 500
+char_max_len: 100
+optimizer: adam
+lr: 0.001
+phone_size: 68
+seed: 777
+gpu: 1
