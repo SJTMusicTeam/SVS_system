@@ -82,6 +82,10 @@ def train(args):
                                 dec_nhead=args.dec_nhead,
                                 dec_num_block=args.dec_num_block,
                                 device=device)
+    elif args.model_type == "LSTM":
+        model = LSTM()
+    elif args.model_type == "PureTransformer":
+        model = PureTransformer()
     else:
         raise ValueError('Not Support Model Type %s' % args.model_type)
     print(model)
@@ -121,6 +125,11 @@ def train(args):
             args.hidden_size,
             args.noam_warmup_steps,
             args.noam_scale)
+    elif args.optimizer == "adam":
+        optimizer = torch.optim.Adam(model.parameters(),
+            lr=args.lr,
+            betas=(0.9, 0.98),
+            eps=1e-09)
     else:
         raise ValueError('Not Support Optimizer')
 
@@ -150,10 +159,17 @@ def train(args):
         train_info = train_one_epoch(train_loader, model, device, optimizer, loss, loss_perceptual_entropy, args)
         end_t_train = time.time()
 
-        print(
+        if args.optimizer == "noam":
+            print(
             'Train epoch: {:04d}, lr: {:.6f}, '
             'loss: {:.4f}, time: {:.2f}s'.format(
                 epoch, optimizer._optimizer.param_groups[0]['lr'],
+                train_info['loss'], end_t_train - start_t_train))
+        else:
+            print(
+            'Train epoch: {:04d}, '
+            'loss: {:.4f}, time: {:.2f}s'.format(
+                epoch,
                 train_info['loss'], end_t_train - start_t_train))
 
         start_t_dev = time.time()
@@ -168,11 +184,17 @@ def train(args):
         if not os.path.exists(args.model_save_dir):
             os.makedirs(args.model_save_dir)
 
-        save_checkpoint({
-            'epoch': epoch,
-            'state_dict': model.state_dict(),
-            'optimizer': optimizer._optimizer.state_dict(),
-        }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
+        if args.optimizer == "noam":
+            save_checkpoint({
+                'epoch': epoch,
+                'state_dict': model.state_dict(),
+                'optimizer': optimizer._optimizer.state_dict(),
+            }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
+        else:
+            save_checkpoint({
+                'epoch': epoch,
+                'state_dict': model.state_dict(),
+            }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
 
         # record training and validation information
         if args.use_tfboard:
