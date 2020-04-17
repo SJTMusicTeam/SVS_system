@@ -10,7 +10,7 @@ import torch
 import time
 from model.gpu_util import use_single_gpu
 from model.SVSDataset import SVSDataset, SVSCollator
-from model.network import GLU_Transformer
+from model.network import GLU_TransformerSVS, LSTMSVS
 from model.transformer_optim import ScheduledOptim
 from model.loss import MaskedLoss
 from model.utils import train_one_epoch, save_checkpoint, validate, record_info
@@ -73,7 +73,7 @@ def train(args):
 
     # prepare model
     if args.model_type == "GLU_Transformer":
-        model = GLU_Transformer(phone_size=args.phone_size,
+        model = GLU_TransformerSVS(phone_size=args.phone_size,
                                 embed_size=args.embedding_size,
                                 hidden_size=args.hidden_size,
                                 glu_num_layers=args.glu_num_layers,
@@ -83,7 +83,13 @@ def train(args):
                                 dec_num_block=args.dec_num_block,
                                 device=device)
     elif args.model_type == "LSTM":
-        model = LSTM()
+        model = LSTMSVS(phone_size=args.phone_size,
+                        embed_size=args.embedding_size,
+                        d_model=args.hidden_size,
+                        num_layers=args.num_rnn_layers,
+                        dropout=args.dropout,
+                        d_output=args.args.feat_dim,
+                        device=device)
     elif args.model_type == "PureTransformer":
         model = PureTransformer()
     else:
