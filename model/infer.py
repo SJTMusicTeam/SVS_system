@@ -7,7 +7,7 @@
 import torch
 import os
 from model.SVSDataset import SVSDataset, SVSCollator
-from model.network import GLU_Transformer
+from model.network import GLU_TransformerSVS
 from model.loss import MaskedLoss
 from model.utils import AverageMeter, create_src_key_padding_mask, log_figure
 

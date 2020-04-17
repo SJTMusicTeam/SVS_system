@@ -71,6 +71,7 @@ class Encoder_Postnet(nn.Module):
         self.fc_pos = nn.Linear(embed_size, embed_size)
         #only 0 and 1 two possibilities
         self.emb_beats = nn.Embedding(2, embed_size)
+        self.pos = module.PositionalEncoding(embedded_dim)
 
     def aligner(self, encoder_out, align_phone, text_phone):
         '''
@@ -119,8 +120,8 @@ class Encoder_Postnet(nn.Module):
         beats = self.emb_beats(beats.squeeze(2))
         out = out + beats
         
-        pos = module.PositionalEncoding(embedded_dim)
-        pos_encode = pos(torch.transpose(aligner_out,0,1))
+        
+        pos_encode = self.pos(torch.transpose(aligner_out,0,1))
         pos_out = self.fc_pos(torch.transpose(pos_encode,0,1))
         
         out = out + pos_out
@@ -150,7 +151,7 @@ class Decoder(nn.Module):
         output = self.output_fc(memory)
         return output, att_weight
 
-class GLU_Transformer(nn.Module):
+class GLU_TransformerSVS(nn.Module):
     """
     Transformer Network
     """
@@ -170,6 +171,81 @@ class GLU_Transformer(nn.Module):
         mel_output, att_weight = self.decoder(post_out, src_key_padding_mask=src_key_padding_mask)
         mel_output = self.postnet(mel_output)
         return mel_output, att_weight
+
+
+class LSTMSVS(Module):
+    """
+    LSTM singing voice synthesis model
+    """
+
+    def __init__(self, embed_size=512, d_model=512, d_output=1324,
+                 num_layers=2, phone_size=87,
+                 dropout=0.1, device="cuda"):
+        super(LSTMSVS, self).__init__()
+
+        self.input_embed = nn.Embedding(phone_size, embed_size)
+
+        self.linear_wrapper = nn.Linear(embed_size, d_model)
+
+        self.phone_lstm = nn.LSTM(input_size=d_model, hidden_size=d_model, num_layers=num_block, batch_first=True,
+            bidirectional=True, dropout=dropout)
+
+        self.linear_wrapper2 = nn.Linear(d_model * 2, d_model)
+
+        self.pos = module.PositionalEncoding(d_model)
+        #Remember! embed_size must be even!!
+        assert embed_size % 2 == 0
+        self.fc_pos = nn.Linear(d_model, d_model)
+
+        self.pos_lstm = nn.LSTM(input_size=d_model, hidden_size=d_model, num_layers=num_block, batch_first=True,
+            bidirectional=True, dropout=dropout)
+
+        self.fc_pitch = nn.Linear(1, d_model)
+        self.linear_wrapper3 = nn.Linear(d_model * 2, d_model)
+        self.pitch_lstm = nn.LSTM(input_size=d_model, hidden_size=d_model, num_layers=num_block, batch_first=True,
+            bidirectional=True, dropout=dropout)
+        
+        #only 0 and 1 two possibilities
+        self.emb_beats = nn.Embedding(2, d_model)
+        self.linear_wrapper4 = nn.Linear(d_model * 2, d_model)
+        self.beats_lstm = nn.LSTM(input_size=d_model, hidden_size=d_model, num_layers=num_block, batch_first=True,
+            bidirectional=True, dropout=dropout)
+    
+        
+        self.output_fc = Linear(d_model * 2, d_output)
+
+        self._reset_parameters()
+
+        self.d_model = d_model
+
+    def forward(self, phone, pitch, beats):
+        out = self.input_embed(phone)
+        out = self.linear_wrapper(out)
+        out, _ = self.phone_lstm(out)
+        out = self.linear_wrapper2(out)
+
+        pos = self.pos(out)
+        pos_encode = self.fc_pos(pos)
+        out = pos + out
+        out, _ = self.pos_lstm(out)
+        out = self.linear_wrapper3(out)
+        pitch = self.fc_pitch(pitch)
+        out = pitch + out
+        out, _ = self.pitch_lstm(out)
+        out = self.linear_wrapper4(out)
+        beats = self.emb_beats(beats)
+        out = beats + out
+        out, (h0, c0) = self.beats_lstm(out)
+        out = self.output_fc(out)
+        
+        return output, (h0, c0)
+
+    def _reset_parameters(self):
+        """Initiate parameters in the transformer model."""
+
+        for p in self.parameters():
+            if p.dim() > 1:
+                xavier_uniform_(p)
 
 
 def _test():
