@@ -64,7 +64,10 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
         final_loss.backward()
         if args.gradclip > 0:
             torch.nn.utils.clip_grad_norm_(model.parameters(), args.gradclip)
-        optimizer.step_and_update_lr()
+        if args.optimizer == "noam":
+            optimizer.step_and_update_lr()
+        else:
+            optimizer.step()
         losses.update(train_loss.item(), phone.size(0))
         if args.perceptual_loss > 0:
             pe_losses.update(pe_loss.item(), phone.size(0))

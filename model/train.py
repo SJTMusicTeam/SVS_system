@@ -10,7 +10,7 @@ import torch
 import time
 from model.gpu_util import use_single_gpu
 from model.SVSDataset import SVSDataset, SVSCollator
-from model.network import GLU_Transformer
+from model.network import GLU_TransformerSVS, LSTMSVS
 from model.transformer_optim import ScheduledOptim
 from model.loss import MaskedLoss
 from model.utils import train_one_epoch, save_checkpoint, validate, record_info
@@ -73,7 +73,7 @@ def train(args):
 
     # prepare model
     if args.model_type == "GLU_Transformer":
-        model = GLU_Transformer(phone_size=args.phone_size,
+        model = GLU_TransformerSVS(phone_size=args.phone_size,
                                 embed_size=args.embedding_size,
                                 hidden_size=args.hidden_size,
                                 glu_num_layers=args.glu_num_layers,
@@ -82,6 +82,16 @@ def train(args):
                                 dec_nhead=args.dec_nhead,
                                 dec_num_block=args.dec_num_block,
                                 device=device)
+    elif args.model_type == "LSTM":
+        model = LSTMSVS(phone_size=args.phone_size,
+                        embed_size=args.embedding_size,
+                        d_model=args.hidden_size,
+                        num_layers=args.num_rnn_layers,
+                        dropout=args.dropout,
+                        d_output=args.args.feat_dim,
+                        device=device)
+    elif args.model_type == "PureTransformer":
+        model = PureTransformer()
     else:
         raise ValueError('Not Support Model Type %s' % args.model_type)
     print(model)
@@ -121,6 +131,11 @@ def train(args):
             args.hidden_size,
             args.noam_warmup_steps,
             args.noam_scale)
+    elif args.optimizer == "adam":
+        optimizer = torch.optim.Adam(model.parameters(),
+            lr=args.lr,
+            betas=(0.9, 0.98),
+            eps=1e-09)
     else:
         raise ValueError('Not Support Optimizer')
 
@@ -150,10 +165,17 @@ def train(args):
         train_info = train_one_epoch(train_loader, model, device, optimizer, loss, loss_perceptual_entropy, args)
         end_t_train = time.time()
 
-        print(
+        if args.optimizer == "noam":
+            print(
             'Train epoch: {:04d}, lr: {:.6f}, '
             'loss: {:.4f}, time: {:.2f}s'.format(
                 epoch, optimizer._optimizer.param_groups[0]['lr'],
+                train_info['loss'], end_t_train - start_t_train))
+        else:
+            print(
+            'Train epoch: {:04d}, '
+            'loss: {:.4f}, time: {:.2f}s'.format(
+                epoch,
                 train_info['loss'], end_t_train - start_t_train))
 
         start_t_dev = time.time()
@@ -168,11 +190,17 @@ def train(args):
         if not os.path.exists(args.model_save_dir):
             os.makedirs(args.model_save_dir)
 
-        save_checkpoint({
-            'epoch': epoch,
-            'state_dict': model.state_dict(),
-            'optimizer': optimizer._optimizer.state_dict(),
-        }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
+        if args.optimizer == "noam":
+            save_checkpoint({
+                'epoch': epoch,
+                'state_dict': model.state_dict(),
+                'optimizer': optimizer._optimizer.state_dict(),
+            }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
+        else:
+            save_checkpoint({
+                'epoch': epoch,
+                'state_dict': model.state_dict(),
+            }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
 
         # record training and validation information
         if args.use_tfboard:

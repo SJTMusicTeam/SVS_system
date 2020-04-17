@@ -62,6 +62,7 @@ parser.add_argument('--glu-num-layers', default=1, type=int,
                     help='number of glu layers')
 parser.add_argument('--dropout', default=0.1, type=float)
 parser.add_argument('--dec_num_block', default=6, type=int)
+parser.add_argument('--num-rnn-layers', default=2, type=int)
 parser.add_argument('--dec_nhead', default=4, type=int)
 parser.add_argument('--seed', default=666, type=int)
 parser.add_argument('--use_tfb', dest='use_tfboard',
