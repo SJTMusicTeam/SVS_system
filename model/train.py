@@ -35,6 +35,7 @@ def train(args):
                            max_len=args.num_frames,
                            sr=args.sampling_rate,
                            preemphasis=args.preemphasis,
+                           nfft=args.nfft,
                            frame_shift=args.frame_shift,
                            frame_length=args.frame_length,
                            n_mels=args.n_mels,
@@ -49,6 +50,7 @@ def train(args):
                            max_len=args.num_frames,
                            sr=args.sampling_rate,
                            preemphasis=args.preemphasis,
+                           nfft=args.nfft,
                            frame_shift=args.frame_shift,
                            frame_length=args.frame_length,
                            n_mels=args.n_mels,
@@ -88,7 +90,7 @@ def train(args):
                         d_model=args.hidden_size,
                         num_layers=args.num_rnn_layers,
                         dropout=args.dropout,
-                        d_output=args.args.feat_dim,
+                        d_output=args.feat_dim,
                         device=device)
     elif args.model_type == "PureTransformer":
         model = PureTransformer()
@@ -97,21 +99,31 @@ def train(args):
     print(model)
     model = model.to(device)
 
-    # load weights for pre-trained model
+    model_load_dir = ""
+    start_epoch = 1
     if args.initmodel != '':
-        pretrain = torch.load(args.initmodel, map_location=device)
-        pretrain_dict = pretrain['state_dict']
+        model_load_dir = args.initmodel
+    if args.resume:
+        checks = os.listdir(args.model_save_dir)
+        start_epoch = max(list(map(lambda x: int(x[6:-8]) if x.endswith("pth.tar") else -1, checks)))
+        model_load_dir = "{}/epoch_{}.pth.tar".format(args.model_save_dir, start_epoch)
+        
+    
+    # load weights for pre-trained model
+    if model_load_dir != '':
+        model_load = torch.load(model_load_dir, map_location=device)
+        loading_dict = model_load['state_dict']
         model_dict = model.state_dict()
         state_dict_new = {}
         para_list = []
-        for k, v in pretrain_dict.items():
+        for k, v in loading_dict.items():
             assert k in model_dict
-            if model_dict[k].size() == pretrain_dict[k].size():
+            if model_dict[k].size() == loading_dict[k].size():
                 state_dict_new[k] = v
             else:
                 para_list.append(k)
         print("Total {} parameters, Loaded {} parameters".format(
-            len(pretrain_dict), len(state_dict_new)))
+            len(loading_dict), len(state_dict_new)))
         if len(para_list) > 0:
             print("Not loading {} because of different sizes".format(
                 ", ".join(para_list)))
@@ -147,9 +159,9 @@ def train(args):
         logger = None
 
     if args.loss == "l1":
-        loss = MaskedLoss("l1")
+        loss = MaskedLoss("l1", mask_free=args.mask_free)
     elif args.loss == "mse":
-        loss = MaskedLoss("mse")
+        loss = MaskedLoss("mse", mask_free=args.mask_free)
     else:
         raise ValueError("Not Support Loss Type")
 
@@ -160,7 +172,7 @@ def train(args):
     else:
         loss_perceptual_entropy = None
     # Training
-    for epoch in range(1, 1 + args.max_epochs):
+    for epoch in range(start_epoch, 1 + args.max_epochs):
         start_t_train = time.time()
         train_info = train_one_epoch(train_loader, model, device, optimizer, loss, loss_perceptual_entropy, args)
         end_t_train = time.time()

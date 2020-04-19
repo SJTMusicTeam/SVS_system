@@ -62,6 +62,7 @@ def infer(args):
                            max_len=args.num_frames,
                            sr=args.sampling_rate,
                            preemphasis=args.preemphasis,
+                           nfft=args.nfft,
                            frame_shift=args.frame_shift,
                            frame_length=args.frame_length,
                            n_mels=args.n_mels,

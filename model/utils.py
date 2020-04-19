@@ -3,6 +3,7 @@
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
 
+import os
 import torch
 import numpy as np
 import copy
@@ -49,9 +50,13 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
         length_mask = length_mask.to(device)
         length = length.to(device)
         char_len_list = char_len_list.to(device)
-
-        output, att = model(chars, phone, pitch, beat, src_key_padding_mask=length,
+        
+        if args.model_type == "GLU_Transformer":
+            output, att = model(chars, phone, pitch, beat, src_key_padding_mask=length,
                        char_key_padding_mask=char_len_list)
+        elif args.model_type == "LSTM":
+            output, hidden = model(phone, pitch, beat)
+            att = None
 
         train_loss = criterion(output, spec, length_mask)
         if args.perceptual_loss > 0:
@@ -111,9 +116,13 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, args):
             length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
             length_mask = length_mask.to(device)
             char_len_list = char_len_list.to(device)
-
-            output, att = model(chars, phone, pitch, beat, src_key_padding_mask=length,
+            
+            if args.model_type == "GLU_Transformer":
+                output, att = model(chars, phone, pitch, beat, src_key_padding_mask=length,
                            char_key_padding_mask=char_len_list)
+            elif args.model_type == "LSTM":
+                output, hidden = model(phone, pitch, beat)
+                att = None
 
             dev_loss = criterion(output, spec, length_mask)
             losses.update(dev_loss.item(), phone.size(0))
@@ -185,7 +194,7 @@ def griffin_lim(spectrogram, iter_vocoder, n_fft, hop_length, win_length):
     return y
 
 
-def spectrogram2wav(mag, max_db, ref_db, preemphasis, power, sr, hop_length, win_length):
+def spectrogram2wav(mag, max_db, ref_db, preemphasis, power, sr, hop_length, win_length, n_fft):
     '''# Generate wave file from linear magnitude spectrogram
     Args:
       mag: A numpy array of (T, 1+n_fft//2)
@@ -194,7 +203,7 @@ def spectrogram2wav(mag, max_db, ref_db, preemphasis, power, sr, hop_length, win
     '''
     hop_length = int(hop_length * sr)
     win_length = int(win_length * sr)
-    n_fft = win_length
+    n_fft = n_fft
 
     # transpose
     mag = mag.T
@@ -223,12 +232,10 @@ def log_figure(step, output, spec, att, length, save_dir, args):
     output = output.cpu().detach().numpy()[0]
     out_spec = spec.cpu().detach().numpy()[0]
     length = length.cpu().detach().numpy()[0]
-    att = att.cpu().detach().numpy()[0]
     output = output[:length]
     out_spec = out_spec[:length]
-    att = att[:, :length, :length]
-    wav = spectrogram2wav(output, args.max_db, args.ref_db, args.preemphasis, args.power, args.sampling_rate, args.frame_shift, args.frame_length)
-    wav_true = spectrogram2wav(out_spec, args.max_db, args.ref_db, args.preemphasis, args.power, args.sampling_rate, args.frame_shift, args.frame_length)
+    wav = spectrogram2wav(output, args.max_db, args.ref_db, args.preemphasis, args.power, args.sampling_rate, args.frame_shift, args.frame_length, args.nfft)
+    wav_true = spectrogram2wav(out_spec, args.max_db, args.ref_db, args.preemphasis, args.power, args.sampling_rate, args.frame_shift, args.frame_length, args.nfft)
     write_wav(os.path.join(save_dir, '{}.wav'.format(step)), wav, args.sampling_rate)
     write_wav(os.path.join(save_dir, '{}_true.wav'.format(step)), wav_true, args.sampling_rate)
     plt.subplot(1, 2, 1)
@@ -238,12 +245,15 @@ def log_figure(step, output, spec, att, length, save_dir, args):
     specshow(out_spec.T)
     plt.title("ground_truth")
     plt.savefig(os.path.join(save_dir, '{}.png'.format(step)))
-    plt.subplot(1, 4, 1)
-    specshow(att[0])
-    plt.subplot(1, 4, 2)
-    specshow(att[1])
-    plt.subplot(1, 4, 3)
-    specshow(att[2])
-    plt.subplot(1, 4, 4)
-    specshow(att[3])
-    plt.savefig(os.path.join(save_dir, '{}_att.png'.format(step)))
+    if att is not None:
+        att = att.cpu().detach().numpy()[0]
+        att = att[:, :length, :length]
+        plt.subplot(1, 4, 1)
+        specshow(att[0])
+        plt.subplot(1, 4, 2)
+        specshow(att[1])
+        plt.subplot(1, 4, 3)
+        specshow(att[2])
+        plt.subplot(1, 4, 4)
+        specshow(att[3])
+        plt.savefig(os.path.join(save_dir, '{}_att.png'.format(step)))

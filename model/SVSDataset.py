@@ -77,7 +77,8 @@ class SVSCollator(object):
         len_list = [len(batch[i][0]) for i in range(batch_size)]
         char_len_list = [len(batch[i][4]) for i in range(batch_size)]
         spec = np.zeros((batch_size, self.max_len, spec_dim))
-        phase = np.zeros((batch_size, self.max_len, spec_dim))
+        real = np.zeros((batch_size, self.max_len, spec_dim))
+        imag = np.zeros((batch_size, self.max_len, spec_dim))
         phone = np.zeros((batch_size, self.max_len))
         pitch = np.zeros((batch_size, self.max_len))
         beat = np.zeros((batch_size, self.max_len))
@@ -86,7 +87,8 @@ class SVSCollator(object):
             length = min(len_list[i], self.max_len)
             char_leng = min(len(batch[i][4]), self.char_max_len)
             spec[i, :length, :] = batch[i][3][:length]
-            phase[i, :length, :] = batch[i][5][:length]
+            real[i, :length, :] = batch[i][5][:length].real
+            imag[i, :length, :] = batch[i][5][:length].imag
             pitch[i, :length] = batch[i][2][:length]
             beat[i, :length] = batch[i][1][:length]
             phone[i, :length] = batch[i][0][:length]
@@ -95,8 +97,8 @@ class SVSCollator(object):
         length = np.array(len_list)
         char_len_list = np.array(char_len_list)
         spec = torch.from_numpy(spec)
-        imag = torch.from_numpy(phase.imag)
-        real = torch.from_numpy(phase.real)
+        imag = torch.from_numpy(imag)
+        real = torch.from_numpy(real)
         length = torch.from_numpy(length)
         pitch = torch.from_numpy(pitch).unsqueeze(dim=-1).long()
         beat = torch.from_numpy(beat).unsqueeze(dim=-1).long()
@@ -115,6 +117,7 @@ class SVSDataset(Dataset):
                  max_len = 500,
                  sr = 44100,
                  preemphasis = 0.97,
+                 nfft=2048,
                  frame_shift = 0.03,
                  frame_length = 0.06,
                  n_mels = 80,
@@ -128,6 +131,7 @@ class SVSDataset(Dataset):
         self.max_len = max_len
         self.sr = sr
         self.preemphasis = preemphasis
+        self.nfft = nfft
         self.frame_shift = int(frame_shift * sr)
         self.frame_length = int(frame_length * sr)
         self.n_mels = n_mels
@@ -164,11 +168,10 @@ class SVSDataset(Dataset):
         wav_path = os.path.join(self.wav_root_path, str(int(self.filename_list[i][1:4])), self.filename_list[i][4:-4] + ".wav")
 
         spectrogram, phase = _get_spectrograms(wav_path, self.sr, self.preemphasis,
-                                        self.frame_length, self.frame_shift, self.frame_length,
+                                        self.nfft, self.frame_shift, self.frame_length,
                                         self.max_db, self.ref_db)
 
         # length check
-        
         if np.abs(len(phone) - np.shape(spectrogram)[0]) > 3:
             print("error file: %s" %self.filename_list[i])
             print("spectrum_size: {}, alignment_size: {}, pitch_size: {}, beat_size: {}".format(np.shape(spectrogram)[0],

@@ -11,7 +11,9 @@ import torch.nn as nn
 import numpy as np
 import math
 import model.module as module
-
+from torch.nn.init import xavier_uniform_
+from torch.nn.init import xavier_normal_
+from torch.nn.init import constant_
 
 class Encoder(nn.Module):
     """
@@ -173,7 +175,7 @@ class GLU_TransformerSVS(nn.Module):
         return mel_output, att_weight
 
 
-class LSTMSVS(Module):
+class LSTMSVS(nn.Module):
     """
     LSTM singing voice synthesis model
     """
@@ -187,7 +189,7 @@ class LSTMSVS(Module):
 
         self.linear_wrapper = nn.Linear(embed_size, d_model)
 
-        self.phone_lstm = nn.LSTM(input_size=d_model, hidden_size=d_model, num_layers=num_block, batch_first=True,
+        self.phone_lstm = nn.LSTM(input_size=d_model, hidden_size=d_model, num_layers=num_layers, batch_first=True,
             bidirectional=True, dropout=dropout)
 
         self.linear_wrapper2 = nn.Linear(d_model * 2, d_model)
@@ -197,29 +199,29 @@ class LSTMSVS(Module):
         assert embed_size % 2 == 0
         self.fc_pos = nn.Linear(d_model, d_model)
 
-        self.pos_lstm = nn.LSTM(input_size=d_model, hidden_size=d_model, num_layers=num_block, batch_first=True,
+        self.pos_lstm = nn.LSTM(input_size=d_model, hidden_size=d_model, num_layers=num_layers, batch_first=True,
             bidirectional=True, dropout=dropout)
 
         self.fc_pitch = nn.Linear(1, d_model)
         self.linear_wrapper3 = nn.Linear(d_model * 2, d_model)
-        self.pitch_lstm = nn.LSTM(input_size=d_model, hidden_size=d_model, num_layers=num_block, batch_first=True,
+        self.pitch_lstm = nn.LSTM(input_size=d_model, hidden_size=d_model, num_layers=num_layers, batch_first=True,
             bidirectional=True, dropout=dropout)
         
         #only 0 and 1 two possibilities
         self.emb_beats = nn.Embedding(2, d_model)
         self.linear_wrapper4 = nn.Linear(d_model * 2, d_model)
-        self.beats_lstm = nn.LSTM(input_size=d_model, hidden_size=d_model, num_layers=num_block, batch_first=True,
+        self.beats_lstm = nn.LSTM(input_size=d_model, hidden_size=d_model, num_layers=num_layers, batch_first=True,
             bidirectional=True, dropout=dropout)
     
         
-        self.output_fc = Linear(d_model * 2, d_output)
+        self.output_fc = nn.Linear(d_model * 2, d_output)
 
         self._reset_parameters()
 
         self.d_model = d_model
 
     def forward(self, phone, pitch, beats):
-        out = self.input_embed(phone)
+        out = self.input_embed(phone.squeeze(-1))
         out = self.linear_wrapper(out)
         out, _ = self.phone_lstm(out)
         out = self.linear_wrapper2(out)
@@ -233,12 +235,12 @@ class LSTMSVS(Module):
         out = pitch + out
         out, _ = self.pitch_lstm(out)
         out = self.linear_wrapper4(out)
-        beats = self.emb_beats(beats)
+        beats = self.emb_beats(beats.squeeze(-1))
         out = beats + out
         out, (h0, c0) = self.beats_lstm(out)
         out = self.output_fc(out)
         
-        return output, (h0, c0)
+        return out, (h0, c0)
 
     def _reset_parameters(self):
         """Initiate parameters in the transformer model."""

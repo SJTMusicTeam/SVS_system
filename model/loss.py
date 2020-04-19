@@ -9,17 +9,24 @@ from torch import nn
 import librosa
 
 class MaskedLoss(torch.nn.Module):
-    def __init__(self, loss):
+    def __init__(self, loss, mask_free=False):
         super(MaskedLoss, self).__init__()
         self.loss = loss
+        self.mask_free = mask_free
 
     def forward(self, output, target, length):
-        output = output.flatten() * length.flatten()
-        target = target.flatten() * length.flatten()
-        if self.loss == "mse":
-            return torch.sum((output - target) ** 2.0) / torch.sum(length)
-        elif self.loss == "l1":
-            return torch.sum(torch.abs(output - target)) / torch.sum(length)
+        if self.mask_free:
+            if self.loss == "mse":
+                return torch.mean((output - target)** 2.0)
+            elif self.loss == "l1":
+                return torch.mean(torch.abs(output - target))
+        else:
+            output = output.flatten() * length.flatten()
+            target = target.flatten() * length.flatten()
+            if self.loss == "mse":
+                return torch.sum((output - target) ** 2.0) / torch.sum(length)
+            elif self.loss == "l1":
+                return torch.sum(torch.abs(output - target)) / torch.sum(length)
 
 
 def tq(f_bin, fs, fft_bins):
