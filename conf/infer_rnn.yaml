@@ -7,7 +7,9 @@ prediction_path: exp/debug1/result_cbhg
 
 
 decode_sample: 10
-sampling_rate: 44100
+sampling_rate: 22050
+nfft: 2048
+feat_dim: 1025
 frame_length: 0.06
 frame_shift: 0.03
 model_type: LSTM

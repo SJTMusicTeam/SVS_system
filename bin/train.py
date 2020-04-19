@@ -28,7 +28,7 @@ parser.add_argument('--model-type', default='GLU_Transformer',
                     help='Type of model (New_Transformer or GLU_Transformer or LSTM)')
 parser.add_argument('--initmodel', '-m', default='',
                     help='Initialize the model from given file')
-parser.add_argument('--resume', '-r', default='',
+parser.add_argument('--resume', type=bool, default=False,
                     help='Resume the optimization from snapshot')
 parser.add_argument('--gpu', '-g', default=-1, type=int,
                     help='GPU ID (negative value indicates CPU)')
@@ -54,6 +54,7 @@ parser.add_argument('--n_mels', default=80, type=int)
 parser.add_argument('--power', default=1.2, type=float)
 parser.add_argument('--max_db', default=100, type=int)
 parser.add_argument('--ref_db', default=20, type=int)
+parser.add_argument('--nfft', default=2048, type=int)
 parser.add_argument('--phone_size', default=67, type=int)
 parser.add_argument('--feat-dim', default=1324, type=int)
 parser.add_argument('--embedding-size', default=256, type=int)
@@ -74,6 +75,7 @@ parser.add_argument('--loss', default="l1", type=str)
 parser.add_argument('--perceptual_loss', default=-1, type=float)
 parser.add_argument('--use-pos-enc', default=0, type=int)
 parser.add_argument('--gradient-accumulation-steps', default=1, type=int)
+parser.add_argument('--mask_free', default=False, type=bool)
 
 args = parser.parse_args()
 
