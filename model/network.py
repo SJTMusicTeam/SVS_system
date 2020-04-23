@@ -11,6 +11,7 @@ import torch.nn as nn
 import numpy as np
 import math
 import model.module as module
+from model.pretrain_module import clones,FFN,Attention
 from torch.nn.init import xavier_uniform_
 from torch.nn.init import xavier_normal_
 from torch.nn.init import constant_
@@ -60,6 +61,25 @@ class Encoder(nn.Module):
         out = out * math.sqrt(0.5)
         return out, text_phone
 
+class SA_Encoder(nn.Module):
+    def __init__(self,phone_size, embed_size, hidden_size,dropout,num_blocks=3,nheads=4):
+        super(SA_Encoder, self).__init__()
+        self.layers = clones(Attention(hidden_size), int(num_blocks))
+        self.ffns = clones(FFN(hidden_size), int(num_blocks))
+        self.emb_phone = nn.Embedding(phone_size, embed_size)
+        self.fc_1 = nn.Linear(embed_size, hidden_size)
+
+    def forward(self,text_phone):
+        embedded_phone = self.emb_phone(text_phone)
+        x = self.fc_1(embedded_phone)
+        # Fix me: Yuekai Add mask
+        mask,c_mask = None
+        attns=list()
+        for layer, ffn in zip(self.layers, self.ffns):
+            x, attn = layer(x, x, mask=mask, query_mask=c_mask)
+            x = ffn(x)
+            attns.append(attn) 
+        return x , text_phone
 
 class Encoder_Postnet(nn.Module):
     """
@@ -254,6 +274,14 @@ class LSTMSVS(nn.Module):
         for p in self.parameters():
             if p.dim() > 1:
                 xavier_uniform_(p)
+
+class TransformerSVS(GLU_TransformerSVS):
+    def __init__(self, phone_size, embed_size, hidden_size, glu_num_layers, dropout, dec_num_block,
+            dec_nhead, output_dim, device="cuda"):
+        super(Transformer_Transformer, self).__init__(phone_size, embed_size, hidden_size,
+                glu_num_layers, dropout, dec_num_block,dec_nhead, output_dim, device="cuda")
+        self.encoder = SA_Encoder(phone_size, embed_size, hidden_size,dropout)
+
 
 
 def _test():

@@ -7,7 +7,7 @@
 import torch
 import os
 from model.SVSDataset import SVSDataset, SVSCollator
-from model.network import GLU_TransformerSVS
+from model.network import GLU_TransformerSVS,TransformerSVS
 from model.loss import MaskedLoss
 from model.utils import AverageMeter, create_src_key_padding_mask, log_figure
 
@@ -25,6 +25,15 @@ def infer(args):
                                 output_dim=args.feat_dim,
                                 dec_nhead=args.dec_nhead,
                                 dec_num_block=args.dec_num_block)
+    elif args.model_type == "PureTransformer":
+        model = TransformerSVS(phone_size=args.phone_size,
+                                        embed_size=args.embedding_size,
+                                        hidden_size=args.hidden_size,
+                                        glu_num_layers=args.glu_num_layers,
+                                        dropout=args.dropout,
+                                        output_dim=args.feat_dim,
+                                        dec_nhead=args.dec_nhead,
+                                        dec_num_block=args.dec_num_block)
     else:
         raise ValueError('Not Support Model Type %s' % args.model_type)
 
