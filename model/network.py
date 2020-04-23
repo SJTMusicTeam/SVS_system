@@ -73,7 +73,7 @@ class SA_Encoder(nn.Module):
         embedded_phone = self.emb_phone(text_phone)
         x = self.fc_1(embedded_phone)
         # Fix me: Yuekai Add mask
-        mask,c_mask = None
+        mask,c_mask = None,None
         attns=list()
         for layer, ffn in zip(self.layers, self.ffns):
             x, attn = layer(x, x, mask=mask, query_mask=c_mask)
