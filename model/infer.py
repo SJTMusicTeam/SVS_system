@@ -68,8 +68,10 @@ def infer(args):
                            n_mels=args.n_mels,
                            power=args.power,
                            max_db=args.max_db,
-                           ref_db=args.ref_db)
-    collate_fn_svs = SVSCollator(args.num_frames, args.char_max_len)
+                           ref_db=args.ref_db,
+                           standard=args.standard,
+                           sing_quality=args.sing_quality)
+    collate_fn_svs = SVSCollator(args.num_frames, args.char_max_len, args.use_asr_post, args.phone_size)
     test_loader = torch.utils.data.DataLoader(dataset=test_set,
                                                batch_size=1,
                                                shuffle=False,

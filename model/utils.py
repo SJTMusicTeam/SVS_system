@@ -43,13 +43,16 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
         spec = spec.to(device).float()
         real = real.to(device).float()
         imag = imag.to(device).float()
-        chars = chars.to(device)
         length_mask = create_src_key_padding_mask(length, args.num_frames)
         length_mask = length_mask.unsqueeze(2)
         length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
         length_mask = length_mask.to(device)
         length = length.to(device)
-        char_len_list = char_len_list.to(device)
+        if not args.use_asr_post:
+            chars = chars.to(device)
+            char_len_list = char_len_list.to(device)
+        else:
+            phone = phone.float()
         
         if args.model_type == "GLU_Transformer":
             output, att = model(chars, phone, pitch, beat, src_key_padding_mask=length,
@@ -109,14 +112,17 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, args):
             spec = spec.to(device).float()
             real = real.to(device).float()
             imag = imag.to(device).float()
-            chars = chars.to(device)
             length = length.to(device)
             length_mask = create_src_key_padding_mask(length, args.num_frames)
             length_mask = length_mask.unsqueeze(2)
             length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
             length_mask = length_mask.to(device)
-            char_len_list = char_len_list.to(device)
-            
+            if not args.use_asr_post:
+                chars = chars.to(device)
+                char_len_list = char_len_list.to(device)
+            else:
+                phone = phone.float()
+
             if args.model_type == "GLU_Transformer":
                 output, att = model(chars, phone, pitch, beat, src_key_padding_mask=length,
                            char_key_padding_mask=char_len_list)

@@ -57,6 +57,9 @@ parser.add_argument('--loss', default="l1", type=str)
 parser.add_argument('--perceptual_loss', default=-1, type=float)
 parser.add_argument('--use-pos-enc', default=0, type=int)
 parser.add_argument('--gradient-accumulation-steps', default=1, type=int)
+parser.add_argument('--use_asr_post', default=False, type=bool)
+parser.add_argument('--sing_quality', default="conf/sing_quality.csv", type=str)
+parser.add_argument('--standard', default=3, type=int)
 
 args = parser.parse_args()
 
