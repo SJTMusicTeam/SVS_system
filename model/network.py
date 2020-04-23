@@ -278,7 +278,7 @@ class LSTMSVS(nn.Module):
 class TransformerSVS(GLU_TransformerSVS):
     def __init__(self, phone_size, embed_size, hidden_size, glu_num_layers, dropout, dec_num_block,
             dec_nhead, output_dim, device="cuda"):
-        super(Transformer_Transformer, self).__init__(phone_size, embed_size, hidden_size,
+        super(TransformerSVS, self).__init__(phone_size, embed_size, hidden_size,
                 glu_num_layers, dropout, dec_num_block,dec_nhead, output_dim, device="cuda")
         self.encoder = SA_Encoder(phone_size, embed_size, hidden_size,dropout)
 

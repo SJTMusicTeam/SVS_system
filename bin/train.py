@@ -5,7 +5,7 @@
 import yamlargparse
 
 import sys
-sys.path.append("/export/c04/jiatong/project/svs/SVS_system")
+sys.path.append("/home/yzhan/SVS_github/SVS_system")
 
 parser = yamlargparse.ArgumentParser(description='SVS training')
 parser.add_argument('-c', '--config', help='config file path',
@@ -28,6 +28,7 @@ parser.add_argument('--model-type', default='GLU_Transformer',
                     help='Type of model (New_Transformer or GLU_Transformer or LSTM)')
 parser.add_argument('--initmodel', '-m', default='',
                     help='Initialize the model from given file')
+parser.add_argument('--pretrain-encoder',default='',)
 parser.add_argument('--resume', type=bool, default=False,
                     help='Resume the optimization from snapshot')
 parser.add_argument('--gpu', '-g', default=-1, type=int,
