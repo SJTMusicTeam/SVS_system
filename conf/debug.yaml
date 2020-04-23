@@ -1,32 +1,35 @@
-# train_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/train/
-train_align: /export/c04/jiatong/project/svs/SVS_system/data/post/train
+train_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/train/
 train_pitch: /export/c04/jiatong/project/svs/SVS_system/data/pitch_beat_extraction/train/
 train_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/train
-val_align: /export/c04/jiatong/project/svs/SVS_system/data/post/dev
-# val_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/dev/
+val_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/dev/
 val_pitch: /export/c04/jiatong/project/svs/SVS_system/data/pitch_beat_extraction/dev/
 val_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/dev
-model_save_dir: exp/debug_rnn/use_asr_post
+model_save_dir: exp/debug/model
 
-resume: False
-mask_free: False
-use_asr_post: True
+
 sampling_rate: 22050
 nfft: 2048
 feat_dim: 1025
 frame_length: 0.06
 frame_shift: 0.03
-model_type: LSTM
+model_type: GLU_Transformer
 max_epochs: 100
+gradclip: 5
 batchsize: 4
 num_workers: 10
-hidden_size: 512
-embedding_size: 512
-num_rnn_layers: 3
+hidden_size: 64
+embedding_size: 64
+glu_num_layers: 3
+dec_nhead: 4
+dec_num_block: 6
 num_frames: 500
 char_max_len: 100
-optimizer: adam
-lr: 0.001
+optimizer: noam
+noam_scale: 1.0
+gradient_accumulation_steps: 1
+noam_warmup_steps: 25000
 phone_size: 68
+standard: 3
+sing_quality: conf/sing_quality.csv
 seed: 777
 gpu: 1

@@ -5,9 +5,13 @@ val_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/dev/
 val_pitch: /export/c04/jiatong/project/svs/SVS_system/data/pitch_beat_extraction/dev/
 val_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/dev
 model_save_dir: exp/debug1/model
+standard: 4
+sing_quality: conf/sing_quality.csv
 
+sampling_rate: 22050
+nfft: 2048
+feat_dim: 1025
 
-sampling_rate: 44100
 frame_length: 0.06
 frame_shift: 0.03
 model_type: GLU_Transformer

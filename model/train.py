@@ -41,7 +41,9 @@ def train(args):
                            n_mels=args.n_mels,
                            power=args.power,
                            max_db=args.max_db,
-                           ref_db=args.ref_db)
+                           ref_db=args.ref_db,
+                           sing_quality=args.sing_quality,
+                           standard=args.standard)
 
     dev_set = SVSDataset(align_root_path=args.val_align,
                            pitch_beat_root_path=args.val_pitch,
@@ -56,8 +58,10 @@ def train(args):
                            n_mels=args.n_mels,
                            power=args.power,
                            max_db=args.max_db,
-                           ref_db=args.ref_db)
-    collate_fn_svs = SVSCollator(args.num_frames, args.char_max_len)
+                           ref_db=args.ref_db,
+                           sing_quality=args.sing_quality,
+                           standard=args.standard)
+    collate_fn_svs = SVSCollator(args.num_frames, args.char_max_len, args.use_asr_post, args.phone_size)
     train_loader = torch.utils.data.DataLoader(dataset=train_set,
                                                batch_size=args.batchsize,
                                                shuffle=True,
@@ -91,7 +95,8 @@ def train(args):
                         num_layers=args.num_rnn_layers,
                         dropout=args.dropout,
                         d_output=args.feat_dim,
-                        device=device)
+                        device=device,
+                        use_asr_post=args.use_asr_post)
     elif args.model_type == "PureTransformer":
         model = PureTransformer()
     else:
@@ -172,7 +177,7 @@ def train(args):
     else:
         loss_perceptual_entropy = None
     # Training
-    for epoch in range(start_epoch, 1 + args.max_epochs):
+    for epoch in range(start_epoch + 1, 1 + args.max_epochs):
         start_t_train = time.time()
         train_info = train_one_epoch(train_loader, model, device, optimizer, loss, loss_perceptual_entropy, args)
         end_t_train = time.time()

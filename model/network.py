@@ -73,7 +73,7 @@ class Encoder_Postnet(nn.Module):
         self.fc_pos = nn.Linear(embed_size, embed_size)
         #only 0 and 1 two possibilities
         self.emb_beats = nn.Embedding(2, embed_size)
-        self.pos = module.PositionalEncoding(embedded_dim)
+        self.pos = module.PositionalEncoding(embed_size)
 
     def aligner(self, encoder_out, align_phone, text_phone):
         '''
@@ -159,12 +159,12 @@ class GLU_TransformerSVS(nn.Module):
     """
     def __init__(self, phone_size, embed_size, hidden_size, glu_num_layers, dropout, dec_num_block,
                  dec_nhead, output_dim, device="cuda"):
-        super(GLU_Transformer, self).__init__()
+        super(GLU_TransformerSVS, self).__init__()
         self.encoder = Encoder(phone_size, embed_size, hidden_size, dropout, glu_num_layers,
                                num_layers=1, glu_kernel=3)
         self.enc_postnet = Encoder_Postnet(embed_size)
         self.decoder = Decoder(dec_num_block, embed_size, output_dim, dec_nhead, dropout, device=device)
-        self.postnet = module.PostNet(output_dim, output_dim, output_dim)
+        self.postnet = module.PostNet(output_dim, output_dim, (output_dim // 2 * 2))
 
     def forward(self, characters, phone, pitch, beat, pos_text=True, src_key_padding_mask=None,
                 char_key_padding_mask=None):
@@ -182,10 +182,13 @@ class LSTMSVS(nn.Module):
 
     def __init__(self, embed_size=512, d_model=512, d_output=1324,
                  num_layers=2, phone_size=87,
-                 dropout=0.1, device="cuda"):
+                 dropout=0.1, device="cuda", use_asr_post=False):
         super(LSTMSVS, self).__init__()
-
-        self.input_embed = nn.Embedding(phone_size, embed_size)
+        self.use_asr_post = use_asr_post
+        if use_asr_post:
+            self.input_fc = nn.Linear(phone_size - 1, d_model)
+        else:
+            self.input_embed = nn.Embedding(phone_size, embed_size)
 
         self.linear_wrapper = nn.Linear(embed_size, d_model)
 
@@ -221,7 +224,10 @@ class LSTMSVS(nn.Module):
         self.d_model = d_model
 
     def forward(self, phone, pitch, beats):
-        out = self.input_embed(phone.squeeze(-1))
+        if self.use_asr_post:
+            out = self.input_fc(phone.squeeze(-1))
+        else:
+            out = self.input_embed(phone.squeeze(-1))
         out = self.linear_wrapper(out)
         out, _ = self.phone_lstm(out)
         out = self.linear_wrapper2(out)
