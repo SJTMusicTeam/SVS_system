@@ -292,7 +292,8 @@ class Attention(nn.Module):
 
         # Layer normalization
         result = self.layer_norm_1(result)
-
+        shape1,shape2,shape3 = attns.shape[0],attns.shape[1],attns.shape[2]
+        attns = attns.view(-1,self.h,shape2,shape3)
         return result, attns
     
 
