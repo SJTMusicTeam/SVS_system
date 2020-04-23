@@ -113,6 +113,7 @@ def train(args):
     model = model.to(device)
 
     model_load_dir = ""
+    pretrain_encoder_dir = ""
     start_epoch = 1
     if args.pretrain_encoder != '':
         pretrain_encoder_dir = args.pretrain_encoder
