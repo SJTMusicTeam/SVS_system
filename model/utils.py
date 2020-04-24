@@ -60,6 +60,10 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
         elif args.model_type == "LSTM":
             output, hidden = model(phone, pitch, beat)
             att = None
+        elif args.model_type == "PureTransformer":
+            output, att = model(chars, phone, pitch, beat, src_key_padding_mask=length,
+                    char_key_padding_mask=char_len_list)
+            #att = None # FIX ME
 
         train_loss = criterion(output, spec, length_mask)
         if args.perceptual_loss > 0:
@@ -129,6 +133,10 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, args):
             elif args.model_type == "LSTM":
                 output, hidden = model(phone, pitch, beat)
                 att = None
+            elif args.model_type == "PureTransformer":
+                output, att = model(chars, phone, pitch, beat, src_key_padding_mask=length,
+                        char_key_padding_mask=char_len_list)
+                #att = None # FIX ME
 
             dev_loss = criterion(output, spec, length_mask)
             losses.update(dev_loss.item(), phone.size(0))

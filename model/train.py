@@ -10,7 +10,7 @@ import torch
 import time
 from model.gpu_util import use_single_gpu
 from model.SVSDataset import SVSDataset, SVSCollator
-from model.network import GLU_TransformerSVS, LSTMSVS
+from model.network import GLU_TransformerSVS, LSTMSVS, TransformerSVS
 from model.transformer_optim import ScheduledOptim
 from model.loss import MaskedLoss
 from model.utils import train_one_epoch, save_checkpoint, validate, record_info
@@ -98,14 +98,25 @@ def train(args):
                         device=device,
                         use_asr_post=args.use_asr_post)
     elif args.model_type == "PureTransformer":
-        model = PureTransformer()
+        model = TransformerSVS(phone_size=args.phone_size,
+                                        embed_size=args.embedding_size,
+                                        hidden_size=args.hidden_size,
+                                        glu_num_layers=args.glu_num_layers,
+                                        dropout=args.dropout,
+                                        output_dim=args.feat_dim,
+                                        dec_nhead=args.dec_nhead,
+                                        dec_num_block=args.dec_num_block,
+                                        device=device)
     else:
         raise ValueError('Not Support Model Type %s' % args.model_type)
     print(model)
     model = model.to(device)
 
     model_load_dir = ""
+    pretrain_encoder_dir = ""
     start_epoch = 1
+    if args.pretrain_encoder != '':
+        pretrain_encoder_dir = args.pretrain_encoder
     if args.initmodel != '':
         model_load_dir = args.initmodel
     if args.resume:
@@ -113,6 +124,22 @@ def train(args):
         start_epoch = max(list(map(lambda x: int(x[6:-8]) if x.endswith("pth.tar") else -1, checks)))
         model_load_dir = "{}/epoch_{}.pth.tar".format(args.model_save_dir, start_epoch)
         
+    # load encoder parm from Transformer-TTS
+    if pretrain_encoder_dir != '':
+        pretrain = torch.load(pretrain_encoder_dir, map_location=device)
+        pretrain_dict = pretrain['model']
+        model_dict = model.state_dict()
+        state_dict_new = {}
+        para_list = []
+        i=0
+        for k, v in pretrain_dict.items():
+            k_new = k[7:]
+            if k_new in model_dict and model_dict[k_new].size() == pretrain_dict[k].size():
+                i += 1
+                state_dict_new[k_new] = v
+            model_dict.update(state_dict_new)
+        model.load_state_dict(model_dict)
+        print(f"Load {i} layers total. Load pretrain encoder success !")
     
     # load weights for pre-trained model
     if model_load_dir != '':
