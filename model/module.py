@@ -18,7 +18,7 @@ from torch.nn import LayerNorm
 import numpy as np
 import math
 import copy
-
+from model.pretrain_module import Attention
 SCALE_WEIGHT = 0.5 ** 0.5
 
 
@@ -360,7 +360,7 @@ class TransformerEncoderLayer(Module):
         return src, att_weight
 
 
-class TransformerGLULayer(Module):
+class TransformerGLULayer_old(Module):
     """TransformerGLULayer is made up of self-attn and feedforward network.
 
     Args:
@@ -374,7 +374,7 @@ class TransformerGLULayer(Module):
 
     def __init__(self, d_model, nhead, dropout=0.1, activation="relu",
         glu_kernel=3, device="cuda"):
-        super(TransformerGLULayer, self).__init__()
+        super(TransformerGLULayer_old, self).__init__()
         self.self_attn = MultiheadAttention(nhead, d_model, device)
         # Implementation of Feedforward model
         self.GLU = GLU(1, d_model, glu_kernel, dropout, d_model)
@@ -389,7 +389,7 @@ class TransformerGLULayer(Module):
     def __setstate__(self, state):
         if 'activation' not in state:
             state['activation'] = F.relu
-        super(TransformerGLULayer, self).__setstate__(state)
+        super(TransformerGLULayer_old, self).__setstate__(state)
 
     def forward(self, src, src_mask=None, src_key_padding_mask=None):
         # type: (Tensor, Optional[Tensor], Optional[Tensor]) -> Tensor
@@ -416,6 +416,35 @@ class TransformerGLULayer(Module):
         src = src * SCALE_WEIGHT
         return src, att_weight
 
+class TransformerGLULayer(Module):
+    def __init__(self, d_model, nhead, dropout=0.1, activation="relu",
+            glu_kernel=3, device="cuda"):
+        super(TransformerGLULayer, self).__init__()
+        self.self_attn = Attention(d_model)
+        self.GLU = GLU(1, d_model, glu_kernel, dropout, d_model)
+        self.norm1 = LayerNorm(d_model)
+        self.norm2 = LayerNorm(d_model)
+        self.dropout1 = Dropout(dropout)
+        self.dropout2 = Dropout(dropout)
+        self.activation = _get_activation_fn(activation)
+
+    def __setstate__(self, state):
+        if 'activation' not in state:
+            state['activation'] = F.relu
+        super(TransformerGLULayer, self).__setstate__(state)
+
+    def forward(self, src, src_mask=None, src_key_padding_mask=None):
+        src1 = self.norm1(src)
+        mask,c_mask = None, None # FIX ME
+        src2, att_weight = self.self_attn(src1,src1,mask=mask,query_mask=c_mask)
+        src3 = src + self.dropout1(src2)
+        src3 = src3 * SCALE_WEIGHT
+        src4 = self.norm2(src3)
+        src5 = self.GLU(src4)
+        src5 = src5.transpose(1, 2)
+        src6 = src3 + self.dropout2(src5)
+        src6 = src6 * SCALE_WEIGHT
+        return src, att_weight
 
 class TransformerEncoder(Module):
     r"""TransformerEncoder is a stack of N encoder layers
