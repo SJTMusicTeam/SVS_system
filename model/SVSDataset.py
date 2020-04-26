@@ -9,7 +9,7 @@ import os
 import librosa
 
 
-def _get_spectrograms(fpath, require_sr, preemphasis, n_fft, hop_length, win_length, max_db, ref_db):
+def _get_spectrograms(fpath, require_sr, preemphasis, n_fft, hop_length, win_length, max_db, ref_db, use_mel=False, n_mels=80):
     '''Parse the wave file in `fpath` and
     Returns normalized melspectrogram and linear spectrogram.
     Args:
@@ -36,17 +36,24 @@ def _get_spectrograms(fpath, require_sr, preemphasis, n_fft, hop_length, win_len
     mag, phase = librosa.magphase(linear)
     # mag = np.abs(linear)  # (1+n_fft//2, T)
 
+    mel_basis = librosa.filters.mel(require_sr, n_fft, n_mels)
+    mel = np.dot(mel_basis, mag) # (n_mels, t)
+
+
     # to decibel
     mag = 20 * np.log10(np.maximum(1e-5, mag))
+    mel = 20 * np.log10(np.maximum(1e-5, mel))
 
     # normalize
     mag = np.clip((mag - ref_db + max_db) / max_db, 1e-8, 1)
+    mel = np.clip((mel - ref_db + max_db) / max_db, 1e-8, 1)
 
     # Transpose
     mag = mag.T.astype(np.float32)  # (T, 1+n_fft//2)
+    mel = mel.T.astype(np.float32)
     phase = phase.T
 
-    return mag, phase
+    return mag, mel, phase
 
 
 def _load_sing_quality(quality_file, standard=3):
@@ -85,6 +92,8 @@ class SVSCollator(object):
         self.phone_size = phone_size - 1
 
     def __call__(self, batch):
+        # phone, beat, pitch, spectrogram, char, phase, mel
+
         batch_size = len(batch)
         # get spectrum dim
         spec_dim = len(batch[0][3][0])
@@ -92,14 +101,18 @@ class SVSCollator(object):
         spec = np.zeros((batch_size, self.max_len, spec_dim))
         real = np.zeros((batch_size, self.max_len, spec_dim))
         imag = np.zeros((batch_size, self.max_len, spec_dim))
+        mel_dim = len(batch[0][6][0])
+        mel = np.zeros((batch_size, self.max_len, mel_dim))
+        pitch = np.zeros((batch_size, self.max_len))
+        beat = np.zeros((batch_size, self.max_len))
+
         if self.use_asr_post:
             phone = np.zeros((batch_size, self.max_len, self.phone_size))
         else:
             char_len_list = [len(batch[i][4]) for i in range(batch_size)]
             phone = np.zeros((batch_size, self.max_len))
             chars = np.zeros((batch_size, self.char_max_len))
-        pitch = np.zeros((batch_size, self.max_len))
-        beat = np.zeros((batch_size, self.max_len))
+
         for i in range(batch_size):
             length = min(len_list[i], self.max_len)
             spec[i, :length, :] = batch[i][3][:length]
@@ -107,12 +120,14 @@ class SVSCollator(object):
             imag[i, :length, :] = batch[i][5][:length].imag
             pitch[i, :length] = batch[i][2][:length]
             beat[i, :length] = batch[i][1][:length]
+            mel[i, :length] = batch[i][6][: length]
+
             if self.use_asr_post:
                 phone[i, :length, :] = batch[i][0][:length]
             else:
                 char_leng = min(len(batch[i][4]), self.char_max_len)
                 phone[i, :length] = batch[i][0][:length]
-                chars[i, :char_leng] = batch[i][4][:char_leng]
+                chars[i, :char_leng] = batch[i][4][:char_leng]         
 
         length = np.array(len_list)
         spec = torch.from_numpy(spec)
@@ -122,13 +137,16 @@ class SVSCollator(object):
         pitch = torch.from_numpy(pitch).unsqueeze(dim=-1).long()
         beat = torch.from_numpy(beat).unsqueeze(dim=-1).long()
         phone = torch.from_numpy(phone).unsqueeze(dim=-1).long()
+
         if not self.use_asr_post:
             char_len_list = np.array(char_len_list)
             chars = torch.from_numpy(chars).unsqueeze(dim=-1).to(torch.int64)
             char_len_list = torch.from_numpy(char_len_list)
-            return phone, beat, pitch, spec, real, imag, length, chars, char_len_list
+            return phone, beat, pitch, spec, real, imag, length, chars, char_len_list, mel
         else:
-            return phone, beat, pitch, spec, real, imag, length, None, None
+            return phone, beat, pitch, spec, real, imag, length, None, None, mel
+
+
 
 
 class SVSDataset(Dataset):
@@ -193,9 +211,9 @@ class SVSDataset(Dataset):
         pitch = np.load(pitch_path)
         wav_path = os.path.join(self.wav_root_path, str(int(self.filename_list[i][1:4])), self.filename_list[i][4:-4] + ".wav")
 
-        spectrogram, phase = _get_spectrograms(wav_path, self.sr, self.preemphasis,
+        spectrogram, mel, phase = _get_spectrograms(wav_path, self.sr, self.preemphasis,
                                         self.nfft, self.frame_shift, self.frame_length,
-                                        self.max_db, self.ref_db)
+                                        self.max_db, self.ref_db, n_mels=self.n_mels)
 
         # length check
         if np.abs(len(phone) - np.shape(spectrogram)[0]) > 3:
@@ -214,7 +232,9 @@ class SVSDataset(Dataset):
         pitch = pitch[:min_length]
         spectrogram = spectrogram[:min_length, :]
         phase = phase[:min_length, :]
-        # print("char len: {}, phone len: {}, spectrom: {}".format(len(char), len(phone), np.shape(spectrogram)[0]))
+        mel = mel[:min_length, :]
 
-        return phone, beat, pitch, spectrogram, char, phase
+        # print("char len: {}, phone len: {}, spectrom: {}".format(len(char), len(phone), np.shape(spectrogram)[0]))
+        return phone, beat, pitch, spectrogram, char, phase, mel
+        
 

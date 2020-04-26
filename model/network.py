@@ -202,9 +202,10 @@ class LSTMSVS(nn.Module):
 
     def __init__(self, embed_size=512, d_model=512, d_output=1324,
                  num_layers=2, phone_size=87,
-                 dropout=0.1, device="cuda", use_asr_post=False):
+                 dropout=0.1, device="cuda", use_asr_post=False,
+                 n_mels=-1):
         super(LSTMSVS, self).__init__()
-        self.use_asr_post = use_asr_post
+        
         if use_asr_post:
             self.input_fc = nn.Linear(phone_size - 1, d_model)
         else:
@@ -239,8 +240,19 @@ class LSTMSVS(nn.Module):
         
         self.output_fc = nn.Linear(d_model * 2, d_output)
 
+        self.use_mel = (n_mels > 0)
+        self.n_mels = n_mels
+        if self.use_mel:
+            self.output_mel = nn.Linear(d_model * 2, n_mels)
+            self.postnet = module.PostNet(n_mels, d_output, (output_dim // 2 * 2))
+        else:
+            self.output_fc = nn.Linear(d_model * 2, d_output)
+
+
         self._reset_parameters()
 
+        self.use_asr_post = use_asr_post
+        self.use_mel = use_mel
         self.d_model = d_model
 
     def forward(self, phone, pitch, beats):
@@ -264,9 +276,13 @@ class LSTMSVS(nn.Module):
         beats = self.emb_beats(beats.squeeze(-1))
         out = beats + out
         out, (h0, c0) = self.beats_lstm(out)
-        out = self.output_fc(out)
-        
-        return out, (h0, c0)
+        if self.use_mel:
+            mel = self.output_mel(out)
+            out = self.postnet(mel, out)
+            return out, mel
+        else:
+            out = self.output_fc(out)
+            return out, (h0, c0)
 
     def _reset_parameters(self):
         """Initiate parameters in the transformer model."""
