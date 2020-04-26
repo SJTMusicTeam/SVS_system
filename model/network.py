@@ -244,7 +244,7 @@ class LSTMSVS(nn.Module):
         self.n_mels = n_mels
         if self.use_mel:
             self.output_mel = nn.Linear(d_model * 2, n_mels)
-            self.postnet = module.PostNet(n_mels, d_output, (output_dim // 2 * 2))
+            self.postnet = module.PostNet(n_mels, d_output, (d_output // 2 * 2))
         else:
             self.output_fc = nn.Linear(d_model * 2, d_output)
 
@@ -252,7 +252,6 @@ class LSTMSVS(nn.Module):
         self._reset_parameters()
 
         self.use_asr_post = use_asr_post
-        self.use_mel = use_mel
         self.d_model = d_model
 
     def forward(self, phone, pitch, beats):
