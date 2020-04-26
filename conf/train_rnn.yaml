@@ -1,19 +1,27 @@
 # train_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/train/
-train_align: /export/c04/jiatong/project/svs/SVS_system/data/post/train
+# train_align: /export/c04/jiatong/project/svs/SVS_system/data/head_tail_test/train/
+train_align: /export/c04/jiatong/project/svs/SVS_system/data/opt_sil_test/train/
+# train_align: /export/c04/jiatong/project/svs/SVS_system/data/post/train
+
 train_pitch: /export/c04/jiatong/project/svs/SVS_system/data/pitch_beat_extraction/train/
 train_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/train
-val_align: /export/c04/jiatong/project/svs/SVS_system/data/post/dev
+# val_align: /export/c04/jiatong/project/svs/SVS_system/data/post/dev
 # val_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/dev/
+# val_align: /export/c04/jiatong/project/svs/SVS_system/data/head_tail_test/dev/
+val_align: /export/c04/jiatong/project/svs/SVS_system/data/opt_sil_test/dev/
 val_pitch: /export/c04/jiatong/project/svs/SVS_system/data/pitch_beat_extraction/dev/
 val_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/dev
-model_save_dir: exp/debug_rnn/use_asr_post
+model_save_dir: exp/debug_post/
+standard: 4
+sing_quality: conf/sing_quality.csv
 
 resume: False
 mask_free: False
-use_asr_post: True
+use_asr_post: False
 sampling_rate: 22050
 nfft: 2048
 feat_dim: 1025
+
 frame_length: 0.06
 frame_shift: 0.03
 model_type: LSTM
