@@ -25,13 +25,13 @@ def create_src_key_padding_mask(src_len, max_len):
     return torch.from_numpy(mask).float()
 
 
-def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptual_entropy, args):
+def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptual_entropy, epoch, args):
     losses = AverageMeter()
     if args.perceptual_loss > 0:
         pe_losses = AverageMeter()
     model.train()
 
-    log_save_dir = os.path.join(args.model_save_dir, "log_train_figure")
+    log_save_dir = os.path.join(args.model_save_dir, "{}/log_train_figure".format(epoch))
     if not os.path.exists(log_save_dir):
         os.makedirs(log_save_dir)
 
@@ -98,13 +98,13 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
     return info
 
 
-def validate(dev_loader, model, device, criterion, perceptual_entropy, args):
+def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, args):
     losses = AverageMeter()
     if args.perceptual_loss > 0:
         pe_losses = AverageMeter()
     model.eval()
 
-    log_save_dir = os.path.join(args.model_save_dir, "log_val_figure")
+    log_save_dir = os.path.join(args.model_save_dir, "{}/log_val_figure".format(epoch))
     if not os.path.exists(log_save_dir):
         os.makedirs(log_save_dir)
 
