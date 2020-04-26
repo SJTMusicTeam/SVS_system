@@ -178,21 +178,28 @@ class GLU_TransformerSVS(nn.Module):
     Transformer Network
     """
     def __init__(self, phone_size, embed_size, hidden_size, glu_num_layers, dropout, dec_num_block,
-                 dec_nhead, output_dim, device="cuda"):
+                 dec_nhead, output_dim, n_mels=-1, device="cuda"):
         super(GLU_TransformerSVS, self).__init__()
         self.encoder = Encoder(phone_size, embed_size, hidden_size, dropout, glu_num_layers,
                                num_layers=1, glu_kernel=3)
         self.enc_postnet = Encoder_Postnet(embed_size)
-        self.decoder = Decoder(dec_num_block, embed_size, output_dim, dec_nhead, dropout, device=device)
-        self.postnet = module.PostNet(output_dim, output_dim, (output_dim // 2 * 2))
+
+        self.use_mel = (n_mels > 0)
+
+        if self.use_mel:
+            self.decoder = Decoder(dec_num_block, embed_size, n_mels, dec_nhead, dropout, device=device)
+            self.postnet = module.PostNet(n_mels, output_dim, (output_dim // 2 * 2))
+        else:
+            self.decoder = Decoder(dec_num_block, embed_size, output_dim, dec_nhead, dropout, device=device)
+            self.postnet = module.PostNet(output_dim, output_dim, (output_dim // 2 * 2))
 
     def forward(self, characters, phone, pitch, beat, pos_text=True, src_key_padding_mask=None,
                 char_key_padding_mask=None):
         encoder_out, text_phone = self.encoder(characters.squeeze(2))
         post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat)
         mel_output, att_weight = self.decoder(post_out, src_key_padding_mask=src_key_padding_mask)
-        mel_output = self.postnet(mel_output)
-        return mel_output, att_weight
+        output = self.postnet(mel_output)
+        return output, att_weight, mel_output
 
 
 class LSTMSVS(nn.Module):
@@ -201,9 +208,8 @@ class LSTMSVS(nn.Module):
     """
 
     def __init__(self, embed_size=512, d_model=512, d_output=1324,
-                 num_layers=2, phone_size=87,
-                 dropout=0.1, device="cuda", use_asr_post=False,
-                 n_mels=-1):
+                 num_layers=2, phone_size=87, n_mels=-1,
+                 dropout=0.1, device="cuda", use_asr_post=False):
         super(LSTMSVS, self).__init__()
         
         if use_asr_post:
@@ -279,10 +285,10 @@ class LSTMSVS(nn.Module):
         if self.use_mel:
             mel = self.output_mel(out)
             out = self.postnet(mel, out)
-            return out, mel
+            return out, (h0, c0), mel
         else:
             out = self.output_fc(out)
-            return out, (h0, c0)
+            return out, (h0, c0), None
 
     def _reset_parameters(self):
         """Initiate parameters in the transformer model."""
