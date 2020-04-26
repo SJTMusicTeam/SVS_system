@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch as t
 import torch.nn.functional as F
 import math
-import hyperparams as hp
+# import hyperparams as hp
 #from text.symbols import symbols
 import numpy as np
 import copy
