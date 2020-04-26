@@ -211,25 +211,29 @@ def train(args):
                                      epoch, args)
         end_t_train = time.time()
 
+        out_log = 'Train epoch: {:04d}, '.format(epoch)
         if args.optimizer == "noam":
-            print(
-            'Train epoch: {:04d}, lr: {:.6f}, '
-            'loss: {:.4f}, time: {:.2f}s'.format(
-                epoch, optimizer._optimizer.param_groups[0]['lr'],
-                train_info['loss'], end_t_train - start_t_train))
-        else:
-            print(
-            'Train epoch: {:04d}, '
-            'loss: {:.4f}, time: {:.2f}s'.format(
-                epoch,
-                train_info['loss'], end_t_train - start_t_train))
+            out_log += 'lr: {:.6f}, '.format(optimizer._optimizer.param_groups[0]['lr'])
+        out_log += 'loss: {:.4f}, spec_loss: {:.4f}, '.format(train_info['loss'], train_info['spec_loss'])
+        if args.n_mels > 0:
+            out_log += 'mel_loss: {:.4f}, '.format(train_info['mel_loss'])
+        if args.perceptual_loss > 0:
+            out_log += 'pe_loss: {:.4f}, '.format(train_info['pe_loss'])
+        print("{} time: {:.2f}s".format(out_log, end_t_train - start_t_train))
 
         start_t_dev = time.time()
         dev_info = validate(dev_loader, model, device, loss, loss_perceptual_entropy, epoch, args)
         end_t_dev = time.time()
 
-        print("Epoch: {:04d}, Valid loss: {:.4f}, time: {:.2f}s".format(
-            epoch, dev_info['loss'], end_t_dev - start_t_dev))
+        dev_log = 'Dev epoch: {:04d}, loss: {:.4f}, spec_loss: {:.4f}, '.format(epoch, 
+                                                                            dev_info['loss'],
+                                                                            dev_info['spec_loss'])
+        if args.n_mels > 0:
+            dev_log += 'mel_loss: {:.4f}, '.format(dev_info['mel_loss'])
+        if args.perceptual_loss > 0:
+            dev_log += 'pe_loss: {:.4f}, '.format(dev_info['pe_loss'])
+        print("{} time: {:.2f}s".format(dev_log, end_t_dev - start_t_train))
+
         print("")
         sys.stdout.flush()
         
