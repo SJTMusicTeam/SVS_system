@@ -27,8 +27,11 @@ def create_src_key_padding_mask(src_len, max_len):
 
 def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptual_entropy, epoch, args):
     losses = AverageMeter()
+    spec_losses = AverageMeter()
     if args.perceptual_loss > 0:
         pe_losses = AverageMeter()
+    if args.n_mels > 0:
+        mel_losses = AverageMeter()
     model.train()
 
     log_save_dir = os.path.join(args.model_save_dir, "{}/log_train_figure".format(epoch))
@@ -36,7 +39,7 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
         os.makedirs(log_save_dir)
 
     start = time.time()
-    for step, (phone, beat, pitch, spec, real, imag, length, chars, char_len_list) in enumerate(train_loader, 1):
+    for step, (phone, beat, pitch, spec, real, imag, length, chars, char_len_list, mel) in enumerate(train_loader, 1):
         phone = phone.to(device)
         beat = beat.to(device)
         pitch = pitch.to(device).float()
@@ -48,6 +51,7 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
         length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
         length_mask = length_mask.to(device)
         length = length.to(device)
+
         if not args.use_asr_post:
             chars = chars.to(device)
             char_len_list = char_len_list.to(device)
@@ -55,17 +59,24 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
             phone = phone.float()
         
         if args.model_type == "GLU_Transformer":
-            output, att = model(chars, phone, pitch, beat, src_key_padding_mask=length,
+            output, att, output_mel = model(chars, phone, pitch, beat, src_key_padding_mask=length,
                        char_key_padding_mask=char_len_list)
         elif args.model_type == "LSTM":
-            output, hidden = model(phone, pitch, beat)
+            output, hidden, output_mel = model(phone, pitch, beat)
             att = None
         elif args.model_type == "PureTransformer":
-            output, att = model(chars, phone, pitch, beat, src_key_padding_mask=length,
+            output, att, output_mel = model(chars, phone, pitch, beat, src_key_padding_mask=length,
                     char_key_padding_mask=char_len_list)
             #att = None # FIX ME
 
-        train_loss = criterion(output, spec, length_mask)
+        spec_loss = criterion(output, spec, length_mask)
+        if args.n_mels > 0:
+            mel_loss = criterion(output_mel, mel, length_mask)
+        else:
+            mel_loss = 0
+
+        train_loss = mel_loss + spec_loss
+
         if args.perceptual_loss > 0:
             pe_loss = perceptual_entropy(output, real, imag)
             final_loss = args.perceptual_loss * pe_loss + (1 - args.perceptual_loss) * train_loss
@@ -74,34 +85,47 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
 
         optimizer.zero_grad()
         final_loss.backward()
+
         if args.gradclip > 0:
             torch.nn.utils.clip_grad_norm_(model.parameters(), args.gradclip)
         if args.optimizer == "noam":
             optimizer.step_and_update_lr()
         else:
             optimizer.step()
+
         losses.update(train_loss.item(), phone.size(0))
+        spec_losses.update(spec_loss.item(), phone.size(0))
         if args.perceptual_loss > 0:
             pe_losses.update(pe_loss.item(), phone.size(0))
+        if args.n_mels > 0:
+            mel_losses.update(mel_loss.item(), phone.size(0))
+
         if step % 100 == 0:
             end = time.time()
             log_figure(step, output, spec, att, length, log_save_dir, args)
+            out_log = "step {}: train_loss {}; spec_loss {}; ".format(step,
+                                                                      losses.avg, spec_losses.avg)
             if args.perceptual_loss > 0:
-                print("step {}: train_loss {}; pe_loss {}-- sum_time: {}s".format(step, losses.avg, pe_losses.avg, end - start))
-            else:
-                print("step {}: train_loss {} -- sum_time: {}s".format(step, losses.avg, end - start))
+                out_log += "pe_loss {}; ".format(pe_losses.avg)
+            if args.n_mels > -:
+                out_log += "mel_loss {}; ".format(mel_losses.avg)
+            print("{} -- sum_time: {}s".format(out_log, (end-start)))
 
+    info = {'loss': losses.avg, 'spec_loss': spec_losses.avg}
     if args.perceptual_loss > 0:
-        info = {'loss': losses.avg, 'pe_loss': pe_losses.avg}
-    else:
-        info = {'loss': losses.avg}
+        info['pe_loss'] = pe_losses.avg
+    if args.n_mels > 0:
+        info['mel_loss'] = mel_losses.avg
     return info
 
 
 def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, args):
     losses = AverageMeter()
+    spec_losses = AverageMeter()
     if args.perceptual_loss > 0:
         pe_losses = AverageMeter()
+    if args.n_mels > 0:
+        mel_losses = AverageMeter()
     model.eval()
 
     log_save_dir = os.path.join(args.model_save_dir, "{}/log_val_figure".format(epoch))
@@ -109,7 +133,7 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
         os.makedirs(log_save_dir)
 
     with torch.no_grad():
-        for step, (phone, beat, pitch, spec, real, imag, length, chars, char_len_list) in enumerate(dev_loader, 1):
+        for step, (phone, beat, pitch, spec, real, imag, length, chars, char_len_list, mel) in enumerate(dev_loader, 1):
             phone = phone.to(device).to(torch.int64)
             beat = beat.to(device).to(torch.int64)
             pitch = pitch.to(device).float()
@@ -138,21 +162,41 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                         char_key_padding_mask=char_len_list)
                 #att = None # FIX ME
 
-            dev_loss = criterion(output, spec, length_mask)
+            spec_loss = criterion(output, spec, length_mask)
+            if args.n_mels > 0:
+                mel_loss = criterion(output_mel, mel, length_mask)
+            else:
+                mel_loss = 0
+    
+            dev_loss = mel_loss + spec_loss
+    
+            if args.perceptual_loss > 0:
+                pe_loss = perceptual_entropy(output, real, imag)
+                final_loss = args.perceptual_loss * pe_loss + (1 - args.perceptual_loss) * train_loss
+            else:
+                final_loss = train_loss
+
             losses.update(dev_loss.item(), phone.size(0))
+            spec_losses.update(spec_loss.item(), phone.size(0))
             if args.perceptual_loss > 0:
                 pe_loss = perceptual_entropy(output, real, imag)
                 pe_losses.update(pe_loss.item(), phone.size(0))
+
             if step % 10 == 0:
                 log_figure(step, output, spec, att, length, log_save_dir, args)
+                out_log = "step {}: train_loss {}; spec_loss {}; ".format(step, losses.avg,
+                                                                          spec_losses.avg)
                 if args.perceptual_loss > 0:
-                    print("step {}: loss {} ; pe_loss {}".format(step, losses.avg, pe_losses.avg))
-                else:
-                    print("step {}: loss {}".format(step, losses.avg))
+                    out_log += "pe_loss {}; ".format(pe_losses.avg)
+                if args.n_mels > -:
+                    out_log += "mel_loss {}; ".format(mel_losses.avg)
+                print("{} -- sum_time: {}s".format(out_log, (end-start)))
+
+    info = {'loss': losses.avg, 'spec_loss': spec_losses.avg}
     if args.perceptual_loss > 0:
-        info = {'loss': losses.avg, 'pe_loss': pe_losses.avg}
-    else:
-        info = {'loss': losses.avg}
+        info['pe_loss'] = pe_losses.avg
+    if args.n_mels > 0:
+        info['mel_loss'] = mel_losses.avg
     return info
 
 
