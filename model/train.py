@@ -95,6 +95,7 @@ def train(args):
                         num_layers=args.num_rnn_layers,
                         dropout=args.dropout,
                         d_output=args.feat_dim,
+                        n_mels=args.n_mels,
                         device=device,
                         use_asr_post=args.use_asr_post)
     elif args.model_type == "PureTransformer":
@@ -206,7 +207,8 @@ def train(args):
     # Training
     for epoch in range(start_epoch + 1, 1 + args.max_epochs):
         start_t_train = time.time()
-        train_info = train_one_epoch(train_loader, model, device, optimizer, loss, loss_perceptual_entropy, args)
+        train_info = train_one_epoch(train_loader, model, device, optimizer, loss, loss_perceptual_entropy,
+                                     epoch, args)
         end_t_train = time.time()
 
         if args.optimizer == "noam":
@@ -223,7 +225,7 @@ def train(args):
                 train_info['loss'], end_t_train - start_t_train))
 
         start_t_dev = time.time()
-        dev_info = validate(dev_loader, model, device, loss, loss_perceptual_entropy, args)
+        dev_info = validate(dev_loader, model, device, loss, loss_perceptual_entropy, epoch, args)
         end_t_dev = time.time()
 
         print("Epoch: {:04d}, Valid loss: {:.4f}, time: {:.2f}s".format(
