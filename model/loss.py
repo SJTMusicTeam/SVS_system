@@ -21,8 +21,8 @@ class MaskedLoss(torch.nn.Module):
             elif self.loss == "l1":
                 return torch.mean(torch.abs(output - target))
         else:
-            output = output.flatten() * length.flatten()
-            target = target.flatten() * length.flatten()
+            output = torch.mul(output, length)
+            target = torch.mul(target, length)
             if self.loss == "mse":
                 return torch.sum((output - target) ** 2.0) / torch.sum(length)
             elif self.loss == "l1":
