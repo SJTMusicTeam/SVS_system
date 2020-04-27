@@ -8,6 +8,7 @@
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 import math
 import model.module as module
@@ -265,25 +266,26 @@ class LSTMSVS(nn.Module):
             out = self.input_fc(phone.squeeze(-1))
         else:
             out = self.input_embed(phone.squeeze(-1))
-        out = self.linear_wrapper(out)
+        out = F.leaky_relu(out)
+        out = F.leaky_relu(self.linear_wrapper(out))
         out, _ = self.phone_lstm(out)
-        out = self.linear_wrapper2(out)
+        out = F.leaky_relu(self.linear_wrapper2(out))
 
         pos = self.pos(out)
         pos_encode = self.fc_pos(pos)
         out = pos + out
         out, _ = self.pos_lstm(out)
-        out = self.linear_wrapper3(out)
-        pitch = self.fc_pitch(pitch)
+        out = F.leaky_relu(self.linear_wrapper3(out))
+        pitch = F.leaky_relu(self.fc_pitch(pitch))
         out = pitch + out
         out, _ = self.pitch_lstm(out)
-        out = self.linear_wrapper4(out)
-        beats = self.emb_beats(beats.squeeze(-1))
+        out = F.leaky_relu(self.linear_wrapper4(out))
+        beats = F.leaky_relu(self.emb_beats(beats.squeeze(-1)))
         out = beats + out
         out, (h0, c0) = self.beats_lstm(out)
         if self.use_mel:
             mel = self.output_mel(out)
-            out = self.postnet(mel, out)
+            out = self.postnet(mel)
             return out, (h0, c0), mel
         else:
             out = self.output_fc(out)

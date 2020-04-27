@@ -80,6 +80,8 @@ parser.add_argument('--mask_free', default=False, type=bool)
 parser.add_argument('--use_asr_post', default=False, type=bool)
 parser.add_argument('--sing_quality', default="conf/sing_quality.csv", type=str)
 parser.add_argument('--standard', default=3, type=int)
+parser.add_argument('--train_step_log', default=100, type=int)
+parser.add_argument('--dev_step_log', default=10, type=int)
 args = parser.parse_args()
 
 import system_info

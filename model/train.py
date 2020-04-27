@@ -70,7 +70,7 @@ def train(args):
                                                pin_memory=True)
     dev_loader = torch.utils.data.DataLoader(dataset=dev_set,
                                                batch_size=args.batchsize,
-                                               shuffle=True,
+                                               shuffle=False,
                                                num_workers=args.num_workers,
                                                collate_fn=collate_fn_svs,
                                                pin_memory=True)
@@ -87,6 +87,7 @@ def train(args):
                                 output_dim=args.feat_dim,
                                 dec_nhead=args.dec_nhead,
                                 dec_num_block=args.dec_num_block,
+                                n_mels=args.n_mels,
                                 device=device)
     elif args.model_type == "LSTM":
         model = LSTMSVS(phone_size=args.phone_size,
@@ -107,6 +108,7 @@ def train(args):
                                         output_dim=args.feat_dim,
                                         dec_nhead=args.dec_nhead,
                                         dec_num_block=args.dec_num_block,
+                                        n_mels=args.n_mels,
                                         device=device)
     else:
         raise ValueError('Not Support Model Type %s' % args.model_type)

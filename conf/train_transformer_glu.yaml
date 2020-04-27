@@ -1,11 +1,13 @@
-train_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/train/
+# train_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/train/
+train_align: /export/c04/jiatong/project/svs/SVS_system/data/opt_sil_test/train
 train_pitch: /export/c04/jiatong/project/svs/SVS_system/data/pitch_beat_extraction/train/
 train_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/train
-val_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/dev/
+# val_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/dev/
+val_align: /export/c04/jiatong/project/svs/SVS_system/data/opt_sil_test/dev
 val_pitch: /export/c04/jiatong/project/svs/SVS_system/data/pitch_beat_extraction/dev/
 val_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/dev
 model_save_dir: exp/debug_sing_quality/model
-standard: 5
+standard: 4
 sing_quality: conf/sing_quality.csv
 
 sampling_rate: 22050
@@ -31,5 +33,8 @@ noam_scale: 1.0
 gradient_accumulation_steps: 1
 noam_warmup_steps: 25000
 phone_size: 68
+
+train_step_log: 100
+dev_step_log: 10
 seed: 777
 gpu: 1

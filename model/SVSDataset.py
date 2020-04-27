@@ -120,7 +120,7 @@ class SVSCollator(object):
             imag[i, :length, :] = batch[i][5][:length].imag
             pitch[i, :length] = batch[i][2][:length]
             beat[i, :length] = batch[i][1][:length]
-            mel[i, :length] = batch[i][6][: length]
+            mel[i, :length, :] = batch[i][6][: length]
 
             if self.use_asr_post:
                 phone[i, :length, :] = batch[i][0][:length]
@@ -131,6 +131,7 @@ class SVSCollator(object):
 
         length = np.array(len_list)
         spec = torch.from_numpy(spec)
+        mel = torch.from_numpy(mel)
         imag = torch.from_numpy(imag)
         real = torch.from_numpy(real)
         length = torch.from_numpy(length)
@@ -182,24 +183,23 @@ class SVSDataset(Dataset):
         self.max_db = max_db
         self.ref_db = ref_db
         quality = _load_sing_quality(sing_quality, standard)
-        # TODO: sum up the data source to one directory
         # get file_list
         self.filename_list = os.listdir(align_root_path)
-        # fast debug
-        # self.filename_list = self.filename_list[:10]
         phone_list, beat_list, pitch_list, spectrogram_list = [], [], [], []
         for filename in self.filename_list:
-            if filename[-1] == 'm' or filename[-1] == 'e' or filename[:4] not in quality:
+            if filename[-4:] != '.npy' or filename[:4] not in quality:
                 print("remove file {}".format(filename))
                 self.filename_list.remove(filename)
-
 
     def __len__(self):
         return len(self.filename_list)
 
     def __getitem__(self, i):
         path = os.path.join(self.align_root_path, self.filename_list[i])
-        phone = np.load(path)
+        try:
+            phone = np.load(path)
+        except:
+            print("error path {}".format(path))
         beat_path = os.path.join(self.pitch_beat_root_path, str(int(self.filename_list[i][1:4])),
                                  self.filename_list[i][4:-4] + "_beats.npy")
         beat_numpy = np.load(beat_path)
