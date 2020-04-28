@@ -317,9 +317,10 @@ class TransformerEncoderLayer(Module):
         activation: the activation function of intermediate layer, relu or gelu (default=relu).
     """
 
-    def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1, activation="relu", device="cuda"):
+    def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1, activation="relu",
+                 local_gaussian=False, device="cuda"):
         super(TransformerEncoderLayer, self).__init__()
-        self.self_attn = MultiheadAttention(nhead, d_model, device)
+        self.self_attn = MultiheadAttention(nhead, d_model, device, local_gaussian=local_gaussian)
         # Implementation of Feedforward model
         self.linear1 = Linear(d_model, dim_feedforward)
         self.dropout = Dropout(dropout)
@@ -373,9 +374,9 @@ class TransformerGLULayer_old(Module):
     """
 
     def __init__(self, d_model, nhead, dropout=0.1, activation="relu",
-        glu_kernel=3, device="cuda"):
+        glu_kernel=3, local_gaussian=False, device="cuda"):
         super(TransformerGLULayer_old, self).__init__()
-        self.self_attn = MultiheadAttention(nhead, d_model, device)
+        self.self_attn = MultiheadAttention(nhead, d_model, device, local_gaussian=local_gaussian)
         # Implementation of Feedforward model
         self.GLU = GLU(1, d_model, glu_kernel, dropout, d_model)
 
@@ -418,9 +419,9 @@ class TransformerGLULayer_old(Module):
 
 class TransformerGLULayer(Module):
     def __init__(self, d_model, nhead, dropout=0.1, activation="relu",
-            glu_kernel=3, device="cuda"):
+            glu_kernel=3, local_gaussian=False, device="cuda"):
         super(TransformerGLULayer, self).__init__()
-        self.self_attn = Attention(d_model)
+        self.self_attn = Attention(h=nhead, num_hidden=d_model, local_gaussian=local_gaussian)
         self.GLU = GLU(1, d_model, glu_kernel, dropout, d_model)
         self.norm1 = LayerNorm(d_model)
         self.norm2 = LayerNorm(d_model)
