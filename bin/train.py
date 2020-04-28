@@ -5,7 +5,7 @@
 import yamlargparse
 
 import sys
-sys.path.append("/export/c04/jiatong/project/svs/SVS_system")
+sys.path.append("/home/yzhan/SVS_github/SVS_system")
 
 parser = yamlargparse.ArgumentParser(description='SVS training')
 parser.add_argument('-c', '--config', help='config file path',
@@ -83,6 +83,8 @@ parser.add_argument('--sing_quality', default="conf/sing_quality.csv", type=str)
 parser.add_argument('--standard', default=3, type=int)
 parser.add_argument('--train_step_log', default=100, type=int)
 parser.add_argument('--dev_step_log', default=10, type=int)
+
+parser.add_argument('--normalize',default=False,type=bool)
 args = parser.parse_args()
 
 import system_info
