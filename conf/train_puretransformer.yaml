@@ -11,7 +11,6 @@ sing_quality: conf/sing_quality.csv
 sampling_rate: 22050
 nfft: 2048
 feat_dim: 1025
-
 frame_length: 0.06
 frame_shift: 0.03
 model_type: PureTransformer
@@ -33,5 +32,6 @@ noam_warmup_steps: 25000
 phone_size: 68
 seed: 777
 gpu: 1
+normalize: True
 #initmodel: /home/yzhan/SVS_system/exp/debug1/model/epoch_3.pth.tar
 pretrain_encoder: /home/yzhan/SVS_system/exp/debug1/model/checkpoint_transformer_160000.pth.tar
