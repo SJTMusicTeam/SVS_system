@@ -33,5 +33,6 @@ noam_warmup_steps: 25000
 phone_size: 68
 seed: 777
 gpu: 1
+normalize: True
 #initmodel: /home/yzhan/SVS_system/exp/debug1/model/epoch_3.pth.tar
 pretrain_encoder: /home/yzhan/SVS_system/exp/debug1/model/checkpoint_transformer_160000.pth.tar
