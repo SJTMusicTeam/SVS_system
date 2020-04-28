@@ -49,6 +49,7 @@ parser.add_argument('--dropout', default=0.1, type=float)
 parser.add_argument('--dec_num_block', default=6, type=int)
 parser.add_argument('--num-rnn-layers', default=2, type=int)
 parser.add_argument('--dec_nhead', default=4, type=int)
+parser.add_argument('--local_gaussian', default=False, type=bool)
 parser.add_argument('--seed', default=666, type=int)
 parser.add_argument('--use_tfb', dest='use_tfboard',
                     help='whether use tensorboard',

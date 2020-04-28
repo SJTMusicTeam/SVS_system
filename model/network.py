@@ -158,11 +158,11 @@ class Decoder(nn.Module):
     """
     # TODO： frame smoothing (triple the time resolution)
     def __init__(self, num_block, hidden_size, output_dim, nhead=4, dropout=0.1, activation="relu",
-        glu_kernel=3, device="cuda"):
+        glu_kernel=3, local_gaussian=False, device="cuda"):
         super(Decoder, self).__init__()
         self.input_norm = module.LayerNorm(hidden_size)
         decoder_layer = module.TransformerGLULayer(hidden_size, nhead, dropout, activation,
-            glu_kernel, device=device)
+            glu_kernel, local_gaussian=local_gaussian, device=device)
         self.decoder = module.TransformerEncoder(decoder_layer, num_block)
         self.output_fc = nn.Linear(hidden_size, output_dim)
 
@@ -179,7 +179,7 @@ class GLU_TransformerSVS(nn.Module):
     Transformer Network
     """
     def __init__(self, phone_size, embed_size, hidden_size, glu_num_layers, dropout, dec_num_block,
-                 dec_nhead, output_dim, n_mels=-1, device="cuda"):
+                 dec_nhead, output_dim, n_mels=-1, local_gaussian=False, device="cuda"):
         super(GLU_TransformerSVS, self).__init__()
         self.encoder = Encoder(phone_size, embed_size, hidden_size, dropout, glu_num_layers,
                                num_layers=1, glu_kernel=3)
@@ -188,10 +188,12 @@ class GLU_TransformerSVS(nn.Module):
         self.use_mel = (n_mels > 0)
 
         if self.use_mel:
-            self.decoder = Decoder(dec_num_block, embed_size, n_mels, dec_nhead, dropout, device=device)
+            self.decoder = Decoder(dec_num_block, embed_size, n_mels, dec_nhead, dropout,
+                                   local_gaussian=local_gaussian, device=device)
             self.postnet = module.PostNet(n_mels, output_dim, (output_dim // 2 * 2))
         else:
-            self.decoder = Decoder(dec_num_block, embed_size, output_dim, dec_nhead, dropout, device=device)
+            self.decoder = Decoder(dec_num_block, embed_size, output_dim, dec_nhead, dropout,
+                                   local_gaussian=local_gaussian, device=device)
             self.postnet = module.PostNet(output_dim, output_dim, (output_dim // 2 * 2))
 
     def forward(self, characters, phone, pitch, beat, pos_text=True, src_key_padding_mask=None,
@@ -300,9 +302,10 @@ class LSTMSVS(nn.Module):
 
 class TransformerSVS(GLU_TransformerSVS):
     def __init__(self, phone_size, embed_size, hidden_size, glu_num_layers, dropout, dec_num_block,
-            dec_nhead, output_dim, n_mels=80, device="cuda"):
+            dec_nhead, output_dim, n_mels=80, local_gaussian=local_gaussian, device="cuda"):
         super(TransformerSVS, self).__init__(phone_size, embed_size, hidden_size,
-                glu_num_layers, dropout, dec_num_block,dec_nhead, output_dim, device="cuda")
+                glu_num_layers, dropout, dec_num_block,dec_nhead, output_dim,
+                local_gaussian=local_gaussian, device="cuda")
         self.encoder = SA_Encoder(phone_size, embed_size, hidden_size,dropout)
         self.use_mel = (n_mels>0) # FIX ME
         if self.use_mel:
