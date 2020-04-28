@@ -88,6 +88,7 @@ def train(args):
                                 dec_nhead=args.dec_nhead,
                                 dec_num_block=args.dec_num_block,
                                 n_mels=args.n_mels,
+                                local_gaussian=args.local_gaussian,
                                 device=device)
     elif args.model_type == "LSTM":
         model = LSTMSVS(phone_size=args.phone_size,
@@ -109,6 +110,7 @@ def train(args):
                                         dec_nhead=args.dec_nhead,
                                         dec_num_block=args.dec_num_block,
                                         n_mels=args.n_mels,
+                                        local_gaussian=args.local_gaussian,
                                         device=device)
     else:
         raise ValueError('Not Support Model Type %s' % args.model_type)

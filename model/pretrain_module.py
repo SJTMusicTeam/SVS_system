@@ -198,17 +198,19 @@ class MultiheadAttention(nn.Module):
         self.num_hidden_k = num_hidden_k
         self.attn_dropout = nn.Dropout(p=0.1)
 
-    def forward(self, key, value, query, mask=None, query_mask=None):
+    def forward(self, key, value, query, mask=None, query_mask=None, gaussian_factor=None):
         # Get attention score
-        attn = t.bmm(query, key.transpose(1, 2))
+        attn = torch.bmm(query, key.transpose(1, 2))
         attn = attn / math.sqrt(self.num_hidden_k)
+        if gaussian_factor is not None:
+            attn = attn - gaussian_factor
 
         # Masking to ignore padding (key side)
         if mask is not None:
             attn = attn.masked_fill(mask, -2 ** 32 + 1)
-            attn = t.softmax(attn, dim=-1)
+            attn = torch.softmax(attn, dim=-1)
         else:
-            attn = t.softmax(attn, dim=-1)
+            attn = torch.softmax(attn, dim=-1)
 
         # Masking to ignore padding (query side)
         if query_mask is not None:
@@ -218,7 +220,7 @@ class MultiheadAttention(nn.Module):
         # attn = self.attn_dropout(attn)
         
         # Get Context Vector
-        result = t.bmm(attn, value)
+        result = torch.bmm(attn, value)
 
         return result, attn
 
@@ -227,7 +229,7 @@ class Attention(nn.Module):
     """
     Attention Network
     """
-    def __init__(self, num_hidden, h=4):
+    def __init__(self, num_hidden, h=4, local_gaussian=False):
         """
         :param num_hidden: dimension of hidden
         :param h: num of heads 
@@ -243,6 +245,12 @@ class Attention(nn.Module):
         self.query = Linear(num_hidden, num_hidden, bias=False)
 
         self.multihead = MultiheadAttention(self.num_hidden_per_attn)
+        
+        self.local_gaussian = local_gaussian
+        if local_gaussian:
+            self.local_gaussian_factor = Variable(torch.tensor(30), requires_grad=True).float()
+        else:
+            self.local_gaussian_factor = None
 
         self.residual_dropout = nn.Dropout(p=0.1)
 
@@ -272,15 +280,26 @@ class Attention(nn.Module):
         value = value.permute(2, 0, 1, 3).contiguous().view(-1, seq_k, self.num_hidden_per_attn)
         query = query.permute(2, 0, 1, 3).contiguous().view(-1, seq_q, self.num_hidden_per_attn)
 
+        # add gaussian or not
+        if self.local_gaussian:
+            row = torch.arange(1, seq_k + 1).unsqueeze(0).unsqueeze(-1).repeat(batch_size * self.h, 1, seq_k)
+            col = torch.arange(1, seq_k + 1).unsqueeze(0).unsqueeze(0).repeat(batch_size * self.h, seq_k, 1)
+            local_gaussian = torch.pow(row - col, 2).float().to(key.device.type)
+            self.local_gaussian_factor = self.local_gaussian_factor.to(key.device.type)
+            local_gaussian = local_gaussian / self.local_gaussian_factor
+        else:
+            local_gaussian = None
+
         # Get context vector
-        result, attns = self.multihead(key, value, query, mask=mask, query_mask=query_mask)
+        result, attns = self.multihead(key, value, query, mask=mask, query_mask=query_mask,
+                                      gaussian_factor=local_gaussian)
 
         # Concatenate all multihead context vector
         result = result.view(self.h, batch_size, seq_q, self.num_hidden_per_attn)
         result = result.permute(1, 2, 0, 3).contiguous().view(batch_size, seq_q, -1)
         
         # Concatenate context vector with input (most important)
-        result = t.cat([decoder_input, result], dim=-1)
+        result = torch.cat([decoder_input, result], dim=-1)
         
         # Final linear
         result = self.final_linear(result)
@@ -292,8 +311,7 @@ class Attention(nn.Module):
 
         # Layer normalization
         result = self.layer_norm_1(result)
-        shape1,shape2,shape3 = attns.shape[0],attns.shape[1],attns.shape[2]
-        attns = attns.view(-1,self.h,shape2,shape3)
+
         return result, attns
     
 
