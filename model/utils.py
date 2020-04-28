@@ -14,6 +14,7 @@ from librosa.output import write_wav
 from librosa.display import specshow
 from scipy import signal
 
+from model.utterance_mvn import UtteranceMVN
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -72,6 +73,12 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
                     char_key_padding_mask=char_len_list)
             #att = None # FIX ME
 
+        if args.normalize:
+            normalizer = UtteranceMVN()
+            spec,_ = normalizer(spec,length)
+            mel,_ = normalizer(mel,length)
+        
+        
         spec_loss = criterion(output, spec, length_mask)
         if args.n_mels > 0:
             mel_loss = criterion(output_mel, mel, length_mel_mask)
