@@ -11,7 +11,6 @@ sing_quality: conf/sing_quality.csv
 sampling_rate: 22050
 nfft: 2048
 feat_dim: 1025
-
 frame_length: 0.06
 frame_shift: 0.03
 model_type: PureTransformer

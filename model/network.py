@@ -300,10 +300,14 @@ class LSTMSVS(nn.Module):
 
 class TransformerSVS(GLU_TransformerSVS):
     def __init__(self, phone_size, embed_size, hidden_size, glu_num_layers, dropout, dec_num_block,
-            dec_nhead, output_dim, n_mels=-1, device="cuda"):
+            dec_nhead, output_dim, n_mels=80, device="cuda"):
         super(TransformerSVS, self).__init__(phone_size, embed_size, hidden_size,
                 glu_num_layers, dropout, dec_num_block,dec_nhead, output_dim, device="cuda")
         self.encoder = SA_Encoder(phone_size, embed_size, hidden_size,dropout)
+        self.use_mel = (n_mels>0) # FIX ME
+        if self.use_mel:
+            self.decoder = Decoder(dec_num_block,embed_size,n_mels,dec_nhead,dropout,device=device)
+            self.postnet = module.PostNet(n_mels,output_dim,(output_dim// 2*2))
 
 
 
