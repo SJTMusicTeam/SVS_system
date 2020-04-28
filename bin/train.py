@@ -5,7 +5,7 @@
 import yamlargparse
 
 import sys
-sys.path.append("/home/yzhan/SVS_github/SVS_system")
+sys.path.append("/your/path/2/SVS_system")
 
 parser = yamlargparse.ArgumentParser(description='SVS training')
 parser.add_argument('-c', '--config', help='config file path',
