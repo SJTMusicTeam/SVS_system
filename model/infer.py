@@ -24,6 +24,8 @@ def infer(args):
                                 dropout=args.dropout,
                                 output_dim=args.feat_dim,
                                 dec_nhead=args.dec_nhead,
+                                n_mels=args.n_mels,
+                                local_gaussian=args.local_gaussian,
                                 dec_num_block=args.dec_num_block)
     elif args.model_type == "PureTransformer":
         model = TransformerSVS(phone_size=args.phone_size,
@@ -33,7 +35,9 @@ def infer(args):
                                         dropout=args.dropout,
                                         output_dim=args.feat_dim,
                                         dec_nhead=args.dec_nhead,
-                                        dec_num_block=args.dec_num_block)
+                                        dec_num_block=args.dec_num_block,
+                                        n_mels=args.n_mels,
+                                        local_gaussian=args.local_gaussian,)
     else:
         raise ValueError('Not Support Model Type %s' % args.model_type)
 
@@ -96,6 +100,11 @@ def infer(args):
         raise ValueError("Not Support Loss Type")
 
     losses = AverageMeter()
+    spec_losses = AverageMeter()
+    if args.perceptual_loss > 0:
+        pe_losses = AverageMeter()
+    if args.n_mels > 0:
+        mel_losses = AverageMeter()
 
     if not os.path.exists(args.prediction_path):
         os.makedirs(args.prediction_path)
@@ -107,20 +116,47 @@ def infer(args):
         beat = beat.to(device)
         pitch = pitch.to(device).float()
         spec = spec.to(device).float()
-
-        chars = chars.to(device)
+        mel = mel.to(device).float()
+        real = real.to(device).float()
+        imag = imag.to(device).float()
         length_mask = create_src_key_padding_mask(length, args.num_frames)
         length_mask = length_mask.unsqueeze(2)
+        length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
         length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
         length_mask = length_mask.to(device)
+        length_mel_mask = length_mel_mask.to(device)
         length = length.to(device)
-        char_len_list = char_len_list.to(device)
 
-        output, att = model(chars, phone, pitch, beat, src_key_padding_mask=length,
+        if not args.use_asr_post:
+            chars = chars.to(device)
+            char_len_list = char_len_list.to(device)
+        else:
+            phone = phone.float()
+        
+        if args.model_type == "GLU_Transformer":
+            output, att, output_mel = model(chars, phone, pitch, beat, src_key_padding_mask=length,
                        char_key_padding_mask=char_len_list)
+        elif args.model_type == "LSTM":
+            output, hidden, output_mel = model(phone, pitch, beat)
+            att = None
+        elif args.model_type == "PureTransformer":
+            output, att, output_mel = model(chars, phone, pitch, beat, src_key_padding_mask=length,
+                    char_key_padding_mask=char_len_list)
+            #att = None # FIX ME
 
-        test_loss = loss(output, spec, length_mask)
+        spec_loss = criterion(output, spec, length_mask)
+        if args.n_mels > 0:
+            mel_loss = criterion(output_mel, mel, length_mel_mask)
+        else:
+            mel_loss = 0
+
+        final_loss = mel_loss + spec_loss
+
+        losses.update(train_loss.item(), phone.size(0))
+        spec_losses.update(spec_loss.item(), phone.size(0))
+        if args.n_mels > 0:
+            mel_losses.update(mel_loss.item(), phone.size(0))
+
         if step % 1 == 0:
         	log_figure(step, output, spec, att, length, args.prediction_path, args)
-        losses.update(test_loss.item(), phone.size(0))
     print("loss avg for test is {}".format(losses.avg))
