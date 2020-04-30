@@ -119,13 +119,13 @@ def infer(args):
         mel = mel.to(device).float()
         real = real.to(device).float()
         imag = imag.to(device).float()
-        length_mask = create_src_key_padding_mask(length, args.num_frames)
-        length_mask = length_mask.unsqueeze(2)
+        length_mask = length.unsqueeze(2)
         length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
         length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
         length_mask = length_mask.to(device)
         length_mel_mask = length_mel_mask.to(device)
         length = length.to(device)
+        char_len_list = char_len_list.to(device)
 
         if not args.use_asr_post:
             chars = chars.to(device)
@@ -134,15 +134,14 @@ def infer(args):
             phone = phone.float()
         
         if args.model_type == "GLU_Transformer":
-            output, att, output_mel = model(chars, phone, pitch, beat, src_key_padding_mask=length,
-                       char_key_padding_mask=char_len_list)
+            output, att, output_mel = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                       pos_spec=length)
         elif args.model_type == "LSTM":
             output, hidden, output_mel = model(phone, pitch, beat)
             att = None
         elif args.model_type == "PureTransformer":
-            output, att, output_mel = model(chars, phone, pitch, beat, src_key_padding_mask=length,
-                    char_key_padding_mask=char_len_list)
-            #att = None # FIX ME
+            output, att, output_mel = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                       pos_spec=length)
 
         spec_loss = criterion(output, spec, length_mask)
         if args.n_mels > 0:
