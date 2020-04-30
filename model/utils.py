@@ -18,14 +18,6 @@ from model.utterance_mvn import UtteranceMVN
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def create_src_key_padding_mask(src_len, max_len):
-    bs = len(src_len)
-    mask = np.zeros((bs, max_len))
-    for i in range(bs):
-        mask[i, :src_len[i]] = 1
-    return torch.from_numpy(mask).float()
-
-
 def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptual_entropy, epoch, args):
     losses = AverageMeter()
     spec_losses = AverageMeter()
@@ -48,13 +40,13 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
         mel = mel.to(device).float()
         real = real.to(device).float()
         imag = imag.to(device).float()
-        length_mask = create_src_key_padding_mask(length, args.num_frames)
-        length_mask = length_mask.unsqueeze(2)
+        length_mask = length.unsqueeze(2)
         length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
         length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
         length_mask = length_mask.to(device)
         length_mel_mask = length_mel_mask.to(device)
         length = length.to(device)
+        char_len_list = char_len_list.to(device)
 
         if not args.use_asr_post:
             chars = chars.to(device)
@@ -63,15 +55,14 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
             phone = phone.float()
         
         if args.model_type == "GLU_Transformer":
-            output, att, output_mel = model(chars, phone, pitch, beat, src_key_padding_mask=length,
-                       char_key_padding_mask=char_len_list)
+            output, att, output_mel = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                       pos_spec=length)
         elif args.model_type == "LSTM":
             output, hidden, output_mel = model(phone, pitch, beat)
             att = None
         elif args.model_type == "PureTransformer":
-            output, att, output_mel = model(chars, phone, pitch, beat, src_key_padding_mask=length,
-                    char_key_padding_mask=char_len_list)
-            #att = None # FIX ME
+            output, att, output_mel = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                       pos_spec=length)
 
         if args.normalize:
             normalizer = UtteranceMVN()
@@ -146,37 +137,36 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
 
     with torch.no_grad():
         for step, (phone, beat, pitch, spec, real, imag, length, chars, char_len_list, mel) in enumerate(dev_loader, 1):
-            phone = phone.to(device).to(torch.int64)
-            beat = beat.to(device).to(torch.int64)
+            phone = phone.to(device)
+            beat = beat.to(device)
             pitch = pitch.to(device).float()
             spec = spec.to(device).float()
             mel = mel.to(device).float()
             real = real.to(device).float()
             imag = imag.to(device).float()
-            length = length.to(device)
-            length_mask = create_src_key_padding_mask(length, args.num_frames)
-            length_mask = length_mask.unsqueeze(2)
+            length_mask = length.unsqueeze(2)
             length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
             length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
             length_mask = length_mask.to(device)
             length_mel_mask = length_mel_mask.to(device)
-
+            length = length.to(device)
+            char_len_list = char_len_list.to(device)
+    
             if not args.use_asr_post:
                 chars = chars.to(device)
                 char_len_list = char_len_list.to(device)
             else:
                 phone = phone.float()
-
+            
             if args.model_type == "GLU_Transformer":
-                output, att, output_mel = model(chars, phone, pitch, beat, src_key_padding_mask=length,
-                           char_key_padding_mask=char_len_list)
+                output, att, output_mel = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                           pos_spec=char_len_list)
             elif args.model_type == "LSTM":
                 output, hidden, output_mel = model(phone, pitch, beat)
                 att = None
             elif args.model_type == "PureTransformer":
-                output, att, output_mel = model(chars, phone, pitch, beat, src_key_padding_mask=length,
-                        char_key_padding_mask=char_len_list)
-                #att = None # FIX ME
+                output, att, output_mel = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                           pos_spec=char_len_list)
 
             spec_loss = criterion(output, spec, length_mask)
             if args.n_mels > 0:
