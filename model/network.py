@@ -39,11 +39,12 @@ class Encoder(nn.Module):
         self.fc_2 = nn.Linear(hidden_size, embed_size)
     
 
-    def forward(self, text_phone):
+    def forward(self, text_phone, mask=None, query_mask=None):
         """
         text_phone dim: [batch_size, text_phone_length]
         output dim : [batch_size, text_phone_length, embedded_dim]
         """
+        # don't use mask and query mask in glu, but leave the field for uniform interface
         embedded_phone = self.emb_phone(text_phone)
         glu_in = self.fc_1(embedded_phone)
         
@@ -62,6 +63,7 @@ class Encoder(nn.Module):
         out = out * math.sqrt(0.5)
         return out, text_phone
 
+
 class SA_Encoder(nn.Module):
     def __init__(self,phone_size, embed_size, hidden_size,dropout,num_blocks=3,nheads=4):
         super(SA_Encoder, self).__init__()
@@ -70,17 +72,23 @@ class SA_Encoder(nn.Module):
         self.emb_phone = nn.Embedding(phone_size, embed_size)
         self.fc_1 = nn.Linear(embed_size, hidden_size)
 
-    def forward(self,text_phone):
+    def forward(self, text_phone, pos):
+
+        if self.training:
+            query_mask = pos.ne(0).type(torch.float)
+        else:
+            query_mask = None
+        mask = pos.eq(0).unsqueeze(1).repeat(1, text_phone.size(1), 1)
+
         embedded_phone = self.emb_phone(text_phone)
         x = self.fc_1(embedded_phone)
-        # Fix me: Yuekai Add mask
-        mask,c_mask = None,None
-        attns=list()
+        attns = []
         for layer, ffn in zip(self.layers, self.ffns):
-            x, attn = layer(x, x, mask=mask, query_mask=c_mask)
+            x, attn = layer(x, x, mask=mask, query_mask=query_mask)
             x = ffn(x)
             attns.append(attn) 
         return x , text_phone
+
 
 class Encoder_Postnet(nn.Module):
     """
@@ -168,9 +176,15 @@ class Decoder(nn.Module):
 
         self.hidden_size=hidden_size
 
-    def forward(self, src, src_mask=None, src_key_padding_mask=None):
+    def forward(self, src, pos):
+        if self.training:
+            query_mask = pos.ne(0).type(torch.float)
+        else:
+            query_mask = None
+        mask = pos.eq(0).unsqueeze(1).repeat(1, text_phone.size(1), 1)
+
         src = self.input_norm(src)
-        memory, att_weight = self.decoder(src, mask=src_mask, src_key_padding_mask=src_key_padding_mask)
+        memory, att_weight = self.decoder(src, mask=mask, query_mask=query_mask)
         output = self.output_fc(memory)
         return output, att_weight
 
@@ -196,11 +210,12 @@ class GLU_TransformerSVS(nn.Module):
                                    local_gaussian=local_gaussian, device=device)
             self.postnet = module.PostNet(output_dim, output_dim, (output_dim // 2 * 2))
 
-    def forward(self, characters, phone, pitch, beat, pos_text=True, src_key_padding_mask=None,
-                char_key_padding_mask=None):
-        encoder_out, text_phone = self.encoder(characters.squeeze(2))
+    def forward(self, characters, phone, pitch, beat, pos_text=True, pos_char=None,
+                pos_spec=None):
+
+        encoder_out, text_phone = self.encoder(characters.squeeze(2), pos=pos_char)
         post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat)
-        mel_output, att_weight = self.decoder(post_out, src_key_padding_mask=src_key_padding_mask)
+        mel_output, att_weight = self.decoder(post_out, pos=pos_spec)
         output = self.postnet(mel_output)
         return output, att_weight, mel_output
 
@@ -306,11 +321,11 @@ class TransformerSVS(GLU_TransformerSVS):
         super(TransformerSVS, self).__init__(phone_size, embed_size, hidden_size,
                 glu_num_layers, dropout, dec_num_block,dec_nhead, output_dim,
                 local_gaussian=local_gaussian, device="cuda")
-        self.encoder = SA_Encoder(phone_size, embed_size, hidden_size,dropout)
-        self.use_mel = (n_mels>0) # FIX ME
+        self.encoder = SA_Encoder(phone_size, embed_size, hidden_size, dropout)
+        self.use_mel = (n_mels > 0) # FIX ME
         if self.use_mel:
-            self.decoder = Decoder(dec_num_block,embed_size,n_mels,dec_nhead,dropout,device=device)
-            self.postnet = module.PostNet(n_mels,output_dim,(output_dim// 2*2))
+            self.decoder = Decoder(dec_num_block, embed_size, n_mels,dec_nhead, dropout, device=device)
+            self.postnet = module.PostNet(n_mels, output_dim, (output_dim// 2*2))
 
 
 

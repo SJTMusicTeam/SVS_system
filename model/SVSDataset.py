@@ -105,6 +105,7 @@ class SVSCollator(object):
         mel = np.zeros((batch_size, self.max_len, mel_dim))
         pitch = np.zeros((batch_size, self.max_len))
         beat = np.zeros((batch_size, self.max_len))
+        length_mask = np.zeros((batch_size, self.max_len))
 
         if self.use_asr_post:
             phone = np.zeros((batch_size, self.max_len, self.phone_size))
@@ -112,9 +113,11 @@ class SVSCollator(object):
             char_len_list = [len(batch[i][4]) for i in range(batch_size)]
             phone = np.zeros((batch_size, self.max_len))
             chars = np.zeros((batch_size, self.char_max_len))
+            char_len_mask = np.zeros((batch_size, self.char_max_len))
 
         for i in range(batch_size):
             length = min(len_list[i], self.max_len)
+            length_mask[i, :length] = np.arange(1, length + 1)
             spec[i, :length, :] = batch[i][3][:length]
             real[i, :length, :] = batch[i][5][:length].real
             imag[i, :length, :] = batch[i][5][:length].imag
@@ -127,25 +130,24 @@ class SVSCollator(object):
             else:
                 char_leng = min(len(batch[i][4]), self.char_max_len)
                 phone[i, :length] = batch[i][0][:length]
-                chars[i, :char_leng] = batch[i][4][:char_leng]         
+                chars[i, :char_leng] = batch[i][4][:char_leng]
+                char_len_mask[i, :char_leng] = np.arange(1, char_leng + 1)  
 
-        length = np.array(len_list)
         spec = torch.from_numpy(spec)
         mel = torch.from_numpy(mel)
         imag = torch.from_numpy(imag)
         real = torch.from_numpy(real)
-        length = torch.from_numpy(length)
+        length_mask = torch.from_numpy(length_mask).long()
         pitch = torch.from_numpy(pitch).unsqueeze(dim=-1).long()
         beat = torch.from_numpy(beat).unsqueeze(dim=-1).long()
         phone = torch.from_numpy(phone).unsqueeze(dim=-1).long()
 
         if not self.use_asr_post:
-            char_len_list = np.array(char_len_list)
             chars = torch.from_numpy(chars).unsqueeze(dim=-1).to(torch.int64)
-            char_len_list = torch.from_numpy(char_len_list)
-            return phone, beat, pitch, spec, real, imag, length, chars, char_len_list, mel
+            char_len_mask = torch.from_numpy(char_len_mask).long()
+            return phone, beat, pitch, spec, real, imag, length_mask, chars, char_len_mask, mel
         else:
-            return phone, beat, pitch, spec, real, imag, length, None, None, mel
+            return phone, beat, pitch, spec, real, imag, length_mask, None, None, mel
 
 
 
