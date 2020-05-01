@@ -160,13 +160,13 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
             
             if args.model_type == "GLU_Transformer":
                 output, att, output_mel = model(chars, phone, pitch, beat, pos_char=char_len_list,
-                           pos_spec=char_len_list)
+                           pos_spec=length)
             elif args.model_type == "LSTM":
                 output, hidden, output_mel = model(phone, pitch, beat)
                 att = None
             elif args.model_type == "PureTransformer":
                 output, att, output_mel = model(chars, phone, pitch, beat, pos_char=char_len_list,
-                           pos_spec=char_len_list)
+                           pos_spec=length)
 
             spec_loss = criterion(output, spec, length_mask)
             if args.n_mels > 0:
@@ -298,7 +298,7 @@ def log_figure(step, output, spec, att, length, save_dir, args):
     # save wav and plot spectrogram
     output = output.cpu().detach().numpy()[0]
     out_spec = spec.cpu().detach().numpy()[0]
-    length = length.cpu().detach().numpy()[0]
+    length = np.max(length.cpu().detach().numpy()[0])
     output = output[:length]
     out_spec = out_spec[:length]
     wav = spectrogram2wav(output, args.max_db, args.ref_db, args.preemphasis, args.power, args.sampling_rate, args.frame_shift, args.frame_length, args.nfft)

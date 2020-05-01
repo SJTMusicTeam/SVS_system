@@ -2,10 +2,9 @@ import torch.nn as nn
 import torch as t
 import torch.nn.functional as F
 import math
-# import hyperparams as hp
-#from text.symbols import symbols
 import numpy as np
 import copy
+from torch.autograd import Variable
 from collections import OrderedDict
 
 def clones(module, N):
@@ -200,7 +199,7 @@ class MultiheadAttention(nn.Module):
 
     def forward(self, key, value, query, mask=None, query_mask=None, gaussian_factor=None):
         # Get attention score
-        attn = torch.bmm(query, key.transpose(1, 2))
+        attn = t.bmm(query, key.transpose(1, 2))
         attn = attn / math.sqrt(self.num_hidden_k)
         if gaussian_factor is not None:
             attn = attn - gaussian_factor
@@ -208,9 +207,9 @@ class MultiheadAttention(nn.Module):
         # Masking to ignore padding (key side)
         if mask is not None:
             attn = attn.masked_fill(mask, -2 ** 32 + 1)
-            attn = torch.softmax(attn, dim=-1)
+            attn = t.softmax(attn, dim=-1)
         else:
-            attn = torch.softmax(attn, dim=-1)
+            attn = t.softmax(attn, dim=-1)
 
         # Masking to ignore padding (query side)
         if query_mask is not None:
@@ -220,7 +219,7 @@ class MultiheadAttention(nn.Module):
         # attn = self.attn_dropout(attn)
         
         # Get Context Vector
-        result = torch.bmm(attn, value)
+        result = t.bmm(attn, value)
 
         return result, attn
 
@@ -248,7 +247,7 @@ class Attention(nn.Module):
         
         self.local_gaussian = local_gaussian
         if local_gaussian:
-            self.local_gaussian_factor = Variable(torch.tensor(30), requires_grad=True).float()
+            self.local_gaussian_factor = Variable(t.tensor(30.0), requires_grad=True).float()
         else:
             self.local_gaussian_factor = None
 
@@ -282,9 +281,9 @@ class Attention(nn.Module):
 
         # add gaussian or not
         if self.local_gaussian:
-            row = torch.arange(1, seq_k + 1).unsqueeze(0).unsqueeze(-1).repeat(batch_size * self.h, 1, seq_k)
-            col = torch.arange(1, seq_k + 1).unsqueeze(0).unsqueeze(0).repeat(batch_size * self.h, seq_k, 1)
-            local_gaussian = torch.pow(row - col, 2).float().to(key.device.type)
+            row = t.arange(1, seq_k + 1).unsqueeze(0).unsqueeze(-1).repeat(batch_size * self.h, 1, seq_k)
+            col = t.arange(1, seq_k + 1).unsqueeze(0).unsqueeze(0).repeat(batch_size * self.h, seq_k, 1)
+            local_gaussian = t.pow(row - col, 2).float().to(key.device.type)
             self.local_gaussian_factor = self.local_gaussian_factor.to(key.device.type)
             local_gaussian = local_gaussian / self.local_gaussian_factor
         else:
@@ -294,12 +293,15 @@ class Attention(nn.Module):
         result, attns = self.multihead(key, value, query, mask=mask, query_mask=query_mask,
                                       gaussian_factor=local_gaussian)
 
+        attns = attns.view(self.h, batch_size, seq_q, seq_k)
+        attns = attns.permute(1, 0, 2, 3)
+
         # Concatenate all multihead context vector
         result = result.view(self.h, batch_size, seq_q, self.num_hidden_per_attn)
         result = result.permute(1, 2, 0, 3).contiguous().view(batch_size, seq_q, -1)
         
         # Concatenate context vector with input (most important)
-        result = torch.cat([decoder_input, result], dim=-1)
+        result = t.cat([decoder_input, result], dim=-1)
         
         # Final linear
         result = self.final_linear(result)
