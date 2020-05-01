@@ -7,7 +7,7 @@ train_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/train
 val_align: /export/c04/jiatong/project/svs/SVS_system/data/opt_sil_test/dev
 val_pitch: /export/c04/jiatong/project/svs/SVS_system/data/pitch_beat_extraction/dev/
 val_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/dev
-standard: 5
+standard: 4
 sing_quality: conf/sing_quality.csv
 
 # feature related
@@ -19,7 +19,7 @@ frame_length: 0.06
 frame_shift: 0.03
 
 # model related
-model_save_dir: exp/debug_5sing_quality_gaussian/model
+model_save_dir: exp/debug_4sing_quality_gaussian_mask/model
 model_type: GLU_Transformer
 hidden_size: 256
 embedding_size: 256

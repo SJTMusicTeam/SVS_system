@@ -39,12 +39,12 @@ class Encoder(nn.Module):
         self.fc_2 = nn.Linear(hidden_size, embed_size)
     
 
-    def forward(self, text_phone, mask=None, query_mask=None):
+    def forward(self, text_phone, pos=None):
         """
         text_phone dim: [batch_size, text_phone_length]
         output dim : [batch_size, text_phone_length, embedded_dim]
         """
-        # don't use mask and query mask in glu, but leave the field for uniform interface
+        # don't use pos in glu, but leave the field for uniform interface
         embedded_phone = self.emb_phone(text_phone)
         glu_in = self.fc_1(embedded_phone)
         
@@ -181,7 +181,7 @@ class Decoder(nn.Module):
             query_mask = pos.ne(0).type(torch.float)
         else:
             query_mask = None
-        mask = pos.eq(0).unsqueeze(1).repeat(1, text_phone.size(1), 1)
+        mask = pos.eq(0).unsqueeze(1).repeat(1, src.size(1), 1)
 
         src = self.input_norm(src)
         memory, att_weight = self.decoder(src, mask=mask, query_mask=query_mask)
@@ -317,7 +317,7 @@ class LSTMSVS(nn.Module):
 
 class TransformerSVS(GLU_TransformerSVS):
     def __init__(self, phone_size, embed_size, hidden_size, glu_num_layers, dropout, dec_num_block,
-            dec_nhead, output_dim, n_mels=80, local_gaussian=local_gaussian, device="cuda"):
+            dec_nhead, output_dim, n_mels=80, local_gaussian=False, device="cuda"):
         super(TransformerSVS, self).__init__(phone_size, embed_size, hidden_size,
                 glu_num_layers, dropout, dec_num_block,dec_nhead, output_dim,
                 local_gaussian=local_gaussian, device="cuda")

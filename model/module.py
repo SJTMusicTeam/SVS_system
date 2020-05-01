@@ -291,7 +291,7 @@ class TransformerEncoder(Module):
         self.num_layers = num_layers
         self.norm = norm
 
-    def forward(self, src, mask=None, src_key_padding_mask=None):
+    def forward(self, src, mask=None, query_mask=None):
         # type: (Tensor, Optional[Tensor], Optional[Tensor]) -> Tensor
         r"""Pass the input through the encoder layers in turn.
 
@@ -306,7 +306,7 @@ class TransformerEncoder(Module):
         output = src
 
         for mod in self.layers:
-            output, att_weight = mod(output, src_mask=mask, src_key_padding_mask=src_key_padding_mask)
+            output, att_weight = mod(output, mask=mask, query_mask=query_mask)
 
         if self.norm is not None:
             output = self.norm(output)
@@ -390,3 +390,19 @@ class PostNet(nn.Module):
         return output
 
 
+def _get_activation_fn(activation):
+    if activation == "relu":
+        return F.relu
+    elif activation == "gelu":
+        return F.gelu
+    else:
+        raise RuntimeError("activation should be relu/gelu, not %s." % activation)
+
+
+def _get_clones(module, N):
+    return ModuleList([copy.deepcopy(module) for i in range(N)])
+
+
+def _shape_transform(x):
+    """ Tranform the size of the tensors to fit for conv input. """
+    return torch.unsqueeze(torch.transpose(x, 1, 2), 3)
