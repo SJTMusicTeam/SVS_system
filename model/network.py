@@ -17,6 +17,7 @@ from torch.nn.init import xavier_uniform_
 from torch.nn.init import xavier_normal_
 from torch.nn.init import constant_
 
+from model.global_mvn import GlobalMVN
 class Encoder(nn.Module):
     """
     Encoder Network
@@ -324,8 +325,38 @@ class TransformerSVS(GLU_TransformerSVS):
         self.encoder = SA_Encoder(phone_size, embed_size, hidden_size, dropout)
         self.use_mel = (n_mels > 0) # FIX ME
         if self.use_mel:
-            self.decoder = Decoder(dec_num_block, embed_size, n_mels,dec_nhead, dropout, device=device)
+            self.decoder = Decoder(dec_num_block,embed_size,n_mels,dec_nhead,dropout,device=device)
             self.postnet = module.PostNet(n_mels, output_dim, (output_dim// 2*2))
+
+class TransformerSVS_norm(nn.Module):
+    def __init__(self,stats_file,stats_mel_file,phone_size,embed_size,hidden_size,glu_num_layers,dropout,\
+                 dec_num_block,dec_nhead,output_dim,n_mels=80,local_gaussian=False,device="cuda"):
+        super(TransformerSVS_norm,self).__init__()
+        self.encoder = SA_Encoder(phone_size,embed_size,hidden_size,dropout)
+        self.normalizer = GlobalMVN(stats_file)   # FIX ME, add utterance normalizer
+        self.mel_normalizer = GlobalMVN(stats_mel_file)
+        self.enc_postnet = Encoder_Postnet(embed_size)
+        self.use_mel = (n_mels > 0)
+
+        if self.use_mel:
+            self.decoder = Decoder(dec_num_block,embed_size,n_mels,dec_nhead,dropout,device=device)
+            self.postnet = module.PostNet(n_mels,output_dim,(output_dim//2*2))
+        else:
+            print(f"fix me")
+
+    def forward(self,spec,mel,characters,phone,pitch,beat,pos_text=True,pos_char=None,
+                pos_spec=None):
+        encoder_out,text_phone=self.encoder(characters.squeeze(2),pos=pos_char)
+        post_out = self.enc_postnet(encoder_out,phone,text_phone,pitch,beat)
+        mel_output,att_weight = self.decoder(post_out,pos=pos_spec)
+        output = self.postnet(mel_output)
+        
+        spec,_ = self.normalizer(spec,pos_spec)
+        mel,_ = self.mel_normalizer(mel,pos_spec)
+        return output,att_weight, mel_output, spec, mel
+
+
+
 
 
 

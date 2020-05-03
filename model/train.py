@@ -10,10 +10,10 @@ import torch
 import time
 from model.gpu_util import use_single_gpu
 from model.SVSDataset import SVSDataset, SVSCollator
-from model.network import GLU_TransformerSVS, LSTMSVS, TransformerSVS
+from model.network import GLU_TransformerSVS, LSTMSVS, TransformerSVS, TransformerSVS_norm
 from model.transformer_optim import ScheduledOptim
 from model.loss import MaskedLoss
-from model.utils import train_one_epoch, save_checkpoint, validate, record_info
+from model.utils import train_one_epoch, save_checkpoint, validate, record_info, collect_stats
 
 
 def train(args):
@@ -76,7 +76,10 @@ def train(args):
                                                pin_memory=True)
     # print(dev_set[0][3].shape)
     assert args.feat_dim == dev_set[0][3].shape[1]
-
+    if args.collect_stats:
+        collect_stats(train_loader,args)
+        print(f"collect_stats finished !")
+        quit()
     # prepare model
     if args.model_type == "GLU_Transformer":
         model = GLU_TransformerSVS(phone_size=args.phone_size,
@@ -112,6 +115,22 @@ def train(args):
                                         n_mels=args.n_mels,
                                         local_gaussian=args.local_gaussian,
                                         device=device)
+    
+    elif args.model_type == "PureTransformer_norm":
+        model = TransformerSVS_norm(stats_file=args.stats_file,
+                                    stats_mel_file=args.stats_mel_file,
+                                    phone_size=args.phone_size,
+                                    embed_size=args.embedding_size,
+                                    hidden_size=args.hidden_size,
+                                    glu_num_layers=args.glu_num_layers,
+                                    dropout=args.dropout,
+                                    output_dim=args.feat_dim,
+                                    dec_nhead=args.dec_nhead,
+                                    dec_num_block=args.dec_num_block,
+                                    n_mels=args.n_mels,
+                                    local_gaussian=args.local_gaussian,
+                                    device=device)
+    
     else:
         raise ValueError('Not Support Model Type %s' % args.model_type)
     print(model)
@@ -211,6 +230,9 @@ def train(args):
     # Training
     for epoch in range(start_epoch + 1, 1 + args.max_epochs):
         start_t_train = time.time()
+        #if args.collect_stats:
+        #    collect_stats(train_loader,args)
+        #    break
         train_info = train_one_epoch(train_loader, model, device, optimizer, loss, loss_perceptual_entropy,
                                      epoch, args)
         end_t_train = time.time()
