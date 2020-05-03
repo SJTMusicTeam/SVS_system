@@ -14,8 +14,42 @@ from librosa.output import write_wav
 from librosa.display import specshow
 from scipy import signal
 
+from pathlib import Path
 from model.utterance_mvn import UtteranceMVN
+# from model.global_mvn import GlobalMVN
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def collect_stats(train_loader,args):
+    count,sum,sum_square=0,0,0
+    count_mel,sum_mel,sum_square_mel = 0,0,0
+    for step, (phone,beat,pitch,spec,real,imag,length,chars,char_len_list,mel) in enumerate(train_loader,1):
+        #print(f"spec.shape: {spec.shape},length.shape: {length.shape}, mel.shape: {mel.shape}")
+        for i,seq in enumerate(spec.cpu().numpy()):
+            #print(f"seq.shape: {seq.shape}")
+            seq_length = torch.max(length[i])
+            #print(seq_length)
+            seq = seq[:seq_length]
+            sum += seq.sum(0)
+            sum_square += (seq ** 2).sum(0)
+            count += len(seq)
+
+        for i,seq in enumerate(mel.cpu().numpy()):
+            seq_length = torch.max(length[i])
+            seq = seq[:seq_length]
+            sum_mel += seq.sum(0)
+            sum_square_mel += (seq ** 2).sum(0)
+            count_mel += len(seq)
+    assert count_mel == count
+    np.savez(Path(args.model_save_dir) / f"feats_stats.npz",
+             count=count,
+             sum=sum,
+             sum_square=sum_square)
+    np.savez(Path(args.model_save_dir) / f"feats_mel_stats.npz",
+            count = count_mel,
+            sum = sum_mel,
+            sum_square = sum_square_mel)
+    
 
 
 def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptual_entropy, epoch, args):
@@ -63,6 +97,9 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
         elif args.model_type == "PureTransformer":
             output, att, output_mel = model(chars, phone, pitch, beat, pos_char=char_len_list,
                        pos_spec=length)
+        elif args.model_type == "PureTransformer_norm":
+            output,att,output_mel,spec,mel = model(spec,mel,chars,phone,pitch,beat,\
+                    pos_char=char_len_list,pos_spec=length) # this model for global norm 
 
         if args.normalize:
             normalizer = UtteranceMVN()
@@ -103,6 +140,11 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
 
         if step % args.train_step_log == 0:
             end = time.time()
+            if args.model_type == "PureTransformer_norm":
+                spec,_ = model.normalizer.inverse(spec,length)
+                output,_= model.normalizer.inverse(output,length)
+            else:
+                pass
             log_figure(step, output, spec, att, length, log_save_dir, args)
             out_log = "step {}: train_loss {}; spec_loss {}; ".format(step,
                                                                       losses.avg, spec_losses.avg)
@@ -167,6 +209,12 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
             elif args.model_type == "PureTransformer":
                 output, att, output_mel = model(chars, phone, pitch, beat, pos_char=char_len_list,
                            pos_spec=length)
+
+            elif args.model_type == "PureTransformer_norm":
+                output,att,output_mel,spec_norm,mel_norm = model(spec,mel,chars,phone,pitch,beat,pos_char=char_len_list,pos_spec=length)
+                output,_ = model.normalizer.inverse(output,length)
+                #output_mel,_ = model.mel_normalizer.inverse(output_mel)
+                # FIX ME, add mel.normalize
 
             spec_loss = criterion(output, spec, length_mask)
             if args.n_mels > 0:
