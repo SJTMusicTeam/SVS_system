@@ -54,6 +54,8 @@ def utterance_mvn(
     """
     if ilens is None:
         ilens = x.new_full([x.size(0)], x.size(1))
+    else:
+        ilens,_=ilens.max(1)
     ilens_ = ilens.to(x.device, x.dtype).view(-1, *[1 for _ in range(x.dim() - 1)])
     # Zero padding
     if x.is_leaf and x.requires_grad:
