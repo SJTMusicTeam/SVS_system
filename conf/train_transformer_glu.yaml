@@ -12,9 +12,9 @@
 train_align: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_data/alignment/train
 train_pitch: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_data/pitch_beat_extraction/# train
 train_wav: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_data/wav_info/train
-val_align: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_data/alignment/dev
-val_pitch: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_data/pitch_beat_extraction/dev
-val_wav: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_data/wav_info/dev
+val_align: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_data/alignment/test
+val_pitch: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_data/pitch_beat_extraction/test
+val_wav: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_data/wav_info/test
 
 # public hts data
 # train_align: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/hts_data/alignment/train
@@ -37,7 +37,7 @@ frame_length: 0.06
 frame_shift: 0.03
 
 # model related
-model_save_dir: exp/debug_4sing_quality_gaussian_mask/model
+model_save_dir: exp/debug_kiritan_gaussian_mask/model
 model_type: GLU_Transformer
 hidden_size: 256
 embedding_size: 256
