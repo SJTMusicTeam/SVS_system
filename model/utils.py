@@ -141,8 +141,8 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
         if step % args.train_step_log == 0:
             end = time.time()
             if args.model_type == "PureTransformer_norm":
-                spec,_ = model.normalizer.inverse(spec)
-                output,_= model.normalizer.inverse(output)
+                spec,_ = model.normalizer.inverse(spec,length)
+                output,_= model.normalizer.inverse(output,length)
             else:
                 pass
             log_figure(step, output, spec, att, length, log_save_dir, args)
@@ -212,8 +212,8 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
 
             elif args.model_type == "PureTransformer_norm":
                 output,att,output_mel,spec_norm,mel_norm = model(spec,mel,chars,phone,pitch,beat,pos_char=char_len_list,pos_spec=length)
-                output,_ = model.normalizer.inverse(output)
-                output_mel,_ = model.mel_normalizer.inverse(output_mel)
+                output,_ = model.normalizer.inverse(output,length)
+                #output_mel,_ = model.mel_normalizer.inverse(output_mel)
                 # FIX ME, add mel.normalize
 
             spec_loss = criterion(output, spec, length_mask)
