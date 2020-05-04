@@ -10,7 +10,7 @@
 
 # public kiritan data
 train_align: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_data/alignment/train
-train_pitch: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_data/pitch_beat_extraction/# train
+train_pitch: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_data/pitch_beat_extraction/train
 train_wav: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_data/wav_info/train
 val_align: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_data/alignment/test
 val_pitch: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_data/pitch_beat_extraction/test
@@ -24,8 +24,8 @@ val_wav: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_
 # val_pitch: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/hts_data/pitch_beat_extraction/dev
 # val_wav: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/hts_data/wav_info/dev
 
-standard: 4
-sing_quality: conf/sing_quality.csv
+# standard: 4
+# sing_quality: conf/sing_quality.csv
 
 
 # feature related
@@ -50,6 +50,7 @@ phone_size: 68
 local_gaussian: True
 
 # train related
+resume: True
 max_epochs: 100
 gradclip: 5
 batchsize: 4
