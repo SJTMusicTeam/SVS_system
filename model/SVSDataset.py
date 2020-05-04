@@ -170,6 +170,7 @@ class SVSDataset(Dataset):
                  ref_db = 20,
                  sing_quality = "conf/sing_quality.csv",
                  standard=3):
+       
         self.align_root_path = align_root_path
         self.pitch_beat_root_path = pitch_beat_root_path
         self.wav_root_path = wav_root_path
@@ -184,11 +185,17 @@ class SVSDataset(Dataset):
         self.power = power
         self.max_db = max_db
         self.ref_db = ref_db
-        quality = _load_sing_quality(sing_quality, standard)
+        if standard > 0:
+            print(standard)
+            quality = _load_sing_quality(sing_quality, standard)
+        else:
+            quality = None
         # get file_list
         self.filename_list = os.listdir(align_root_path)
         phone_list, beat_list, pitch_list, spectrogram_list = [], [], [], []
         for filename in self.filename_list:
+            if quality == None:
+                break
             if filename[-4:] != '.npy' or filename[:4] not in quality:
                 print("remove file {}".format(filename))
                 self.filename_list.remove(filename)
