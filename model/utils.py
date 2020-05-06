@@ -41,6 +41,8 @@ def collect_stats(train_loader,args):
             sum_square_mel += (seq ** 2).sum(0)
             count_mel += len(seq)
     assert count_mel == count
+    if not os.path.exists(args.model_save_dir):
+        os.makedirs(args.model_save_dir)
     np.savez(Path(args.model_save_dir) / f"feats_stats.npz",
              count=count,
              sum=sum,
