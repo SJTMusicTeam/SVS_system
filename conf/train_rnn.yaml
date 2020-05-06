@@ -1,21 +1,35 @@
-# train_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/train/
-# train_align: /export/c04/jiatong/project/svs/SVS_system/data/head_tail_test/train/
-train_align: /export/c04/jiatong/project/svs/SVS_system/data/opt_sil_test/dev/
-# train_align: /export/c04/jiatong/project/svs/SVS_system/data/post/train
+# data related (self collected)
+# train_align: /export/c04/jiatong/project/svs/SVS_system/data/self_data/alignment/train/
+# train_align: /export/c04/jiatong/project/svs/SVS_system/data/self_data/opt_sil_test/train
+# train_pitch: /export/c04/jiatong/project/svs/SVS_system/data/self_data/pitch_beat_extraction/train/
+# train_wav: /export/c04/jiatong/project/svs/SVS_system/data/self_data/wav_info/train
+# val_align: /export/c04/jiatong/project/svs/SVS_system/data/self_data/alignment/dev/
+# val_align: /export/c04/jiatong/project/svs/SVS_system/data/self_data/opt_sil_test/dev
+# val_pitch: /export/c04/jiatong/project/svs/SVS_system/data/self_data/pitch_beat_extraction/dev/
+# val_wav: /export/c04/jiatong/project/svs/SVS_system/data/self_data/wav_info/dev
 
-train_pitch: /export/c04/jiatong/project/svs/SVS_system/data/pitch_beat_extraction/dev/
-train_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/dev
-# val_align: /export/c04/jiatong/project/svs/SVS_system/data/post/dev
-# val_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/dev/
-# val_align: /export/c04/jiatong/project/svs/SVS_system/data/head_tail_test/dev/
-val_align: /export/c04/jiatong/project/svs/SVS_system/data/opt_sil_test/dev/
-val_pitch: /export/c04/jiatong/project/svs/SVS_system/data/pitch_beat_extraction/dev/
-val_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/dev
-model_save_dir: exp/debug_post/
-standard: 4
-sing_quality: conf/sing_quality.csv
+# public kiritan data
+train_align: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_data/alignment/train
+train_pitch: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_data/pitch_beat_extraction/train
+train_wav: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_data/wav_info/train
+val_align: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_data/alignment/test
+val_pitch: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_data/pitch_beat_extraction/test
+val_wav: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/kiritan_data/wav_info/test
 
-resume: False
+# public hts data
+# train_align: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/hts_data/alignment/train
+# train_pitch: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/hts_data/pitch_beat_extraction/train
+# train_wav: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/hts_data/wav_info/train
+# val_align: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/hts_data/alignment/dev
+# val_pitch: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/hts_data/pitch_beat_extraction/dev
+# val_wav: /export/c04/jiatong/project/svs/SVS_system/data/public_dataset/hts_data/wav_info/dev
+
+# standard: 4
+# sing_quality: conf/sing_quality.csv
+
+model_save_dir: exp/rnn_test
+
+resume: True
 mask_free: False
 use_asr_post: False
 sampling_rate: 22050
@@ -25,7 +39,7 @@ feat_dim: 1025
 frame_length: 0.06
 frame_shift: 0.03
 model_type: LSTM
-max_epochs: 100
+max_epochs: 200
 batchsize: 4
 num_workers: 10
 hidden_size: 512
@@ -38,3 +52,8 @@ lr: 0.001
 phone_size: 68
 seed: 777
 gpu: 1
+
+normalize: True # for utterence normalize
+# collect_stats: True
+stats_file: exp/rnn_test/feats_stats.npz
+stats_mel_file: exp/rnn_test/feats_mel_stats.npz

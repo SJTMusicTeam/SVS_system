@@ -37,7 +37,7 @@ frame_length: 0.06
 frame_shift: 0.03
 
 # model related
-model_save_dir: exp/debug_kiritan_gaussian_mask/model
+model_save_dir: exp/normal_kiritan_gaussian_mask_glu/model
 model_type: GLU_Transformer
 hidden_size: 256
 embedding_size: 256
@@ -63,3 +63,7 @@ train_step_log: 100
 dev_step_log: 10
 seed: 777
 gpu: 1
+normalize: True # for utterence normalize
+collect_stats: True
+stats_file: exp/normal_kiritan_gaussian_mask_glu/model/feats_stats.npz
+stats_mel_file: exp/normal_kiritan_gaussian_mask_glu/model/feats_mel_stats.npz
