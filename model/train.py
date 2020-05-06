@@ -146,7 +146,10 @@ def train(args):
     if args.resume:
         checks = os.listdir(args.model_save_dir)
         start_epoch = max(list(map(lambda x: int(x[6:-8]) if x.endswith("pth.tar") else -1, checks)))
-        model_load_dir = "{}/epoch_{}.pth.tar".format(args.model_save_dir, start_epoch)
+        if start_epoch < 0:
+            model_load_dir = ""
+        else:
+            model_load_dir = "{}/epoch_{}.pth.tar".format(args.model_save_dir, start_epoch)
         
     # load encoder parm from Transformer-TTS
     if pretrain_encoder_dir != '':
