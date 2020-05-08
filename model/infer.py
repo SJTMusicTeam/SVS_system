@@ -7,7 +7,7 @@
 import torch
 import os
 from model.SVSDataset import SVSDataset, SVSCollator
-from model.network import GLU_TransformerSVS,TransformerSVS,TransformerSVS_norm
+from model.network import GLU_TransformerSVS,GLU_TransformerSVS_norm,TransformerSVS,TransformerSVS_norm
 from model.loss import MaskedLoss
 from model.utils import AverageMeter, create_src_key_padding_mask, log_figure
 
@@ -51,6 +51,20 @@ def infer(args):
                                     dec_num_block=args.dec_num_block,
                                     n_mels=args.n_mels,
                                     local_gaussian=args.local_gaussian,)
+    elif args.model_type == "GLU_Transformer_norm":
+        model = GLU_TransformerSVS_norm(stats_file=args.stats_file,
+                                    stats_mel_file=args.stats_mel_file,
+                                    phone_size=args.phone_size,
+                                    embed_size=args.embedding_size,
+                                    hidden_size=args.hidden_size,
+                                    glu_num_layers=args.glu_num_layers,
+                                    dropout=args.dropout,
+                                    output_dim=args.feat_dim,
+                                    dec_nhead=args.dec_nhead,
+                                    dec_num_block=args.dec_num_block,
+                                    n_mels=args.n_mels,
+                                    local_gaussian=args.local_gaussian,)
+     
     else:
         raise ValueError('Not Support Model Type %s' % args.model_type)
 
@@ -155,10 +169,10 @@ def infer(args):
         elif args.model_type == "PureTransformer":
             output, att, output_mel = model(chars, phone, pitch, beat, pos_char=char_len_list,
                        pos_spec=length)
-        elif args.model_type == "PureTransformer_norm":
+        elif args.model_type == "PureTransformer_norm" or "GLU_Transformer_norm":
             output,att,output_mel,spec_norm,mel_norm = model(spec,mel,chars,phone,pitch,beat,pos_char=char_len_list,pos_spec=length)
             output,_ = model.normalizer.inverse(output)
-            output_mel,_model.mel_normalizer.inverse(output_mel)
+            #output_mel,_model.mel_normalizer.inverse(output_mel)
 
 
         spec_loss = criterion(output, spec, length_mask)
