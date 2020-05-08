@@ -37,7 +37,7 @@ frame_length: 0.06
 frame_shift: 0.03
 
 # model related
-model_save_dir: exp/normal_kiritan_gaussian_mask_glu/model
+model_save_dir: exp/normal_perp_kiritan_gaussian_mask_glu/model
 model_type: GLU_Transformer
 hidden_size: 256
 embedding_size: 256
@@ -59,6 +59,7 @@ optimizer: noam
 noam_scale: 1.0
 gradient_accumulation_steps: 1
 noam_warmup_steps: 4000
+perceptual_loss: 0.1
 train_step_log: 20
 dev_step_log: 2
 seed: 777
