@@ -16,7 +16,7 @@ from scipy import signal
 
 from pathlib import Path
 from model.utterance_mvn import UtteranceMVN
-# from model.global_mvn import GlobalMVN
+from model.global_mvn import GlobalMVN
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -109,8 +109,10 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
 
         if args.normalize:
             normalizer = UtteranceMVN()
+            spec_origin = spec.clone()
             spec,_ = normalizer(spec,length)
             mel,_ = normalizer(mel,length)
+            
         
         
         spec_loss = criterion(output, spec, length_mask)
@@ -149,6 +151,10 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
             if args.model_type == "PureTransformer_norm" or "GLU_Transformer_norm":
                 spec,_ = model.normalizer.inverse(spec,length)
                 output,_= model.normalizer.inverse(output,length)
+            elif args.normalize and args.stats_file:
+                global_normalizer = GlobalMVN(args.stats_file)
+                output,_ = global_normalizer.inverse(output,length)
+                spec = spec_origin
             else:
                 pass
             log_figure(step, output, spec, att, length, log_save_dir, args)
@@ -199,7 +205,6 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
             length_mel_mask = length_mel_mask.to(device)
             length = length.to(device)
             char_len_list = char_len_list.to(device)
-    
             if not args.use_asr_post:
                 chars = chars.to(device)
                 char_len_list = char_len_list.to(device)
@@ -217,11 +222,18 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                            pos_spec=length)
 
             elif args.model_type == "PureTransformer_norm" or "GLU_Transformer_norm":
-                output,att,output_mel,spec_norm,mel_norm = model(spec,mel,chars,phone,pitch,beat,pos_char=char_len_list,pos_spec=length)
-                output,_ = model.normalizer.inverse(output,length)
-                #output_mel,_ = model.mel_normalizer.inverse(output_mel)
-                # FIX ME, add mel.normalize
+                output,att,output_mel,spec,mel = model(spec,mel,chars,phone,pitch,beat,pos_char=char_len_list,pos_spec=length)
 
+            if args.model_type == "PureTransformer_norm" or "GLU_Transformer_norm":
+                spec,_ = model.normalizer.inverse(spec,length)
+                output,_= model.normalizer.inverse(output,length)
+            elif args.normalize and args.stats_file:
+                global_normalizer = GlobalMVN(args.stats_file)
+                output,_ = global_normalizer.inverse(output,length)
+            else:
+                pass
+            
+            
             spec_loss = criterion(output, spec, length_mask)
             if args.n_mels > 0:
                 mel_loss = criterion(output_mel, mel, length_mel_mask)
