@@ -12,7 +12,7 @@ from model.gpu_util import use_single_gpu
 from model.SVSDataset import SVSDataset, SVSCollator
 from model.network import GLU_TransformerSVS, LSTMSVS, TransformerSVS, TransformerSVS_norm
 from model.transformer_optim import ScheduledOptim
-from model.loss import MaskedLoss
+from model.loss import MaskedLoss, cal_spread_function, cal_psd2bark_dict, PerceptualEntropy
 from model.utils import train_one_epoch, save_checkpoint, validate, record_info, collect_stats
 
 
@@ -143,7 +143,7 @@ def train(args):
         pretrain_encoder_dir = args.pretrain_encoder
     if args.initmodel != '':
         model_load_dir = args.initmodel
-    if args.resume:
+    if args.resume and os.path.exists(args.model_save_dir):
         checks = os.listdir(args.model_save_dir)
         start_epoch = max(list(map(lambda x: int(x[6:-8]) if x.endswith("pth.tar") else -1, checks)))
         if start_epoch < 0:
@@ -225,9 +225,10 @@ def train(args):
         raise ValueError("Not Support Loss Type")
 
     if args.perceptual_loss > 0:
-        psd_dict, bark_num = cal_psd2bark_dict(fs=fs, win_len=win_len)
+        win_length = int(args.sampling_rate * args.frame_length)
+        psd_dict, bark_num = cal_psd2bark_dict(fs=args.sampling_rate, win_len=win_length)
         sf = cal_spread_function(bark_num)
-        loss_perceptual_entropy = PerceptualEntropy(bark_num, sf, fs, win_len, psd_dict)
+        loss_perceptual_entropy = PerceptualEntropy(bark_num, sf, args.sampling_rate, win_length, psd_dict)
     else:
         loss_perceptual_entropy = None
     # Training
