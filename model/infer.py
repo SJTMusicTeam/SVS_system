@@ -10,6 +10,7 @@ from model.SVSDataset import SVSDataset, SVSCollator
 from model.network import GLU_TransformerSVS,GLU_TransformerSVS_norm,TransformerSVS,TransformerSVS_norm
 from model.loss import MaskedLoss
 from model.utils import AverageMeter, create_src_key_padding_mask, log_figure
+from model.global_mvn import GlobalMVN
 
 
 def infer(args):
@@ -169,12 +170,13 @@ def infer(args):
         elif args.model_type == "PureTransformer":
             output, att, output_mel = model(chars, phone, pitch, beat, pos_char=char_len_list,
                        pos_spec=length)
-        elif args.model_type == "PureTransformer_norm" or "GLU_Transformer_norm":
+        elif args.model_type in ("PureTransformer_norm","GLU_Transformer_norm"):
             output,att,output_mel,spec_norm,mel_norm = model(spec,mel,chars,phone,pitch,beat,pos_char=char_len_list,pos_spec=length)
             output,_ = model.normalizer.inverse(output)
-            #output_mel,_model.mel_normalizer.inverse(output_mel)
-
-
+        
+        if args.normalize:
+            global_normalizer =  GlobalMVN(args.stats_file)
+            output,_ = global_normalizer.inverse(output,length)
         spec_loss = criterion(output, spec, length_mask)
         if args.n_mels > 0:
             mel_loss = criterion(output_mel, mel, length_mel_mask) # FIX ME here, mel_loss is recover version

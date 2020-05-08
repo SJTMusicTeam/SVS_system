@@ -148,12 +148,14 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
 
         if step % args.train_step_log == 0:
             end = time.time()
-            if args.model_type == "PureTransformer_norm" or "GLU_Transformer_norm":
+            if args.model_type in ("PureTransformer_norm","GLU_Transformer_norm"):
                 spec,_ = model.normalizer.inverse(spec,length)
                 output,_= model.normalizer.inverse(output,length)
             elif args.normalize and args.stats_file:
                 global_normalizer = GlobalMVN(args.stats_file)
                 output,_ = global_normalizer.inverse(output,length)
+                spec = spec_origin
+            elif args.normalize:
                 spec = spec_origin
             else:
                 pass
@@ -221,10 +223,10 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                 output, att, output_mel = model(chars, phone, pitch, beat, pos_char=char_len_list,
                            pos_spec=length)
 
-            elif args.model_type == "PureTransformer_norm" or "GLU_Transformer_norm":
+            elif args.model_type in ("PureTransformer_norm","GLU_Transformer_norm"):
                 output,att,output_mel,spec,mel = model(spec,mel,chars,phone,pitch,beat,pos_char=char_len_list,pos_spec=length)
 
-            if args.model_type == "PureTransformer_norm" or "GLU_Transformer_norm":
+            if args.model_type in ("PureTransformer_norm","GLU_Transformer_norm"):
                 spec,_ = model.normalizer.inverse(spec,length)
                 output,_= model.normalizer.inverse(output,length)
             elif args.normalize and args.stats_file:
