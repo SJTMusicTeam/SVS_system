@@ -99,7 +99,7 @@ class GlobalMVN(nn.Module):
         if ilens is None:
             ilens = x.new_full([x.size(0)], x.size(1))
         else:
-            ilens = ilens.max(1)
+            ilens,_ = ilens.max(1)
         norm_means = self.norm_means
         norm_vars = self.norm_vars
         self.mean = self.mean.to(x.device, x.dtype)
