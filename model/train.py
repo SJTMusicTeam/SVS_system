@@ -10,7 +10,7 @@ import torch
 import time
 from model.gpu_util import use_single_gpu
 from model.SVSDataset import SVSDataset, SVSCollator
-from model.network import GLU_TransformerSVS, LSTMSVS, TransformerSVS, TransformerSVS_norm
+from model.network import GLU_TransformerSVS,GLU_TransformerSVS_norm,LSTMSVS, TransformerSVS, TransformerSVS_norm
 from model.transformer_optim import ScheduledOptim
 from model.loss import MaskedLoss, cal_spread_function, cal_psd2bark_dict, PerceptualEntropy
 from model.utils import train_one_epoch, save_checkpoint, validate, record_info, collect_stats
@@ -130,7 +130,22 @@ def train(args):
                                     n_mels=args.n_mels,
                                     local_gaussian=args.local_gaussian,
                                     device=device)
+    elif args.model_type == "GLU_Transformer_norm":
+        model = GLU_TransformerSVS_norm(stats_file=args.stats_file,
+                                    stats_mel_file=args.stats_mel_file,
+                                    phone_size=args.phone_size,
+                                    embed_size=args.embedding_size,
+                                    hidden_size=args.hidden_size,
+                                    glu_num_layers=args.glu_num_layers,
+                                    dropout=args.dropout,
+                                    output_dim=args.feat_dim,
+                                    dec_nhead=args.dec_nhead,
+                                    dec_num_block=args.dec_num_block,
+                                    n_mels=args.n_mels,
+                                    local_gaussian=args.local_gaussian,
+                                    device=device)
     
+
     else:
         raise ValueError('Not Support Model Type %s' % args.model_type)
     print(model)

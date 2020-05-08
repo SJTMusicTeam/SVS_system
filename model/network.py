@@ -219,6 +219,43 @@ class GLU_TransformerSVS(nn.Module):
         mel_output, att_weight = self.decoder(post_out, pos=pos_spec)
         output = self.postnet(mel_output)
         return output, att_weight, mel_output
+class GLU_TransformerSVS_norm(nn.Module):
+    """
+    Transformer Network
+    """
+    def __init__(self, stats_file,stats_mel_file,phone_size, embed_size, hidden_size, \
+                 glu_num_layers, dropout, dec_num_block,dec_nhead, output_dim, n_mels=-1, \
+                 local_gaussian=False, device="cuda"):
+        super(GLU_TransformerSVS_norm, self).__init__()
+        self.encoder = Encoder(phone_size, embed_size, hidden_size, dropout, glu_num_layers,
+                               num_layers=1, glu_kernel=3)
+        self.enc_postnet = Encoder_Postnet(embed_size)
+        self.normalizer = GlobalMVN(stats_file)
+        self.mel_normalizer = GlobalMVN(stats_mel_file)
+
+        self.use_mel = (n_mels > 0)
+
+        if self.use_mel:
+            self.decoder = Decoder(dec_num_block, embed_size, n_mels, dec_nhead, dropout,
+                                   local_gaussian=local_gaussian, device=device)
+            self.postnet = module.PostNet(n_mels, output_dim, (output_dim // 2 * 2))
+        else:
+            self.decoder = Decoder(dec_num_block, embed_size, output_dim, dec_nhead, dropout,
+                                   local_gaussian=local_gaussian, device=device)
+            self.postnet = module.PostNet(output_dim, output_dim, (output_dim // 2 * 2))
+
+    def forward(self, spec,mel,characters, phone, pitch, beat, pos_text=True, pos_char=None,
+                pos_spec=None):
+
+        encoder_out, text_phone = self.encoder(characters.squeeze(2), pos=pos_char)
+        post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat)
+        mel_output, att_weight = self.decoder(post_out, pos=pos_spec)
+        output = self.postnet(mel_output)
+
+        spec,_=self.normalizer(spec,pos_spec)
+        mel,_=self.mel_normalizer(mel,pos_spec)
+        return output, att_weight, mel_output,spec,mel
+
 
 
 class LSTMSVS(nn.Module):
