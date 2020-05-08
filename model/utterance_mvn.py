@@ -6,7 +6,7 @@ from model.nets_utils import make_pad_mask
 
 class UtteranceMVN(nn.Module):
     def __init__(
-        self, norm_means: bool = True, norm_vars: bool = False, eps: float = 1.0e-20,
+        self, norm_means: bool = True, norm_vars: bool = True, eps: float = 1.0e-20,
     ):
         super().__init__()
         self.norm_means = norm_means
