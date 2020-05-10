@@ -243,6 +243,35 @@ class Highwaynet(nn.Module):
 
         return out
 
+class Transformer_noGLULayer(Module):
+    def __init__(self, d_model, nhead, dropout=0.1, activation="relu",
+            glu_kernel=3, local_gaussian=False, device="cuda"):
+        super(Transformer_noGLULayer, self).__init__()
+        self.self_attn = Attention(h=nhead, num_hidden=d_model, local_gaussian=local_gaussian)
+        self.GLU = GLU(1, d_model, glu_kernel, dropout, d_model)
+        self.norm1 = LayerNorm(d_model)
+        self.norm2 = LayerNorm(d_model)
+        self.dropout1 = Dropout(dropout)
+        self.dropout2 = Dropout(dropout)
+        self.activation = _get_activation_fn(activation)
+
+    def __setstate__(self, state):
+        if 'activation' not in state:
+            state['activation'] = F.relu
+        super(Transformer_noGLULayer, self).__setstate__(state)
+
+    def forward(self, src, mask=None, query_mask=None):
+        src1 = self.norm1(src)
+        src2, att_weight = self.self_attn(src1,src1,mask=mask,query_mask=query_mask)
+        src3 = src + self.dropout1(src2)
+        src3 = src3 * SCALE_WEIGHT
+        #src4 = self.norm2(src3)
+        #src5 = self.GLU(src4)
+        #src5 = src5.transpose(1, 2)
+        #src6 = src3 + self.dropout2(src5)
+        #src6 = src6 * SCALE_WEIGHT
+        return src3, att_weight
+
 
 class TransformerGLULayer(Module):
     def __init__(self, d_model, nhead, dropout=0.1, activation="relu",
@@ -271,7 +300,7 @@ class TransformerGLULayer(Module):
         src5 = src5.transpose(1, 2)
         src6 = src3 + self.dropout2(src5)
         src6 = src6 * SCALE_WEIGHT
-        return src, att_weight
+        return src6, att_weight
 
 
 class TransformerEncoder(Module):
