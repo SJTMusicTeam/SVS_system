@@ -10,7 +10,7 @@ import torch
 import time
 from model.gpu_util import use_single_gpu
 from model.SVSDataset import SVSDataset, SVSCollator
-from model.network import GLU_TransformerSVS,GLU_TransformerSVS_norm,LSTMSVS, TransformerSVS, TransformerSVS_norm
+from model.network import GLU_TransformerSVS,GLU_TransformerSVS_norm,LSTMSVS, TransformerSVS, TransformerSVS_norm,Transformer_noGLUSVS_norm
 from model.transformer_optim import ScheduledOptim
 from model.loss import MaskedLoss, cal_spread_function, cal_psd2bark_dict, PerceptualEntropy
 from model.utils import train_one_epoch, save_checkpoint, validate, record_info, collect_stats
@@ -115,7 +115,20 @@ def train(args):
                                         n_mels=args.n_mels,
                                         local_gaussian=args.local_gaussian,
                                         device=device)
-    
+    elif args.model_type == "PureTransformer_noGLU_norm":
+        model = Transformer_noGLUSVS_norm(stats_file=args.stats_file,
+                                    stats_mel_file=args.stats_mel_file,
+                                    phone_size=args.phone_size,
+                                    embed_size=args.embedding_size,
+                                    hidden_size=args.hidden_size,
+                                    glu_num_layers=args.glu_num_layers,
+                                    dropout=args.dropout,
+                                    output_dim=args.feat_dim,
+                                    dec_nhead=args.dec_nhead,
+                                    dec_num_block=args.dec_num_block,
+                                    n_mels=args.n_mels,
+                                    local_gaussian=args.local_gaussian,
+                                    device=device)
     elif args.model_type == "PureTransformer_norm":
         model = TransformerSVS_norm(stats_file=args.stats_file,
                                     stats_mel_file=args.stats_mel_file,
