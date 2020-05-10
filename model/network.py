@@ -160,7 +160,35 @@ class Encoder_Postnet(nn.Module):
         
         return out
     
-    
+class Decoder_noGLU(nn.Module):
+    """
+    Decoder Network
+    """
+    # TODO： frame smoothing (triple the time resolution)
+    def __init__(self, num_block, hidden_size, output_dim, nhead=4, dropout=0.1, activation="relu",
+        glu_kernel=3, local_gaussian=False, device="cuda"):
+        super(Decoder_noGLU, self).__init__()
+        self.input_norm = module.LayerNorm(hidden_size)
+        decoder_layer = module.Transformer_noGLULayer(hidden_size, nhead, dropout, activation,
+            glu_kernel, local_gaussian=local_gaussian, device=device)
+        self.decoder = module.TransformerEncoder(decoder_layer, num_block)
+        self.output_fc = nn.Linear(hidden_size, output_dim)
+
+        self.hidden_size=hidden_size
+
+    def forward(self, src, pos):
+        if self.training:
+            query_mask = pos.ne(0).type(torch.float)
+        else:
+            query_mask = None
+        mask = pos.eq(0).unsqueeze(1).repeat(1, src.size(1), 1)
+
+        src = self.input_norm(src)
+        memory, att_weight = self.decoder(src, mask=mask, query_mask=query_mask)
+        output = self.output_fc(memory)
+        return output, att_weight
+
+   
 class Decoder(nn.Module):
     """
     Decoder Network
@@ -392,6 +420,33 @@ class TransformerSVS_norm(nn.Module):
         mel,_ = self.mel_normalizer(mel,pos_spec)
         return output,att_weight, mel_output, spec, mel
 
+
+class Transformer_noGLUSVS_norm(nn.Module):
+    def __init__(self,stats_file,stats_mel_file,phone_size,embed_size,hidden_size,glu_num_layers,dropout,\
+                 dec_num_block,dec_nhead,output_dim,n_mels=80,local_gaussian=False,device="cuda"):
+        super(Transformer_noGLUSVS_norm,self).__init__()
+        self.encoder = SA_Encoder(phone_size,embed_size,hidden_size,dropout)
+        self.normalizer = GlobalMVN(stats_file)   # FIX ME, add utterance normalizer
+        self.mel_normalizer = GlobalMVN(stats_mel_file)
+        self.enc_postnet = Encoder_Postnet(embed_size)
+        self.use_mel = (n_mels > 0)
+
+        if self.use_mel:
+            self.decoder = Decoder_noGLU(dec_num_block,embed_size,n_mels,dec_nhead,dropout,device=device)
+            self.postnet = module.PostNet(n_mels,output_dim,(output_dim//2*2))
+        else:
+            print(f"fix me")
+
+    def forward(self,spec,mel,characters,phone,pitch,beat,pos_text=True,pos_char=None,
+                pos_spec=None):
+        encoder_out,text_phone=self.encoder(characters.squeeze(2),pos=pos_char)
+        post_out = self.enc_postnet(encoder_out,phone,text_phone,pitch,beat)
+        mel_output,att_weight = self.decoder(post_out,pos=pos_spec)
+        output = self.postnet(mel_output)
+        
+        spec,_ = self.normalizer(spec,pos_spec)
+        mel,_ = self.mel_normalizer(mel,pos_spec)
+        return output,att_weight, mel_output, spec, mel
 
 
 

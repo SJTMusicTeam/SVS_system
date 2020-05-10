@@ -24,7 +24,7 @@ class GlobalMVN(nn.Module):
         self,
         stats_file: Union[Path, str],
         norm_means: bool = True,
-        norm_vars: bool = True,
+        norm_vars: bool = False,
         eps: float = 1.0e-20,
     ):
         super().__init__()
