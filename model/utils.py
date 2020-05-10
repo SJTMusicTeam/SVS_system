@@ -99,7 +99,7 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
         elif args.model_type == "PureTransformer":
             output, att, output_mel = model(chars, phone, pitch, beat, pos_char=char_len_list,
                        pos_spec=length)
-        elif args.model_type == "PureTransformer_norm":
+        elif args.model_type in ("PureTransformer_norm","PureTransformer_noGLU_norm"):
             output,att,output_mel,spec,mel = model(spec,mel,chars,phone,pitch,beat,\
                     pos_char=char_len_list,pos_spec=length) # this model for global norm 
         elif args.model_type == "GLU_Transformer_norm":
@@ -223,10 +223,10 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                 output, att, output_mel = model(chars, phone, pitch, beat, pos_char=char_len_list,
                            pos_spec=length)
 
-            elif args.model_type in ("PureTransformer_norm","GLU_Transformer_norm"):
+            elif args.model_type in ("PureTransformer_norm","GLU_Transformer_norm","PureTransformer_noGLU_norm"):
                 output,att,output_mel,spec,mel = model(spec,mel,chars,phone,pitch,beat,pos_char=char_len_list,pos_spec=length)
 
-            if args.model_type in ("PureTransformer_norm","GLU_Transformer_norm"):
+            if args.model_type in ("PureTransformer_norm","GLU_Transformer_norm","PureTransformer_noGLU_norm"):
                 spec,_ = model.normalizer.inverse(spec,length)
                 output,_= model.normalizer.inverse(output,length)
             elif args.normalize and args.stats_file:
