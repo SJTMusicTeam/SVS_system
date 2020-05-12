@@ -281,7 +281,8 @@ class GLU_TransformerSVS_norm(nn.Module):
         output = self.postnet(mel_output)
 
         spec,_=self.normalizer(spec,pos_spec)
-        mel,_=self.mel_normalizer(mel,pos_spec)
+        if mel is not None:
+            mel,_=self.mel_normalizer(mel,pos_spec)
         return output, att_weight, mel_output,spec,mel
 
 
