@@ -61,6 +61,8 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
         pe_losses = AverageMeter()
     if args.n_mels > 0:
         mel_losses = AverageMeter()
+        if args.double_mel_loss:
+            double_mel_losses = AverageMeter()
     model.train()
 
     log_save_dir = os.path.join(args.model_save_dir, "epoch{}/log_train_figure".format(epoch))
@@ -93,20 +95,22 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
             phone = phone.float()
         
         if args.model_type == "GLU_Transformer":
-            output, att, output_mel = model(chars, phone, pitch, beat, pos_char=char_len_list,
-                       pos_spec=length)
+            output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                       pos_spec=length, double_mel_loss=args.double_mel_loss)
         elif args.model_type == "LSTM":
             output, hidden, output_mel = model(phone, pitch, beat)
             att = None
         elif args.model_type == "PureTransformer":
-            output, att, output_mel = model(chars, phone, pitch, beat, pos_char=char_len_list,
-                       pos_spec=length)
+            output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                       pos_spec=length, double_mel_loss=args.double_mel_loss)
         elif args.model_type in ("PureTransformer_norm","PureTransformer_noGLU_norm"):
-            output,att,output_mel,spec,mel = model(spec,mel,chars,phone,pitch,beat,\
-                    pos_char=char_len_list,pos_spec=length) # this model for global norm 
+            # this model for global norm 
+            output, att, output_mel, output_mel2, spec, mel = model(spec, mel, chars, phone, pitch, beat, \
+                    pos_char=char_len_list, pos_spec=length, double_mel_loss=args.double_mel_loss) 
         elif args.model_type == "GLU_Transformer_norm":
-            output,att,output_mel,spec,mel = model(spec,mel,chars,phone,pitch,beat,\
-                    pos_char=char_len_list,pos_spec=length) # this model for global norm 
+            # this model for global norm 
+            output, att, output_mel, output_mel2, spec, mel = model(spec, mel, chars, phone, pitch, beat,\
+                    pos_char=char_len_list, pos_spec=length, double_mel_loss=args.double_mel_loss) 
 
 
         if args.normalize:
@@ -120,10 +124,15 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
         spec_loss = criterion(output, spec, length_mask)
         if args.n_mels > 0:
             mel_loss = criterion(output_mel, mel, length_mel_mask)
+            if args.double_mel_loss:
+                double_mel_loss = criterion(output_mel2, mel, length_mel_mask)
+            else:
+                double_mel_loss = 0
         else:
             mel_loss = 0
+            double_mel_loss = 0
 
-        train_loss = mel_loss + spec_loss
+        train_loss = mel_loss + double_mel_loss + spec_loss
 
         if args.perceptual_loss > 0:
             pe_loss = perceptual_entropy(output, real, imag)
@@ -150,7 +159,7 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
 
         if step % args.train_step_log == 0:
             end = time.time()
-            if args.model_type in ("PureTransformer_norm","GLU_Transformer_norm"):
+            if args.model_type in ("PureTransformer_norm", "GLU_Transformer_norm"):
                 spec,_ = model.normalizer.inverse(spec,length)
                 output,_= model.normalizer.inverse(output,length)
             elif args.normalize and args.stats_file:
@@ -168,6 +177,8 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
                 out_log += "pe_loss {}; ".format(pe_losses.avg)
             if args.n_mels > 0:
                 out_log += "mel_loss {}; ".format(mel_losses.avg)
+                if args.double_mel_loss:
+                    out_log += "dmel_loss {}; ".format(double_mel_losses.avg)
             print("{} -- sum_time: {}s".format(out_log, (end-start)))
 
     info = {'loss': losses.avg, 'spec_loss': spec_losses.avg}
@@ -185,6 +196,8 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
         pe_losses = AverageMeter()
     if args.n_mels > 0:
         mel_losses = AverageMeter()
+        if args.double_mel_loss:
+            double_mel_losses = AverageMeter()
     model.eval()
 
     log_save_dir = os.path.join(args.model_save_dir, "epoch{}/log_val_figure".format(epoch))
@@ -218,17 +231,18 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                 phone = phone.float()
             
             if args.model_type == "GLU_Transformer":
-                output, att, output_mel = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
                            pos_spec=length)
             elif args.model_type == "LSTM":
                 output, hidden, output_mel = model(phone, pitch, beat)
                 att = None
             elif args.model_type == "PureTransformer":
-                output, att, output_mel = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
                            pos_spec=length)
 
             elif args.model_type in ("PureTransformer_norm","GLU_Transformer_norm","PureTransformer_noGLU_norm"):
-                output,att,output_mel,spec,mel = model(spec,mel,chars,phone,pitch,beat,pos_char=char_len_list,pos_spec=length)
+                output, att, output_mel, output_mel2, spec, mel = model(spec, mel,\
+                                             chars, phone,pitch, beat, pos_char=char_len_list, pos_spec=length)
 
             if args.model_type in ("PureTransformer_norm","GLU_Transformer_norm","PureTransformer_noGLU_norm"):
                 spec,_ = model.normalizer.inverse(spec,length)
@@ -243,10 +257,15 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
             spec_loss = criterion(output, spec, length_mask)
             if args.n_mels > 0:
                 mel_loss = criterion(output_mel, mel, length_mel_mask)
+                if args.double_mel_loss:
+                    double_mel_loss = criterion(output_mel2, mel, length_mel_mask)
+                else:
+                    double_mel_loss = 0
             else:
                 mel_loss = 0
+                double_mel_loss = 0
     
-            dev_loss = mel_loss + spec_loss
+            dev_loss = mel_loss + double_mel_loss + spec_loss
     
             if args.perceptual_loss > 0:
                 pe_loss = perceptual_entropy(output, real, imag)
@@ -270,6 +289,8 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                     out_log += "pe_loss {}; ".format(pe_losses.avg)
                 if args.n_mels > 0:
                     out_log += "mel_loss {}; ".format(mel_losses.avg)
+                    if args.double_mel_loss:
+                        out_log += "dmel_loss {}; ".format(double_mel_losses.avg)
                 end = time.time()
                 print("{} -- sum_time: {}s".format(out_log, (end-start)))
 
