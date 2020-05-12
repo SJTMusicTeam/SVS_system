@@ -91,6 +91,7 @@ def train(args):
                                 dec_nhead=args.dec_nhead,
                                 dec_num_block=args.dec_num_block,
                                 n_mels=args.n_mels,
+                                double_mel_loss=args.double_mel_loss,
                                 local_gaussian=args.local_gaussian,
                                 device=device)
     elif args.model_type == "LSTM":
@@ -113,6 +114,7 @@ def train(args):
                                         dec_nhead=args.dec_nhead,
                                         dec_num_block=args.dec_num_block,
                                         n_mels=args.n_mels,
+                                        double_mel_loss=args.double_mel_loss,
                                         local_gaussian=args.local_gaussian,
                                         device=device)
     elif args.model_type == "PureTransformer_noGLU_norm":
@@ -127,6 +129,7 @@ def train(args):
                                     dec_nhead=args.dec_nhead,
                                     dec_num_block=args.dec_num_block,
                                     n_mels=args.n_mels,
+                                    double_mel_loss=args.double_mel_loss,
                                     local_gaussian=args.local_gaussian,
                                     device=device)
     elif args.model_type == "PureTransformer_norm":
@@ -141,6 +144,7 @@ def train(args):
                                     dec_nhead=args.dec_nhead,
                                     dec_num_block=args.dec_num_block,
                                     n_mels=args.n_mels,
+                                    double_mel_loss=args.double_mel_loss,
                                     local_gaussian=args.local_gaussian,
                                     device=device)
     elif args.model_type == "GLU_Transformer_norm":
@@ -155,6 +159,7 @@ def train(args):
                                     dec_nhead=args.dec_nhead,
                                     dec_num_block=args.dec_num_block,
                                     n_mels=args.n_mels,
+                                    double_mel_loss=args.double_mel_loss,
                                     local_gaussian=args.local_gaussian,
                                     device=device)
     

@@ -253,10 +253,10 @@ class GLU_TransformerSVS(nn.Module):
         mel_output, att_weight = self.decoder(post_out, pos=pos_spec)
 
         if self.double_mel_loss:
-            mel_otuput2 = self.double_mel(mel_output)
+            mel_output2 = self.double_mel(mel_output)
         else:
-            mel_output2 = None
-        output = self.postnet(mel_output)
+            mel_output2 = mel_output
+        output = self.postnet(mel_output2)
 
         return output, att_weight, mel_output, mel_output2
 
@@ -299,14 +299,15 @@ class GLU_TransformerSVS_norm(nn.Module):
         post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat)
         mel_output, att_weight = self.decoder(post_out, pos=pos_spec)
         if self.double_mel_loss:
-            mel_otuput2 = self.double_mel(mel_output)
+            mel_output2 = self.double_mel(mel_output)
         else:
-            mel_output2 = None
-        output = self.postnet(mel_output)
+            mel_output2 = mel_output
+        output = self.postnet(mel_output2)
 
-        spec,_=self.normalizer(spec,pos_spec)
+        spec, _ = self.normalizer(spec, pos_spec)
         if mel is not None:
-            mel,_=self.mel_normalizer(mel,pos_spec)
+            mel, _ = self.mel_normalizer(mel, pos_spec)
+
         return output, att_weight, mel_output, mel_output2, spec, mel
 
 
@@ -465,10 +466,10 @@ class TransformerSVS_norm(nn.Module):
         post_out = self.enc_postnet(encoder_out,phone,text_phone,pitch,beat)
         mel_output,att_weight = self.decoder(post_out,pos=pos_spec)
         if self.double_mel_loss:
-            mel_otuput2 = self.double_mel(mel_output)
+            mel_output2 = self.double_mel(mel_output)
         else:
-            mel_output2 = None
-        output = self.postnet(mel_output)
+            mel_output2 = mel_output
+        output = self.postnet(mel_output2)
         
         spec,_ = self.normalizer(spec,pos_spec)
         mel,_ = self.mel_normalizer(mel,pos_spec)
@@ -510,10 +511,10 @@ class Transformer_noGLUSVS_norm(nn.Module):
         mel_output,att_weight = self.decoder(post_out,pos=pos_spec)
 
         if self.double_mel_loss:
-            mel_otuput2 = self.double_mel(mel_output)
+            mel_output2 = self.double_mel(mel_output)
         else:
-            mel_output2 = None
-        output = self.postnet(mel_output)
+            mel_output2 = mel_output
+        output = self.postnet(mel_output2)
 
         spec,_ = self.normalizer(spec,pos_spec)
         mel,_ = self.mel_normalizer(mel,pos_spec)
