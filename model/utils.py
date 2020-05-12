@@ -73,14 +73,16 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
         beat = beat.to(device)
         pitch = pitch.to(device).float()
         spec = spec.to(device).float()
-        mel = mel.to(device).float()
+        if mel is not None:
+            mel = mel.to(device).float()
         real = real.to(device).float()
         imag = imag.to(device).float()
         length_mask = length.unsqueeze(2)
-        length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
+        if mel is not None:
+            length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
+            length_mel_mask = length_mel_mask.to(device)
         length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
         length_mask = length_mask.to(device)
-        length_mel_mask = length_mel_mask.to(device)
         length = length.to(device)
         char_len_list = char_len_list.to(device)
 
@@ -197,14 +199,16 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
             beat = beat.to(device)
             pitch = pitch.to(device).float()
             spec = spec.to(device).float()
-            mel = mel.to(device).float()
+            if mel is not None:
+                mel = mel.to(device).float()
             real = real.to(device).float()
             imag = imag.to(device).float()
             length_mask = length.unsqueeze(2)
-            length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
+            if mel is not None:
+                length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
+                length_mel_mask = length_mel_mask.to(device)
             length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
             length_mask = length_mask.to(device)
-            length_mel_mask = length_mel_mask.to(device)
             length = length.to(device)
             char_len_list = char_len_list.to(device)
             if not args.use_asr_post:

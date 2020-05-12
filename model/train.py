@@ -61,7 +61,7 @@ def train(args):
                            ref_db=args.ref_db,
                            sing_quality=args.sing_quality,
                            standard=args.standard)
-    collate_fn_svs = SVSCollator(args.num_frames, args.char_max_len, args.use_asr_post, args.phone_size)
+    collate_fn_svs = SVSCollator(args.num_frames, args.char_max_len, args.use_asr_post, args.phone_size, args.n_mels)
     train_loader = torch.utils.data.DataLoader(dataset=train_set,
                                                batch_size=args.batchsize,
                                                shuffle=True,

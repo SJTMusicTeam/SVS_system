@@ -9,7 +9,7 @@ import os
 import librosa
 
 
-def _get_spectrograms(fpath, require_sr, preemphasis, n_fft, hop_length, win_length, max_db, ref_db, use_mel=False, n_mels=80):
+def _get_spectrograms(fpath, require_sr, preemphasis, n_fft, hop_length, win_length, max_db, ref_db, n_mels=80):
     '''Parse the wave file in `fpath` and
     Returns normalized melspectrogram and linear spectrogram.
     Args:
@@ -36,24 +36,27 @@ def _get_spectrograms(fpath, require_sr, preemphasis, n_fft, hop_length, win_len
     mag, phase = librosa.magphase(linear)
     # mag = np.abs(linear)  # (1+n_fft//2, T)
 
-    mel_basis = librosa.filters.mel(require_sr, n_fft, n_mels)
-    mel = np.dot(mel_basis, mag) # (n_mels, t)
-
+    if n_mels > 0:
+        mel_basis = librosa.filters.mel(require_sr, n_fft, n_mels)
+        mel = np.dot(mel_basis, mag) # (n_mels, t)
+        mel = 20 * np.log10(np.maximum(1e-5, mel))
+        mel = np.clip((mel - ref_db + max_db) / max_db, 1e-8, 1)
+        mel = mel.T.astype(np.float32)
 
     # to decibel
     mag = 20 * np.log10(np.maximum(1e-5, mag))
-    mel = 20 * np.log10(np.maximum(1e-5, mel))
 
     # normalize
     mag = np.clip((mag - ref_db + max_db) / max_db, 1e-8, 1)
-    mel = np.clip((mel - ref_db + max_db) / max_db, 1e-8, 1)
 
     # Transpose
     mag = mag.T.astype(np.float32)  # (T, 1+n_fft//2)
-    mel = mel.T.astype(np.float32)
     phase = phase.T
 
-    return mag, mel, phase
+    if n_mels > 0:
+        return mag, mel, phase
+    else:
+        return mag, None, phase
 
 
 def _load_sing_quality(quality_file, standard=3):
@@ -84,12 +87,13 @@ def _phone2char(phones, char_max_len):
 
 
 class SVSCollator(object):
-    def __init__(self, max_len, char_max_len=80, use_asr_post=False, phone_size=68):
+    def __init__(self, max_len, char_max_len=80, use_asr_post=False, phone_size=68, n_mels=80):
         self.max_len = max_len
         # plus 1 for aligner to consider padding char
         self.char_max_len = char_max_len + 1
         self.use_asr_post = use_asr_post
         self.phone_size = phone_size - 1
+        self.n_mels = n_mels
 
     def __call__(self, batch):
         # phone, beat, pitch, spectrogram, char, phase, mel
@@ -101,8 +105,8 @@ class SVSCollator(object):
         spec = np.zeros((batch_size, self.max_len, spec_dim))
         real = np.zeros((batch_size, self.max_len, spec_dim))
         imag = np.zeros((batch_size, self.max_len, spec_dim))
-        mel_dim = len(batch[0][6][0])
-        mel = np.zeros((batch_size, self.max_len, mel_dim))
+        if self.n_mels > 0: 
+            mel = np.zeros((batch_size, self.max_len, self.n_mels))
         pitch = np.zeros((batch_size, self.max_len))
         beat = np.zeros((batch_size, self.max_len))
         length_mask = np.zeros((batch_size, self.max_len))
@@ -123,7 +127,8 @@ class SVSCollator(object):
             imag[i, :length, :] = batch[i][5][:length].imag
             pitch[i, :length] = batch[i][2][:length]
             beat[i, :length] = batch[i][1][:length]
-            mel[i, :length, :] = batch[i][6][: length]
+            if self.n_mels > 0:
+                mel[i, :length, :] = batch[i][6][: length]
 
             if self.use_asr_post:
                 phone[i, :length, :] = batch[i][0][:length]
@@ -134,7 +139,10 @@ class SVSCollator(object):
                 char_len_mask[i, :char_leng] = np.arange(1, char_leng + 1)  
 
         spec = torch.from_numpy(spec)
-        mel = torch.from_numpy(mel)
+        if self.n_mels > 0:
+            mel = torch.from_numpy(mel)
+        else:
+            mel = None
         imag = torch.from_numpy(imag)
         real = torch.from_numpy(real)
         length_mask = torch.from_numpy(length_mask).long()
@@ -241,7 +249,9 @@ class SVSDataset(Dataset):
         pitch = pitch[:min_length]
         spectrogram = spectrogram[:min_length, :]
         phase = phase[:min_length, :]
-        mel = mel[:min_length, :]
+        
+        if mel is not None:
+            mel = mel[:min_length, :]
 
         # print("char len: {}, phone len: {}, spectrom: {}".format(len(char), len(phone), np.shape(spectrogram)[0]))
         return phone, beat, pitch, spectrogram, char, phase, mel
