@@ -96,21 +96,21 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
         
         if args.model_type == "GLU_Transformer":
             output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
-                       pos_spec=length, double_mel_loss=args.double_mel_loss)
+                       pos_spec=length)
         elif args.model_type == "LSTM":
             output, hidden, output_mel = model(phone, pitch, beat)
             att = None
         elif args.model_type == "PureTransformer":
             output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
-                       pos_spec=length, double_mel_loss=args.double_mel_loss)
+                       pos_spec=length)
         elif args.model_type in ("PureTransformer_norm","PureTransformer_noGLU_norm"):
             # this model for global norm 
             output, att, output_mel, output_mel2, spec, mel = model(spec, mel, chars, phone, pitch, beat, \
-                    pos_char=char_len_list, pos_spec=length, double_mel_loss=args.double_mel_loss) 
+                    pos_char=char_len_list, pos_spec=length) 
         elif args.model_type == "GLU_Transformer_norm":
             # this model for global norm 
             output, att, output_mel, output_mel2, spec, mel = model(spec, mel, chars, phone, pitch, beat,\
-                    pos_char=char_len_list, pos_spec=length, double_mel_loss=args.double_mel_loss) 
+                    pos_char=char_len_list, pos_spec=length) 
 
 
         if args.normalize:
@@ -156,6 +156,8 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
             pe_losses.update(pe_loss.item(), phone.size(0))
         if args.n_mels > 0:
             mel_losses.update(mel_loss.item(), phone.size(0))
+            if args.double_mel_loss:
+                double_mel_losses.update(double_mel_loss.item(), phone.size(0))
 
         if step % args.train_step_log == 0:
             end = time.time()
@@ -280,6 +282,8 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                 pe_losses.update(pe_loss.item(), phone.size(0))
             if args.n_mels > 0:
                 mel_losses.update(mel_loss.item(), phone.size(0))
+                if args.double_mel_loss:
+                    double_mel_losses.update(double_mel_loss.item(), phone.size(0))
 
             if step % args.dev_step_log == 0:
                 log_figure(step, output, spec, att, length, log_save_dir, args)
