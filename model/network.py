@@ -222,17 +222,23 @@ class GLU_TransformerSVS(nn.Module):
     Transformer Network
     """
     def __init__(self, phone_size, embed_size, hidden_size, glu_num_layers, dropout, dec_num_block,
-                 dec_nhead, output_dim, n_mels=-1, local_gaussian=False, device="cuda"):
+                 dec_nhead, output_dim, n_mels=-1, double_mel_loss=True, local_gaussian=False, device="cuda"):
         super(GLU_TransformerSVS, self).__init__()
         self.encoder = Encoder(phone_size, embed_size, hidden_size, dropout, glu_num_layers,
                                num_layers=1, glu_kernel=3)
         self.enc_postnet = Encoder_Postnet(embed_size)
 
         self.use_mel = (n_mels > 0)
+        if self.use_mel:
+            self.double_mel_loss = double_mel_loss
+        else:
+            self.double_mel_loss = False
 
         if self.use_mel:
             self.decoder = Decoder(dec_num_block, embed_size, n_mels, dec_nhead, dropout,
                                    local_gaussian=local_gaussian, device=device)
+            if self.double_mel_loss:
+                self.double_mel = module.PostNet(n_mels, n_mels, n_mels)
             self.postnet = module.PostNet(n_mels, output_dim, (output_dim // 2 * 2))
         else:
             self.decoder = Decoder(dec_num_block, embed_size, output_dim, dec_nhead, dropout,
@@ -245,15 +251,23 @@ class GLU_TransformerSVS(nn.Module):
         encoder_out, text_phone = self.encoder(characters.squeeze(2), pos=pos_char)
         post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat)
         mel_output, att_weight = self.decoder(post_out, pos=pos_spec)
+
+        if self.double_mel_loss:
+            mel_otuput2 = self.double_mel(mel_output)
+        else:
+            mel_output2 = None
         output = self.postnet(mel_output)
-        return output, att_weight, mel_output
+
+        return output, att_weight, mel_output, mel_output2
+
+
 class GLU_TransformerSVS_norm(nn.Module):
     """
     Transformer Network
     """
     def __init__(self, stats_file,stats_mel_file,phone_size, embed_size, hidden_size, \
                  glu_num_layers, dropout, dec_num_block,dec_nhead, output_dim, n_mels=-1, \
-                 local_gaussian=False, device="cuda"):
+                 double_mel_loss=True, local_gaussian=False, device="cuda"):
         super(GLU_TransformerSVS_norm, self).__init__()
         self.encoder = Encoder(phone_size, embed_size, hidden_size, dropout, glu_num_layers,
                                num_layers=1, glu_kernel=3)
@@ -262,10 +276,16 @@ class GLU_TransformerSVS_norm(nn.Module):
         self.mel_normalizer = GlobalMVN(stats_mel_file)
 
         self.use_mel = (n_mels > 0)
+        if self.use_mel:
+            self.double_mel_loss = double_mel_loss
+        else:
+            self.double_mel_loss = False
 
         if self.use_mel:
             self.decoder = Decoder(dec_num_block, embed_size, n_mels, dec_nhead, dropout,
                                    local_gaussian=local_gaussian, device=device)
+            if self.double_mel_loss:
+                self.double_mel = module.PostNet(n_mels, n_mels, n_mels)
             self.postnet = module.PostNet(n_mels, output_dim, (output_dim // 2 * 2))
         else:
             self.decoder = Decoder(dec_num_block, embed_size, output_dim, dec_nhead, dropout,
@@ -278,12 +298,16 @@ class GLU_TransformerSVS_norm(nn.Module):
         encoder_out, text_phone = self.encoder(characters.squeeze(2), pos=pos_char)
         post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat)
         mel_output, att_weight = self.decoder(post_out, pos=pos_spec)
+        if self.double_mel_loss:
+            mel_otuput2 = self.double_mel(mel_output)
+        else:
+            mel_output2 = None
         output = self.postnet(mel_output)
 
         spec,_=self.normalizer(spec,pos_spec)
         if mel is not None:
             mel,_=self.mel_normalizer(mel,pos_spec)
-        return output, att_weight, mel_output,spec,mel
+        return output, att_weight, mel_output, mel_output2, spec, mel
 
 
 
@@ -384,19 +408,34 @@ class LSTMSVS(nn.Module):
 
 class TransformerSVS(GLU_TransformerSVS):
     def __init__(self, phone_size, embed_size, hidden_size, glu_num_layers, dropout, dec_num_block,
-            dec_nhead, output_dim, n_mels=80, local_gaussian=False, device="cuda"):
+            dec_nhead, output_dim, n_mels=80, double_mel_loss=True, local_gaussian=False, device="cuda"):
         super(TransformerSVS, self).__init__(phone_size, embed_size, hidden_size,
                 glu_num_layers, dropout, dec_num_block,dec_nhead, output_dim,
                 local_gaussian=local_gaussian, device="cuda")
         self.encoder = SA_Encoder(phone_size, embed_size, hidden_size, dropout)
-        self.use_mel = (n_mels > 0) # FIX ME
+        self.use_mel = (n_mels > 0)
         if self.use_mel:
-            self.decoder = Decoder(dec_num_block,embed_size,n_mels,dec_nhead,dropout,device=device)
-            self.postnet = module.PostNet(n_mels, output_dim, (output_dim// 2*2))
+            self.double_mel_loss = double_mel_loss
+        else:
+            self.double_mel_loss = False
+
+        if self.use_mel:
+            self.decoder = Decoder(dec_num_block, embed_size, n_mels, dec_nhead, dropout,
+                                   local_gaussian=local_gaussian, device=device)
+            if self.double_mel_loss:
+                self.double_mel = module.PostNet(n_mels, n_mels, n_mels)
+            self.postnet = module.PostNet(n_mels, output_dim, (output_dim // 2 * 2))
+        else:
+            self.decoder = Decoder(dec_num_block, embed_size, output_dim, dec_nhead, dropout,
+                                   local_gaussian=local_gaussian, device=device)
+            self.postnet = module.PostNet(output_dim, output_dim, (output_dim // 2 * 2))
+
 
 class TransformerSVS_norm(nn.Module):
-    def __init__(self,stats_file,stats_mel_file,phone_size,embed_size,hidden_size,glu_num_layers,dropout,\
-                 dec_num_block,dec_nhead,output_dim,n_mels=80,local_gaussian=False,device="cuda"):
+    def __init__(self, stats_file, stats_mel_file, phone_size, embed_size, \
+                  hidden_size, glu_num_layers, dropout, \
+                 dec_num_block, dec_nhead, output_dim, n_mels=80, \
+                 double_mel_loss=True, local_gaussian=False,device="cuda"):
         super(TransformerSVS_norm,self).__init__()
         self.encoder = SA_Encoder(phone_size,embed_size,hidden_size,dropout)
         self.normalizer = GlobalMVN(stats_file)   # FIX ME, add utterance normalizer
@@ -405,26 +444,42 @@ class TransformerSVS_norm(nn.Module):
         self.use_mel = (n_mels > 0)
 
         if self.use_mel:
-            self.decoder = Decoder(dec_num_block,embed_size,n_mels,dec_nhead,dropout,device=device)
-            self.postnet = module.PostNet(n_mels,output_dim,(output_dim//2*2))
+            self.double_mel_loss = double_mel_loss
         else:
-            print(f"fix me")
+            self.double_mel_loss = False
+
+        if self.use_mel:
+            self.decoder = Decoder(dec_num_block, embed_size, n_mels, dec_nhead, dropout,
+                                   local_gaussian=local_gaussian, device=device)
+            if self.double_mel_loss:
+                self.double_mel = module.PostNet(n_mels, n_mels, n_mels)
+            self.postnet = module.PostNet(n_mels, output_dim, (output_dim // 2 * 2))
+        else:
+            self.decoder = Decoder(dec_num_block, embed_size, output_dim, dec_nhead, dropout,
+                                   local_gaussian=local_gaussian, device=device)
+            self.postnet = module.PostNet(output_dim, output_dim, (output_dim // 2 * 2))
 
     def forward(self,spec,mel,characters,phone,pitch,beat,pos_text=True,pos_char=None,
                 pos_spec=None):
         encoder_out,text_phone=self.encoder(characters.squeeze(2),pos=pos_char)
         post_out = self.enc_postnet(encoder_out,phone,text_phone,pitch,beat)
         mel_output,att_weight = self.decoder(post_out,pos=pos_spec)
+        if self.double_mel_loss:
+            mel_otuput2 = self.double_mel(mel_output)
+        else:
+            mel_output2 = None
         output = self.postnet(mel_output)
         
         spec,_ = self.normalizer(spec,pos_spec)
         mel,_ = self.mel_normalizer(mel,pos_spec)
-        return output,att_weight, mel_output, spec, mel
+        return output, att_weight, mel_output, mel_output2, spec, mel
 
 
 class Transformer_noGLUSVS_norm(nn.Module):
-    def __init__(self,stats_file,stats_mel_file,phone_size,embed_size,hidden_size,glu_num_layers,dropout,\
-                 dec_num_block,dec_nhead,output_dim,n_mels=80,local_gaussian=False,device="cuda"):
+    def __init__(self, stats_file, stats_mel_file, phone_size, embed_size, \
+                  hidden_size, glu_num_layers, dropout, \
+                 dec_num_block, dec_nhead, output_dim, n_mels=80, \
+                 double_mel_loss=True, local_gaussian=False,device="cuda"):
         super(Transformer_noGLUSVS_norm,self).__init__()
         self.encoder = SA_Encoder(phone_size,embed_size,hidden_size,dropout)
         self.normalizer = GlobalMVN(stats_file)   # FIX ME, add utterance normalizer
@@ -433,21 +488,36 @@ class Transformer_noGLUSVS_norm(nn.Module):
         self.use_mel = (n_mels > 0)
 
         if self.use_mel:
-            self.decoder = Decoder_noGLU(dec_num_block,embed_size,n_mels,dec_nhead,dropout,device=device)
-            self.postnet = module.PostNet(n_mels,output_dim,(output_dim//2*2))
+            self.double_mel_loss = double_mel_loss
         else:
-            print(f"fix me")
+            self.double_mel_loss = False
+
+        if self.use_mel:
+            self.decoder = Decoder_noGLU(dec_num_block, embed_size, n_mels, dec_nhead, dropout,
+                                   local_gaussian=local_gaussian, device=device)
+            if self.double_mel_loss:
+                self.double_mel = module.PostNet(n_mels, n_mels, n_mels)
+            self.postnet = module.PostNet(n_mels, output_dim, (output_dim // 2 * 2))
+        else:
+            self.decoder = Decoder_noGLU(dec_num_block, embed_size, output_dim, dec_nhead, dropout,
+                                   local_gaussian=local_gaussian, device=device)
+            self.postnet = module.PostNet(output_dim, output_dim, (output_dim // 2 * 2))
 
     def forward(self,spec,mel,characters,phone,pitch,beat,pos_text=True,pos_char=None,
                 pos_spec=None):
         encoder_out,text_phone=self.encoder(characters.squeeze(2),pos=pos_char)
         post_out = self.enc_postnet(encoder_out,phone,text_phone,pitch,beat)
         mel_output,att_weight = self.decoder(post_out,pos=pos_spec)
+
+        if self.double_mel_loss:
+            mel_otuput2 = self.double_mel(mel_output)
+        else:
+            mel_output2 = None
         output = self.postnet(mel_output)
-        
+
         spec,_ = self.normalizer(spec,pos_spec)
         mel,_ = self.mel_normalizer(mel,pos_spec)
-        return output,att_weight, mel_output, spec, mel
+        return output, att_weight, mel_output, mel_output2, spec, mel
 
 
 
