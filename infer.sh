@@ -4,4 +4,6 @@
 
 . ./path.sh
 
+# CUDA_VISIBLE_DEVICES=0
+
 python bin/infer.py -c conf/infer.yaml

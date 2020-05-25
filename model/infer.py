@@ -6,18 +6,16 @@
 
 import torch
 import os
-import matplotlib.pyplot as plt
-from librosa.output import write_wav
-from librosa.display import specshow
 from model.SVSDataset import SVSDataset, SVSCollator
-from model.network import GLU_Transformer
+from model.network import GLU_TransformerSVS,GLU_TransformerSVS_norm,TransformerSVS,TransformerSVS_norm
 from model.loss import MaskedLoss
-from model.utils import AverageMeter, spectrogram2wav, create_src_key_padding_mask
+from model.utils import AverageMeter, create_src_key_padding_mask, log_figure
+from model.global_mvn import GlobalMVN
 
 
 def infer(args):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
+    
     # prepare model
     if args.model_type == "GLU_Transformer":
         model = GLU_Transformer(phone_size=args.phone_size,
@@ -27,7 +25,47 @@ def infer(args):
                                 dropout=args.dropout,
                                 output_dim=args.feat_dim,
                                 dec_nhead=args.dec_nhead,
+                                n_mels=args.n_mels,
+                                local_gaussian=args.local_gaussian,
                                 dec_num_block=args.dec_num_block)
+    elif args.model_type == "PureTransformer":
+        model = TransformerSVS(phone_size=args.phone_size,
+                                        embed_size=args.embedding_size,
+                                        hidden_size=args.hidden_size,
+                                        glu_num_layers=args.glu_num_layers,
+                                        dropout=args.dropout,
+                                        output_dim=args.feat_dim,
+                                        dec_nhead=args.dec_nhead,
+                                        dec_num_block=args.dec_num_block,
+                                        n_mels=args.n_mels,
+                                        local_gaussian=args.local_gaussian,)
+    elif args.model_type == "PureTransformer_norm":
+        model = TransformerSVS_norm(stats_file=args.stats_file,
+                                    stats_mel_file=args.stats_mel_file,
+                                    phone_size=args.phone_size,
+                                    embed_size=args.embedding_size,
+                                    hidden_size=args.hidden_size,
+                                    glu_num_layers=args.glu_num_layers,
+                                    dropout=args.dropout,
+                                    output_dim=args.feat_dim,
+                                    dec_nhead=args.dec_nhead,
+                                    dec_num_block=args.dec_num_block,
+                                    n_mels=args.n_mels,
+                                    local_gaussian=args.local_gaussian,)
+    elif args.model_type == "GLU_Transformer_norm":
+        model = GLU_TransformerSVS_norm(stats_file=args.stats_file,
+                                    stats_mel_file=args.stats_mel_file,
+                                    phone_size=args.phone_size,
+                                    embed_size=args.embedding_size,
+                                    hidden_size=args.hidden_size,
+                                    glu_num_layers=args.glu_num_layers,
+                                    dropout=args.dropout,
+                                    output_dim=args.feat_dim,
+                                    dec_nhead=args.dec_nhead,
+                                    dec_num_block=args.dec_num_block,
+                                    n_mels=args.n_mels,
+                                    local_gaussian=args.local_gaussian,)
+     
     else:
         raise ValueError('Not Support Model Type %s' % args.model_type)
 
@@ -52,7 +90,7 @@ def infer(args):
         print("Not loading {} because of different sizes".format(", ".join(para_list)))
     model_dict.update(state_dict_new)
     model.load_state_dict(model_dict)
-    print("Loaded checkpoint {}",format(args.model_file))
+    print("Loaded checkpoint {}".format(args.model_file))
     model = model.to(device)
     model.eval()
     
@@ -65,13 +103,16 @@ def infer(args):
                            max_len=args.num_frames,
                            sr=args.sampling_rate,
                            preemphasis=args.preemphasis,
+                           nfft=args.nfft,
                            frame_shift=args.frame_shift,
                            frame_length=args.frame_length,
                            n_mels=args.n_mels,
                            power=args.power,
                            max_db=args.max_db,
-                           ref_db=args.ref_db)
-    collate_fn_svs = SVSCollator(args.num_frames, args.char_max_len)
+                           ref_db=args.ref_db,
+                           standard=args.standard,
+                           sing_quality=args.sing_quality)
+    collate_fn_svs = SVSCollator(args.num_frames, args.char_max_len, args.use_asr_post, args.phone_size)
     test_loader = torch.utils.data.DataLoader(dataset=test_set,
                                                batch_size=1,
                                                shuffle=False,
@@ -80,50 +121,75 @@ def infer(args):
                                                pin_memory=True)
 
     if args.loss == "l1":
-        loss = MaskedLoss(torch.nn.L1Loss())
+        loss = MaskedLoss("l1")
     elif args.loss == "mse":
-        loss = MaskedLoss(torch.nn.MSELoss())
+        loss = MaskedLoss("mse")
     else:
         raise ValueError("Not Support Loss Type")
 
     losses = AverageMeter()
+    spec_losses = AverageMeter()
+    if args.perceptual_loss > 0:
+        pe_losses = AverageMeter()
+    if args.n_mels > 0:
+        mel_losses = AverageMeter()
 
     if not os.path.exists(args.prediction_path):
         os.makedirs(args.prediction_path)
 
-    for step, (phone, beat, pitch, spec, length, chars, char_len_list) in enumerate(test_loader, 1):
+    for step, (phone, beat, pitch, spec, real, imag, length, chars, char_len_list) in enumerate(test_loader, 1):
+        if step >= args.decode_sample:
+            break
         phone = phone.to(device)
         beat = beat.to(device)
         pitch = pitch.to(device).float()
         spec = spec.to(device).float()
-        chars = chars.to(device)
-        print(phone.size())
-        length_mask = create_src_key_padding_mask(length, args.num_frames)
-        length_mask = length_mask.unsqueeze(2)
+        mel = mel.to(device).float()
+        real = real.to(device).float()
+        imag = imag.to(device).float()
+        length_mask = length.unsqueeze(2)
+        length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
         length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
         length_mask = length_mask.to(device)
+        length_mel_mask = length_mel_mask.to(device)
         length = length.to(device)
         char_len_list = char_len_list.to(device)
 
-        output = model(chars, phone, pitch, beat, src_key_padding_mask=length,
-                       char_key_padding_mask=char_len_list)
+        if not args.use_asr_post:
+            chars = chars.to(device)
+            char_len_list = char_len_list.to(device)
+        else:
+            phone = phone.float()
+        
+        if args.model_type == "GLU_Transformer":
+            output, att, output_mel = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                       pos_spec=length)
+        elif args.model_type == "LSTM":
+            output, hidden, output_mel = model(phone, pitch, beat)
+            att = None
+        elif args.model_type == "PureTransformer":
+            output, att, output_mel = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                       pos_spec=length)
+        elif args.model_type in ("PureTransformer_norm","GLU_Transformer_norm"):
+            output,att,output_mel,spec_norm,mel_norm = model(spec,mel,chars,phone,pitch,beat,pos_char=char_len_list,pos_spec=length)
+            output,_ = model.normalizer.inverse(output)
+        
+        if args.normalize:
+            global_normalizer =  GlobalMVN(args.stats_file)
+            output,_ = global_normalizer.inverse(output,length)
+        spec_loss = criterion(output, spec, length_mask)
+        if args.n_mels > 0:
+            mel_loss = criterion(output_mel, mel, length_mel_mask) # FIX ME here, mel_loss is recover version
+        else:
+            mel_loss = 0
 
-        test_loss = loss(output, spec, length_mask)
+        final_loss = mel_loss + spec_loss
+
+        losses.update(train_loss.item(), phone.size(0))
+        spec_losses.update(spec_loss.item(), phone.size(0))
+        if args.n_mels > 0:
+            mel_losses.update(mel_loss.item(), phone.size(0))
 
         if step % 1 == 0:
-            # save wav and plot spectrogram
-            output = output.cpu().detach().numpy()[0]
-            print(output.shape)
-            wav = spectrogram2wav(output, args.max_db, args.ref_db, args.preemphasis, args.power, args.sampling_rate, args.frame_shift, args.frame_length)
-            
-            write_wav(os.path.join(args.prediction_path, '{}.wav'.format(step)), wav, args.sampling_rate)
-            plt.subplot(1, 2, 1)
-            specshow(output)
-            plt.title("prediction")
-            plt.subplot(1, 2, 2)
-            specshow(spec.cpu().detach().numpy()[0])
-            plt.title("ground_truth")
-            plt.savefig(os.path.join(args.prediction_path, '{}.png'.format(step)))
-        losses.update(test_loss.item(), phone.size(0))
-        break
+        	log_figure(step, output, spec, att, length, args.prediction_path, args)
     print("loss avg for test is {}".format(losses.avg))

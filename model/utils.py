@@ -3,87 +3,306 @@
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
 
+import os
 import torch
 import numpy as np
 import copy
 import time
 import librosa
+import matplotlib.pyplot as plt
+from librosa.output import write_wav
+from librosa.display import specshow
 from scipy import signal
+
+from pathlib import Path
+from model.utterance_mvn import UtteranceMVN
+from model.global_mvn import GlobalMVN
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+def collect_stats(train_loader,args):
+    count,sum,sum_square=0,0,0
+    count_mel,sum_mel,sum_square_mel = 0,0,0
+    for step, (phone,beat,pitch,spec,real,imag,length,chars,char_len_list,mel) in enumerate(train_loader,1):
+        #print(f"spec.shape: {spec.shape},length.shape: {length.shape}, mel.shape: {mel.shape}")
+        for i,seq in enumerate(spec.cpu().numpy()):
+            #print(f"seq.shape: {seq.shape}")
+            seq_length = torch.max(length[i])
+            #print(seq_length)
+            seq = seq[:seq_length]
+            sum += seq.sum(0)
+            sum_square += (seq ** 2).sum(0)
+            count += len(seq)
 
-def create_src_key_padding_mask(src_len, max_len):
-    bs = len(src_len)
-    mask = np.zeros((bs, max_len))
-    for i in range(bs):
-        mask[i, src_len[i]:] = 1
-    return torch.from_numpy(mask).float()
+        for i,seq in enumerate(mel.cpu().numpy()):
+            seq_length = torch.max(length[i])
+            seq = seq[:seq_length]
+            sum_mel += seq.sum(0)
+            sum_square_mel += (seq ** 2).sum(0)
+            count_mel += len(seq)
+    assert count_mel == count
+    if not os.path.exists(args.model_save_dir):
+        os.makedirs(args.model_save_dir)
+    np.savez(Path(args.model_save_dir) / f"feats_stats.npz",
+             count=count,
+             sum=sum,
+             sum_square=sum_square)
+    np.savez(Path(args.model_save_dir) / f"feats_mel_stats.npz",
+            count = count_mel,
+            sum = sum_mel,
+            sum_square = sum_square_mel)
+    
 
 
-def train_one_epoch(train_loader, model, device, optimizer, criterion, args):
+def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptual_entropy, epoch, args):
     losses = AverageMeter()
+    spec_losses = AverageMeter()
+    if args.perceptual_loss > 0:
+        pe_losses = AverageMeter()
+    if args.n_mels > 0:
+        mel_losses = AverageMeter()
+        if args.double_mel_loss:
+            double_mel_losses = AverageMeter()
     model.train()
+
+    log_save_dir = os.path.join(args.model_save_dir, "epoch{}/log_train_figure".format(epoch))
+    if not os.path.exists(log_save_dir):
+        os.makedirs(log_save_dir)
+
     start = time.time()
-    for step, (phone, beat, pitch, spec, length, chars, char_len_list) in enumerate(train_loader, 1):
+    for step, (phone, beat, pitch, spec, real, imag, length, chars, char_len_list, mel) in enumerate(train_loader, 1):
         phone = phone.to(device)
         beat = beat.to(device)
         pitch = pitch.to(device).float()
         spec = spec.to(device).float()
-        chars = chars.to(device)
-        length_mask = create_src_key_padding_mask(length, args.num_frames)
-        length_mask = length_mask.unsqueeze(2)
+        if mel is not None:
+            mel = mel.to(device).float()
+        real = real.to(device).float()
+        imag = imag.to(device).float()
+        length_mask = length.unsqueeze(2)
+        if mel is not None:
+            length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
+            length_mel_mask = length_mel_mask.to(device)
         length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
         length_mask = length_mask.to(device)
         length = length.to(device)
         char_len_list = char_len_list.to(device)
 
-        output = model(chars, phone, pitch, beat, src_key_padding_mask=length,
-                       char_key_padding_mask=char_len_list)
+        if not args.use_asr_post:
+            chars = chars.to(device)
+            char_len_list = char_len_list.to(device)
+        else:
+            phone = phone.float()
+        
+        if args.model_type == "GLU_Transformer":
+            output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                       pos_spec=length)
+        elif args.model_type == "LSTM":
+            output, hidden, output_mel = model(phone, pitch, beat)
+            att = None
+        elif args.model_type == "PureTransformer":
+            output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                       pos_spec=length)
+        elif args.model_type in ("PureTransformer_norm","PureTransformer_noGLU_norm"):
+            # this model for global norm 
+            output, att, output_mel, output_mel2, spec, mel = model(spec, mel, chars, phone, pitch, beat, \
+                    pos_char=char_len_list, pos_spec=length) 
+        elif args.model_type == "GLU_Transformer_norm":
+            # this model for global norm 
+            output, att, output_mel, output_mel2, spec, mel = model(spec, mel, chars, phone, pitch, beat,\
+                    pos_char=char_len_list, pos_spec=length) 
 
-        train_loss = criterion(output, spec, length_mask)
+
+        if args.normalize:
+            normalizer = UtteranceMVN()
+            spec_origin = spec.clone()
+            spec,_ = normalizer(spec,length)
+            mel,_ = normalizer(mel,length)
+            
+        
+        
+        spec_loss = criterion(output, spec, length_mask)
+        if args.n_mels > 0:
+            mel_loss = criterion(output_mel, mel, length_mel_mask)
+            if args.double_mel_loss:
+                double_mel_loss = criterion(output_mel2, mel, length_mel_mask)
+            else:
+                double_mel_loss = 0
+        else:
+            mel_loss = 0
+            double_mel_loss = 0
+
+        train_loss = mel_loss + double_mel_loss + spec_loss
+
+        if args.perceptual_loss > 0:
+            pe_loss = perceptual_entropy(output, real, imag)
+            final_loss = args.perceptual_loss * pe_loss + (1 - args.perceptual_loss) * train_loss
+        else:
+            final_loss = train_loss
 
         optimizer.zero_grad()
-        train_loss.backward()
+        final_loss.backward()
+
         if args.gradclip > 0:
             torch.nn.utils.clip_grad_norm_(model.parameters(), args.gradclip)
-        optimizer.step_and_update_lr()
-        losses.update(train_loss.item(), phone.size(0))
-        if step % 100 == 0:
-            end = time.time()
-            print("step {}: train_loss {} -- sum_time: {}s".format(step, losses.avg, end - start))
+        if args.optimizer == "noam":
+            optimizer.step_and_update_lr()
+        else:
+            optimizer.step()
 
-    info = {'loss': losses.avg}
+        losses.update(train_loss.item(), phone.size(0))
+        spec_losses.update(spec_loss.item(), phone.size(0))
+        if args.perceptual_loss > 0:
+            pe_losses.update(pe_loss.item(), phone.size(0))
+        if args.n_mels > 0:
+            mel_losses.update(mel_loss.item(), phone.size(0))
+            if args.double_mel_loss:
+                double_mel_losses.update(double_mel_loss.item(), phone.size(0))
+
+        if step % args.train_step_log == 0:
+            end = time.time()
+            if args.model_type in ("PureTransformer_norm", "GLU_Transformer_norm"):
+                spec,_ = model.normalizer.inverse(spec,length)
+                output,_= model.normalizer.inverse(output,length)
+            elif args.normalize and args.stats_file:
+                global_normalizer = GlobalMVN(args.stats_file)
+                output,_ = global_normalizer.inverse(output,length)
+                spec = spec_origin
+            elif args.normalize:
+                spec = spec_origin
+            else:
+                pass
+            log_figure(step, output, spec, att, length, log_save_dir, args)
+            out_log = "step {}: train_loss {}; spec_loss {}; ".format(step,
+                                                                      losses.avg, spec_losses.avg)
+            if args.perceptual_loss > 0:
+                out_log += "pe_loss {}; ".format(pe_losses.avg)
+            if args.n_mels > 0:
+                out_log += "mel_loss {}; ".format(mel_losses.avg)
+                if args.double_mel_loss:
+                    out_log += "dmel_loss {}; ".format(double_mel_losses.avg)
+            print("{} -- sum_time: {}s".format(out_log, (end-start)))
+
+    info = {'loss': losses.avg, 'spec_loss': spec_losses.avg}
+    if args.perceptual_loss > 0:
+        info['pe_loss'] = pe_losses.avg
+    if args.n_mels > 0:
+        info['mel_loss'] = mel_losses.avg
     return info
 
 
-def validate(dev_loader, model, device, criterion, args):
+def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, args):
     losses = AverageMeter()
+    spec_losses = AverageMeter()
+    if args.perceptual_loss > 0:
+        pe_losses = AverageMeter()
+    if args.n_mels > 0:
+        mel_losses = AverageMeter()
+        if args.double_mel_loss:
+            double_mel_losses = AverageMeter()
     model.eval()
 
+    log_save_dir = os.path.join(args.model_save_dir, "epoch{}/log_val_figure".format(epoch))
+    if not os.path.exists(log_save_dir):
+        os.makedirs(log_save_dir)
+
+    start = time.time()
+
     with torch.no_grad():
-        for step, (phone, beat, pitch, spec, length, chars, char_len_list) in enumerate(dev_loader, 1):
-            phone = phone.to(device).to(torch.int64)
-            beat = beat.to(device).to(torch.int64)
+        for step, (phone, beat, pitch, spec, real, imag, length, chars, char_len_list, mel) in enumerate(dev_loader, 1):
+            phone = phone.to(device)
+            beat = beat.to(device)
             pitch = pitch.to(device).float()
             spec = spec.to(device).float()
-            chars = chars.to(device)
-            length = length.to(device)
-            length_mask = create_src_key_padding_mask(length, args.num_frames)
-            length_mask = length_mask.unsqueeze(2)
+            if mel is not None:
+                mel = mel.to(device).float()
+            real = real.to(device).float()
+            imag = imag.to(device).float()
+            length_mask = length.unsqueeze(2)
+            if mel is not None:
+                length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
+                length_mel_mask = length_mel_mask.to(device)
             length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
             length_mask = length_mask.to(device)
+            length = length.to(device)
             char_len_list = char_len_list.to(device)
+            if not args.use_asr_post:
+                chars = chars.to(device)
+                char_len_list = char_len_list.to(device)
+            else:
+                phone = phone.float()
+            
+            if args.model_type == "GLU_Transformer":
+                output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                           pos_spec=length)
+            elif args.model_type == "LSTM":
+                output, hidden, output_mel = model(phone, pitch, beat)
+                att = None
+            elif args.model_type == "PureTransformer":
+                output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                           pos_spec=length)
 
-            output = model(chars, phone, pitch, beat, src_key_padding_mask=length,
-                           char_key_padding_mask=char_len_list)
+            elif args.model_type in ("PureTransformer_norm","GLU_Transformer_norm","PureTransformer_noGLU_norm"):
+                output, att, output_mel, output_mel2, spec, mel = model(spec, mel,\
+                                             chars, phone,pitch, beat, pos_char=char_len_list, pos_spec=length)
 
-            train_loss = criterion(output, spec, length_mask)
-            losses.update(train_loss.item(), phone.size(0))
-            if step % 10 == 0:
-                print("step {}: {}".format(step, losses.avg))
+            if args.model_type in ("PureTransformer_norm","GLU_Transformer_norm","PureTransformer_noGLU_norm"):
+                spec,_ = model.normalizer.inverse(spec,length)
+                output,_= model.normalizer.inverse(output,length)
+            elif args.normalize and args.stats_file:
+                global_normalizer = GlobalMVN(args.stats_file)
+                output,_ = global_normalizer.inverse(output,length)
+            else:
+                pass
+            
+            
+            spec_loss = criterion(output, spec, length_mask)
+            if args.n_mels > 0:
+                mel_loss = criterion(output_mel, mel, length_mel_mask)
+                if args.double_mel_loss:
+                    double_mel_loss = criterion(output_mel2, mel, length_mel_mask)
+                else:
+                    double_mel_loss = 0
+            else:
+                mel_loss = 0
+                double_mel_loss = 0
+    
+            dev_loss = mel_loss + double_mel_loss + spec_loss
+    
+            if args.perceptual_loss > 0:
+                pe_loss = perceptual_entropy(output, real, imag)
+                final_loss = args.perceptual_loss * pe_loss + (1 - args.perceptual_loss) * dev_loss
+            else:
+                final_loss = dev_loss
 
-    info = {'loss': losses.avg}
+            losses.update(dev_loss.item(), phone.size(0))
+            spec_losses.update(spec_loss.item(), phone.size(0))
+            if args.perceptual_loss > 0:
+                pe_loss = perceptual_entropy(output, real, imag)
+                pe_losses.update(pe_loss.item(), phone.size(0))
+            if args.n_mels > 0:
+                mel_losses.update(mel_loss.item(), phone.size(0))
+                if args.double_mel_loss:
+                    double_mel_losses.update(double_mel_loss.item(), phone.size(0))
+
+            if step % args.dev_step_log == 0:
+                log_figure(step, output, spec, att, length, log_save_dir, args)
+                out_log = "step {}: train_loss {}; spec_loss {}; ".format(step, losses.avg,
+                                                                          spec_losses.avg)
+                if args.perceptual_loss > 0:
+                    out_log += "pe_loss {}; ".format(pe_losses.avg)
+                if args.n_mels > 0:
+                    out_log += "mel_loss {}; ".format(mel_losses.avg)
+                    if args.double_mel_loss:
+                        out_log += "dmel_loss {}; ".format(double_mel_losses.avg)
+                end = time.time()
+                print("{} -- sum_time: {}s".format(out_log, (end-start)))
+
+    info = {'loss': losses.avg, 'spec_loss': spec_losses.avg}
+    if args.perceptual_loss > 0:
+        info['pe_loss'] = pe_losses.avg
+    if args.n_mels > 0:
+        info['mel_loss'] = mel_losses.avg
     return info
 
 
@@ -139,7 +358,7 @@ def griffin_lim(spectrogram, iter_vocoder, n_fft, hop_length, win_length):
     return y
 
 
-def spectrogram2wav(mag, max_db, ref_db, preemphasis, power, sr, hop_length, win_length):
+def spectrogram2wav(mag, max_db, ref_db, preemphasis, power, sr, hop_length, win_length, n_fft):
     '''# Generate wave file from linear magnitude spectrogram
     Args:
       mag: A numpy array of (T, 1+n_fft//2)
@@ -148,7 +367,7 @@ def spectrogram2wav(mag, max_db, ref_db, preemphasis, power, sr, hop_length, win
     '''
     hop_length = int(hop_length * sr)
     win_length = int(win_length * sr)
-    n_fft = win_length
+    n_fft = n_fft
 
     # transpose
     mag = mag.T
@@ -169,3 +388,36 @@ def spectrogram2wav(mag, max_db, ref_db, preemphasis, power, sr, hop_length, win
     wav, _ = librosa.effects.trim(wav)
 
     return wav.astype(np.float32)
+
+
+def log_figure(step, output, spec, att, length, save_dir, args):
+    # only get one sample from a batch
+    # save wav and plot spectrogram
+    output = output.cpu().detach().numpy()[0]
+    out_spec = spec.cpu().detach().numpy()[0]
+    length = np.max(length.cpu().detach().numpy()[0])
+    output = output[:length]
+    out_spec = out_spec[:length]
+    wav = spectrogram2wav(output, args.max_db, args.ref_db, args.preemphasis, args.power, args.sampling_rate, args.frame_shift, args.frame_length, args.nfft)
+    wav_true = spectrogram2wav(out_spec, args.max_db, args.ref_db, args.preemphasis, args.power, args.sampling_rate, args.frame_shift, args.frame_length, args.nfft)
+    write_wav(os.path.join(save_dir, '{}.wav'.format(step)), wav, args.sampling_rate)
+    write_wav(os.path.join(save_dir, '{}_true.wav'.format(step)), wav_true, args.sampling_rate)
+    plt.subplot(1, 2, 1)
+    specshow(output.T)
+    plt.title("prediction")
+    plt.subplot(1, 2, 2)
+    specshow(out_spec.T)
+    plt.title("ground_truth")
+    plt.savefig(os.path.join(save_dir, '{}.png'.format(step)))
+    if att is not None:
+        att = att.cpu().detach().numpy()[0]
+        att = att[:, :length, :length]
+        plt.subplot(1, 4, 1)
+        specshow(att[0])
+        plt.subplot(1, 4, 2)
+        specshow(att[1])
+        plt.subplot(1, 4, 3)
+        specshow(att[2])
+        plt.subplot(1, 4, 4)
+        specshow(att[3])
+        plt.savefig(os.path.join(save_dir, '{}_att.png'.format(step)))

@@ -28,6 +28,8 @@ parser.add_argument('--char_max_len', default=100, type=int,
                     help='max length for character')
 parser.add_argument('--num_workers', default=4, type=int,
                     help='number of cpu workers')
+parser.add_argument('--decode_sample', default=-1, type=int,
+                    help='samples to decode')
 parser.add_argument('--frame-length', default=0.06, type=float)
 parser.add_argument('--frame-shift', default=0.03, type=float)
 parser.add_argument('--sampling-rate', default=44100, type=int)
@@ -36,6 +38,7 @@ parser.add_argument('--n_mels', default=80, type=int)
 parser.add_argument('--power', default=1.2, type=float)
 parser.add_argument('--max_db', default=100, type=int)
 parser.add_argument('--ref_db', default=20, type=int)
+parser.add_argument('--nfft', default=2048, type=int)
 parser.add_argument('--phone_size', default=67, type=int)
 parser.add_argument('--feat-dim', default=1324, type=int)
 parser.add_argument('--embedding-size', default=256, type=int)
@@ -44,14 +47,20 @@ parser.add_argument('--glu-num-layers', default=1, type=int,
                     help='number of glu layers')
 parser.add_argument('--dropout', default=0.1, type=float)
 parser.add_argument('--dec_num_block', default=6, type=int)
+parser.add_argument('--num-rnn-layers', default=2, type=int)
 parser.add_argument('--dec_nhead', default=4, type=int)
+parser.add_argument('--local_gaussian', default=False, type=bool)
 parser.add_argument('--seed', default=666, type=int)
 parser.add_argument('--use_tfb', dest='use_tfboard',
                     help='whether use tensorboard',
                     action='store_true')
 parser.add_argument('--loss', default="l1", type=str)
+parser.add_argument('--perceptual_loss', default=-1, type=float)
 parser.add_argument('--use-pos-enc', default=0, type=int)
 parser.add_argument('--gradient-accumulation-steps', default=1, type=int)
+parser.add_argument('--use_asr_post', default=False, type=bool)
+parser.add_argument('--sing_quality', default="conf/sing_quality.csv", type=str)
+parser.add_argument('--standard', default=3, type=int)
 
 args = parser.parse_args()
 
