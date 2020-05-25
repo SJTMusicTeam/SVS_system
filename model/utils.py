@@ -52,7 +52,18 @@ def collect_stats(train_loader,args):
             sum = sum_mel,
             sum_square = sum_square_mel)
     
-
+def get_MCD(true_spec, pred_spec,sr):
+    #y1, sr1 = sf.read(os.path.join(wav_path,str(i)+'.wav'))
+    #y2, sr2 = sf.read(os.path.join(wav_path,str(i)+'_true.wav'))
+    mfcc1 = librosa.feature.mfcc(y=pred_spec, sr=sr,n_mfcc=24)
+    mfcc2 = librosa.feature.mfcc(y=true_spec, sr=sr,n_mfcc=24)
+    if mfcc1.shape[1] < mfcc2.shape[1]:
+        mfcc2 = mfcc2[:,:mfcc1.shape[1]]
+    if mfcc2.shape[1] < mfcc1.shape[1]:
+        mfcc1 = mfcc1[:,:mfcc2.shape[1]]
+    mcd = melcd(mfcc1, mfcc2, lengths=None)
+    return mcd;
+        
 
 def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptual_entropy, epoch, args):
     losses = AverageMeter()
@@ -173,8 +184,9 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
             else:
                 pass
             log_figure(step, output, spec, att, length, log_save_dir, args)
-            out_log = "step {}: train_loss {}; spec_loss {}; ".format(step,
-                                                                      losses.avg, spec_losses.avg)
+            mcd = get_MCD(spec,output,args.sampling_rate)
+            out_log = "step {}: train_loss {}; spec_loss {}; mcd {}".format(step,
+                                                                      losses.avg, spec_losses.avg, mcd)
             if args.perceptual_loss > 0:
                 out_log += "pe_loss {}; ".format(pe_losses.avg)
             if args.n_mels > 0:
