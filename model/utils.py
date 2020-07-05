@@ -79,6 +79,7 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
             mel = mel.to(device).float()
         real = real.to(device).float()
         imag = imag.to(device).float()
+        length_gru = length
         length_mask = length.unsqueeze(2)
         if mel is not None:
             length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
@@ -100,6 +101,9 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
         elif args.model_type == "LSTM":
             output, hidden, output_mel = model(phone, pitch, beat)
             att = None
+        elif args.model_type == "GRU_gs":
+            output, att, output_mel = model(spec, phone, pitch, beat, length, args)
+            att = None
         elif args.model_type == "PureTransformer":
             output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
                        pos_spec=length)
@@ -112,14 +116,12 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
             output, att, output_mel, output_mel2, spec, mel = model(spec, mel, chars, phone, pitch, beat,\
                     pos_char=char_len_list, pos_spec=length) 
 
-
         if args.normalize:
             normalizer = UtteranceMVN()
             spec_origin = spec.clone()
             spec,_ = normalizer(spec,length)
             mel,_ = normalizer(mel,length)
             
-        
         
         spec_loss = criterion(output, spec, length_mask)
         if args.n_mels > 0:
@@ -237,6 +239,9 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                            pos_spec=length)
             elif args.model_type == "LSTM":
                 output, hidden, output_mel = model(phone, pitch, beat)
+                att = None
+            elif args.model_type == "GRU_gs":
+                output, att, output_mel = model(spec, phone, pitch, beat, length, args)
                 att = None
             elif args.model_type == "PureTransformer":
                 output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,

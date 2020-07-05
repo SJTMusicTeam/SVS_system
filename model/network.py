@@ -6,6 +6,7 @@
 # import sys
 # sys.path.append("/Users/jiatongshi/projects/svs_system/SVS_system")
 
+import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -18,6 +19,9 @@ from torch.nn.init import xavier_normal_
 from torch.nn.init import constant_
 
 from model.global_mvn import GlobalMVN
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 class Encoder(nn.Module):
     """
     Encoder Network
@@ -428,86 +432,91 @@ class GRUSVS_gs(nn.Module):
         self.v = nn.Linear(d_model, 1, bias = False)
 
         # Decoder
-        self.rnnDecoder = nn.GRU((d_model * 2) + d_model, d_model)
-        self.fc_hid1 = nn.Linear((d_model * 2) + d_model + embed_size, 2048)
+        self.rnnDecoder = nn.GRU((d_model * 2) + d_model * 2, d_model)
+        self.fc_hid1 = nn.Linear((d_model * 2) + d_model * 2 + d_model, d_model * 2)
         # self.fc_hid2 = nn.Linear(2048, 1600)
-        self.fc_out = nn.Linear(2048, d_output)
+        
         self.dropoutDecoder = nn.Dropout(dropout)
         
+        self.use_mel = (n_mels > 0)
+        self.n_mels = n_mels
+        if self.use_mel:
+            self.output_mel = nn.Linear(d_model * 2, n_mels)
+            self.postnet = module.PostNet(n_mels, d_output, (d_output // 2 * 2))
+        else:
+            self.fc_out = nn.Linear(d_model * 2, d_output)
 
         self._reset_parameters()
-
-        self.use_asr_post = use_asr_post
         self.d_model = d_model
+        self.d_output = d_output
 
-    def forward(self, phone, pitch, beats, length_mask):
+    def forward(self, target, phone, pitch, beats, length, args):
         
         # phone, pitch, beats = [batch size, len, 1]
         # target = [batch size, max_len, feat_dim]
 
         batch_size = np.shape(phone)[0]
-        length = torch.max(length_mask,dim=1)[0]    # length = [batch size]
-        
-        phone = phone.permute(1,0,2)
-        pitch = pitch.permute(1,0,2)
-        beats = beats.permute(1,0,2)
+        length = torch.max(length,dim=1)[0]    # length = [batch size]
+        max_length = args.num_frames
+
+        sorted_length, sorted_index = torch.sort(length, descending=True)
+        phone = phone.index_select(0, sorted_index).permute(1,0,2)
+        pitch = pitch.index_select(0, sorted_index).permute(1,0,2)
+        beats = beats.index_select(0, sorted_index).permute(1,0,2)
+        target = target.index_select(0, sorted_index).permute(1,0,2)
+
+        # print("target", np.shape(target))
 
         # Encoder 
         embedded_phone = self.dropoutEncoder(self.embedding_phone(phone[:,:,0])) # # [src len, batch size, emb dim]
-        embedded = torch.cat((embedded_phone.long(), beats.long(), pitch.long()), dim = 2)   # [src len, batch size, emb_dim+2]
-        packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, length)
+        embedded = torch.cat((embedded_phone.float(), beats.float(), pitch.float()), dim = 2)   # [src len, batch size, emb_dim+2]
+        packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, sorted_length)
         packed_outputs, hidden = self.rnnEncoder(packed_embedded)
-        encoder_outputs, _ = nn.utils.rnn.pad_packed_sequence(packed_outputs).permute(1, 0, 2) #outputs = [batch size, src len, enc hid dim * 2]
+        encoder_outputs, _ = nn.utils.rnn.pad_packed_sequence(packed_outputs)
+        encoder_outputs = encoder_outputs.permute(1, 0, 2) #outputs = [batch size, src len, enc hid dim * 2]
         hidden = torch.tanh(self.fcEncoder(torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = 1)))  #hidden = [batch size, dec hid dim]
-
-        # Attention
-        energy = torch.tanh(self.attn(torch.cat((hidden, encoder_outputs), dim = 2))) #energy = [batch size, src len, dec hid dim]
-        attention = self.v(energy).squeeze(2)   #attention = [batch size, src len]
-        attention_weights = F.softmax(attention, dim = 1).unsqueeze(1)  #a = [batch size, 1, src len]
         
         # Decoder
-        outputs = torch.zeros(trg_len, batch_size, d_output).to(self.device)
-        input = outputs[0]
-        for t in range(0, trg_len):
-            input = input.unsqueeze(0) #input = [1, batch size，1324]
+        hidden = hidden.unsqueeze(0)
+        outputs = torch.zeros(max_length, batch_size, self.d_model * 2).to(device)
+        input_ = outputs[0]
+        for t in range(0, max_length):
+            input_ = input_.unsqueeze(0) #input = [1, batch size, d_model * 2]
             
-            weighted = torch.bmm(attention_weights, encoder_outputs)  #weighted = [batch size, 1, enc hid dim * 2]
-            weighted = weighted.permute(1, 0, 2)  #weighted = [1, batch size, enc hid dim * 2]
-            rnn_input = torch.cat((input, weighted), dim = 2)
+            # Attention
+            src_len = encoder_outputs.shape[1]
+            hiddenAttention = hidden.squeeze(0).unsqueeze(1).repeat(1, src_len, 1) #hidden = [batch size, src_len, dec hid dim]
+            energy = torch.tanh(self.attn(torch.cat((hiddenAttention, encoder_outputs), dim = 2))) #energy = [batch size, src len, dec hid dim]
+            attention = self.v(energy).squeeze(2)   #attention = [batch size, src len]
+            attention_weights = F.softmax(attention, dim = 1).unsqueeze(1)  #a = [batch size, 1, src len]
             
-            #rnn_input = [1, batch size, (enc hid dim * 2) + emb dim]
-                
-            output, hidden = self.rnn(rnn_input, hidden.unsqueeze(0))
+            weighted = torch.bmm(attention_weights, encoder_outputs)     #weighted = [batch size, 1, enc hid dim * 2]
+            weighted = weighted.permute(1, 0, 2)                         #weighted = [1, batch size, enc hid dim * 2]
+            rnn_input = torch.cat((input_, weighted), dim = 2)            #rnn_input = [1, batch size, (enc hid dim * 2) + (enc hid dim * 2)]          
+            
+            output, hidden = self.rnnDecoder(rnn_input, hidden)
 
             assert (output == hidden).all()
             
-            input = input.squeeze(0)
-            output = output.squeeze(0)
-            weighted = weighted.squeeze(0)
-            hidden = hidden.squeeze(0)
-            prediction = self.dropout(F.relu(self.fc_hid1(torch.cat((output, weighted, embedded), dim = 1))))
-            # prediction = self.dropout(F.relu(self.fc_hid2(prediction)))
-            prediction = F.relu(self.fc_out(prediction))
+            input_ = input_.squeeze(0)            #input = [batch size, d_model * 2]
+            output = output.squeeze(0)          #output = [batch size, d_model]
+            weighted = weighted.squeeze(0)      #weighted = [batch size, d_model * 2]
 
-            #prediction = [batch size, output dim]
-            
+            prediction = self.dropoutDecoder(F.relu(self.fc_hid1(torch.cat((output, weighted, input_), dim = 1))))  #prediction = [batch size, output dim * 2]
+            input_ = prediction
+
             # check output within the len of each_sample, pad 0 as over its len 
             for each_sample in range(batch_size):
-                if t < length[each_sample]:
+                if t < sorted_length[each_sample]:
                     outputs[t][each_sample] = prediction[each_sample]
-            
-            #decide if we are going to use teacher forcing or not
-            teacher_forcing_ratio = 0.3
-            teacher_force = random.random() < teacher_forcing_ratio
-            
-            #get the highest predicted token from our predictions
-            top1 = output
-            
-            #if teacher forcing, use actual next token as next input
-            #if not, use predicted token
-            input = trg[t] if teacher_force else top1
-       
-        return output, attention_weights, None
+        outputs = outputs.permute(1,0,2)
+        if self.use_mel:
+            mel = self.output_mel(outputs)
+            outputs = self.postnet(mel)
+            return outputs, None, mel
+        else:
+            outputs = self.fc_out(outputs)
+            return outputs, None, None
 
     def _reset_parameters(self):
         """Initiate parameters in the transformer model."""
