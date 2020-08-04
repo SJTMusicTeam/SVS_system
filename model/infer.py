@@ -6,11 +6,12 @@
 
 import torch
 import os
-from model.SVSDataset import SVSDataset, SVSCollator
+
+from model.utils.SVSDataset import SVSDataset, SVSCollator
 from model.network import GLU_TransformerSVS,GLU_TransformerSVS_norm,TransformerSVS,TransformerSVS_norm
-from model.loss import MaskedLoss
-from model.utils import AverageMeter, create_src_key_padding_mask, log_figure
-from model.global_mvn import GlobalMVN
+from model.utils.loss import MaskedLoss
+from model.utils.utils import AverageMeter, create_src_key_padding_mask, log_figure
+from model.layers.global_mvn import GlobalMVN
 
 
 def infer(args):

@@ -12,13 +12,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import math
-import model.module as module
-from model.pretrain_module import clones,FFN,Attention
 from torch.nn.init import xavier_uniform_
 from torch.nn.init import xavier_normal_
 from torch.nn.init import constant_
 
-from model.global_mvn import GlobalMVN
+import model.layers.module as module
+from model.layers.pretrain_module import clones,FFN,Attention
+from model.layers.global_mvn import GlobalMVN
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
