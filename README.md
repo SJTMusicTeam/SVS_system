@@ -19,7 +19,7 @@ cudnn version: 7501
 
 ## Running Instruction
 
-For example:
+For example: \
     `cd egs/public_dataset/kiritan`  \
     `sh train.sh` 
 
