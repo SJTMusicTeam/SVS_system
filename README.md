@@ -20,7 +20,7 @@ cudnn version: 7501
 ## Running Instruction
 
 For example:
-    `cd egs/public_dataset/kiritan` 
+    `cd egs/public_dataset/kiritan`  \
     `sh train.sh` 
 
 - For CLSP User, using clsp_wrapper to use qsub.
