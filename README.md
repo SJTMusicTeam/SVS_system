@@ -19,8 +19,13 @@ cudnn version: 7501
 
 ## Running Instruction
 
-For CLSP User, using clsp_wrapper to use qsub.
+For example: \
+    `cd egs/public_dataset/kiritan`  \
+    `sh train.sh` 
 
-For other user, using train.sh or infer.sh to run.
+- For CLSP User, using clsp_wrapper to use qsub.
+- For other user, using train.sh or infer.sh to run.
 
 Please refer to configuration file (e.g. train.yaml) for parameter.
+
+

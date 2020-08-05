@@ -1,0 +1,47 @@
+# public kiritan data
+train_align: /data1/gs/SVS_system/data/public_dataset/kiritan_data/alignment/train
+train_pitch: /data1/gs/SVS_system/data/public_dataset/kiritan_data/pitch_beat_extraction/train
+train_wav: /data1/gs/SVS_system/data/public_dataset/kiritan_data/wav_info/train
+val_align: /data1/gs/SVS_system/data/public_dataset/kiritan_data/alignment/test
+val_pitch: /data1/gs/SVS_system/data/public_dataset/kiritan_data/pitch_beat_extraction/test
+val_wav: /data1/gs/SVS_system/data/public_dataset/kiritan_data/wav_info/test
+
+# standard: 4
+# sing_quality: conf/sing_quality.csv
+
+
+# feature related
+sampling_rate: 22050
+nfft: 2048
+n_mels: 80
+feat_dim: 1025
+frame_length: 0.06
+frame_shift: 0.03
+
+# model related
+model_save_dir: exp/kiritan_gaussian_mask_glu/model
+model_type: GLU_Transformer
+hidden_size: 256
+embedding_size: 256
+glu_num_layers: 3
+dec_nhead: 4
+dec_num_block: 6
+num_frames: 500
+char_max_len: 100
+phone_size: 68
+local_gaussian: True
+
+# train related
+resume: True
+max_epochs: 300
+gradclip: 5
+batchsize: 4
+num_workers: 10
+optimizer: noam
+noam_scale: 1.0
+gradient_accumulation_steps: 1
+noam_warmup_steps: 4000
+train_step_log: 20
+dev_step_log: 2
+seed: 777
+gpu: 1
