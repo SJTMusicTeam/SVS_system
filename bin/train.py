@@ -5,7 +5,7 @@
 import yamlargparse
 
 import sys
-sys.path.append("/export/c04/jiatong/project/svs/SVS_system")
+sys.path.append("/data1/gs/SVS_system_workplace/SVS_system")
 
 parser = yamlargparse.ArgumentParser(description='SVS training')
 parser.add_argument('-c', '--config', help='config file path',
@@ -91,8 +91,8 @@ parser.add_argument('--collect_stats',default=False,type=bool)
 parser.add_argument('--normalize',default=False,type=bool)
 args = parser.parse_args()
 
-import system_info
-system_info.print_system_info()
+from tools.system_info import print_system_info
+print_system_info()
 
 print(args)
 from model.train import train
