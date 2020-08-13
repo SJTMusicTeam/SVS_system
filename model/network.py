@@ -496,7 +496,7 @@ class GRUSVS_gs(nn.Module):
             
             output, hidden = self.rnnDecoder(rnn_input, hidden)
 
-            assert (output == hidden).all()
+            # assert (output == hidden).all()
             
             input_ = input_.squeeze(0)            #input = [batch size, d_model * 2]
             output = output.squeeze(0)          #output = [batch size, d_model]
