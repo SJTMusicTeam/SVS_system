@@ -274,7 +274,12 @@ def train(args):
         loss_perceptual_entropy = PerceptualEntropy(bark_num, sf, args.sampling_rate, win_length, psd_dict)
     else:
         loss_perceptual_entropy = None
+
     # Training
+    epoch_to_save = {}
+    counter = 0 
+    # args.num_saved_model = 5
+
     for epoch in range(start_epoch + 1, 1 + args.max_epochs):
         start_t_train = time.time()
         #if args.collect_stats:
@@ -309,26 +314,68 @@ def train(args):
 
         print("")
         sys.stdout.flush()
-        
+
         if not os.path.exists(args.model_save_dir):
             os.makedirs(args.model_save_dir)
 
-        if args.optimizer == "noam":
-            save_checkpoint({
-                'epoch': epoch,
-                'state_dict': model.state_dict(),
-                'optimizer': optimizer._optimizer.state_dict(),
-            }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
-        else:
-            save_checkpoint({
-                'epoch': epoch,
-                'state_dict': model.state_dict(),
-            }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
+        if counter < args.num_saved_model:
+            counter += 1 
+            if dev_info['spec_loss'] in epoch_to_save.keys():
+                counter -= 1
+                continue
+            epoch_to_save[dev_info['spec_loss']] = epoch
+            if args.optimizer == "noam":
+                save_checkpoint({
+                    'epoch': epoch,
+                    'state_dict': model.state_dict(),
+                    'optimizer': optimizer._optimizer.state_dict(),
+                }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
+            else:
+                save_checkpoint({
+                    'epoch': epoch,
+                    'state_dict': model.state_dict(),
+                }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
 
-        # record training and validation information
-        if args.use_tfboard:
-            record_info(train_info, dev_info, epoch, logger)
+            # record training and validation information
+            if args.use_tfboard:
+                record_info(train_info, dev_info, epoch, logger)
 
+        else: 
+            sorted_dict_keys = sorted(epoch_to_save.keys(), reverse=True)
+            sp_loss = sorted_dict_keys[0] # biggest spec_loss of saved models
+            if dev_info['spec_loss'] < sp_loss:
+                epoch_to_save[dev_info['spec_loss']] = epoch
+                print('---------------------------------------------------------------------------------')
+                print('add epoch: {:04d}, sp_loss={:.4f}'.format(epoch, dev_info['spec_loss']))
+
+                if os.path.exists("{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch_to_save[sp_loss])):
+                    os.remove("{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch_to_save[sp_loss]))
+                    print('model of epoch:{} deleted'.format(epoch_to_save[sp_loss]))
+
+                print('delete epoch: {:04d}, sp_loss={:.4f}'.format(epoch_to_save[sp_loss], sp_loss))
+                epoch_to_save.pop(sp_loss)
+                
+                if args.optimizer == "noam":
+                    save_checkpoint({
+                        'epoch': epoch,
+                        'state_dict': model.state_dict(),
+                        'optimizer': optimizer._optimizer.state_dict(),
+                    }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
+                else:
+                    save_checkpoint({
+                        'epoch': epoch,
+                        'state_dict': model.state_dict(),
+                    }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
+
+                # record training and validation information
+                if args.use_tfboard:
+                    record_info(train_info, dev_info, epoch, logger)
+
+                print(epoch_to_save)
+                print('*********************************************************8************************')
+
+        if len(sorted(epoch_to_save.keys())) > args.num_saved_model:
+            raise 
     if args.use_tfboard:
         logger.close()
 
