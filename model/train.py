@@ -8,12 +8,12 @@ import sys
 import numpy as np
 import torch
 import time
-from model.gpu_util import use_single_gpu
-from model.SVSDataset import SVSDataset, SVSCollator
-from model.network import GLU_TransformerSVS,GLU_TransformerSVS_norm,LSTMSVS, TransformerSVS, TransformerSVS_norm,Transformer_noGLUSVS_norm
-from model.transformer_optim import ScheduledOptim
-from model.loss import MaskedLoss, cal_spread_function, cal_psd2bark_dict, PerceptualEntropy
-from model.utils import train_one_epoch, save_checkpoint, validate, record_info, collect_stats
+from model.utils.gpu_util import use_single_gpu
+from model.utils.SVSDataset import SVSDataset, SVSCollator
+from model.network import GLU_TransformerSVS,GLU_TransformerSVS_norm,LSTMSVS, GRUSVS_gs, TransformerSVS, TransformerSVS_norm,Transformer_noGLUSVS_norm
+from model.utils.transformer_optim import ScheduledOptim
+from model.utils.loss import MaskedLoss, cal_spread_function, cal_psd2bark_dict, PerceptualEntropy
+from model.utils.utils import train_one_epoch, save_checkpoint, validate, record_info, collect_stats
 
 
 def train(args):
@@ -96,6 +96,16 @@ def train(args):
                                 device=device)
     elif args.model_type == "LSTM":
         model = LSTMSVS(phone_size=args.phone_size,
+                        embed_size=args.embedding_size,
+                        d_model=args.hidden_size,
+                        num_layers=args.num_rnn_layers,
+                        dropout=args.dropout,
+                        d_output=args.feat_dim,
+                        n_mels=args.n_mels,
+                        device=device,
+                        use_asr_post=args.use_asr_post)
+    elif args.model_type == "GRU_gs":
+        model = GRUSVS_gs(phone_size=args.phone_size,
                         embed_size=args.embedding_size,
                         d_model=args.hidden_size,
                         num_layers=args.num_rnn_layers,
