@@ -16,6 +16,23 @@ from model.utils.loss import MaskedLoss, cal_spread_function, cal_psd2bark_dict,
 from model.utils.utils import train_one_epoch, save_checkpoint, validate, record_info, collect_stats
 
 
+def save_model(args, epoch, model, optimizer, train_info, dev_info, logger):
+    if args.optimizer == "noam":
+        save_checkpoint({
+            'epoch': epoch,
+            'state_dict': model.state_dict(),
+            'optimizer': optimizer._optimizer.state_dict(),
+        }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
+    else:
+        save_checkpoint({
+            'epoch': epoch,
+            'state_dict': model.state_dict(),
+        }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
+
+    # record training and validation information
+    if args.use_tfboard:
+        record_info(train_info, dev_info, epoch, logger)
+
 def train(args):
     if args.gpu > 0 and torch.cuda.is_available():
         cvd = use_single_gpu()
@@ -324,21 +341,7 @@ def train(args):
                 counter -= 1
                 continue
             epoch_to_save[dev_info['spec_loss']] = epoch
-            if args.optimizer == "noam":
-                save_checkpoint({
-                    'epoch': epoch,
-                    'state_dict': model.state_dict(),
-                    'optimizer': optimizer._optimizer.state_dict(),
-                }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
-            else:
-                save_checkpoint({
-                    'epoch': epoch,
-                    'state_dict': model.state_dict(),
-                }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
-
-            # record training and validation information
-            if args.use_tfboard:
-                record_info(train_info, dev_info, epoch, logger)
+            save_model(args, epoch, model, optimizer, train_info, dev_info, logger)
 
         else: 
             sorted_dict_keys = sorted(epoch_to_save.keys(), reverse=True)
@@ -355,27 +358,13 @@ def train(args):
                 print('delete epoch: {:04d}, sp_loss={:.4f}'.format(epoch_to_save[sp_loss], sp_loss))
                 epoch_to_save.pop(sp_loss)
                 
-                if args.optimizer == "noam":
-                    save_checkpoint({
-                        'epoch': epoch,
-                        'state_dict': model.state_dict(),
-                        'optimizer': optimizer._optimizer.state_dict(),
-                    }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
-                else:
-                    save_checkpoint({
-                        'epoch': epoch,
-                        'state_dict': model.state_dict(),
-                    }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
-
-                # record training and validation information
-                if args.use_tfboard:
-                    record_info(train_info, dev_info, epoch, logger)
+                save_model(args, epoch, model, optimizer, train_info, dev_info, logger)
 
                 print(epoch_to_save)
-                print('*********************************************************8************************')
+                print('*********************************************************************************')
 
         if len(sorted(epoch_to_save.keys())) > args.num_saved_model:
-            raise 
+            raise ValueError("")
     if args.use_tfboard:
         logger.close()
 
