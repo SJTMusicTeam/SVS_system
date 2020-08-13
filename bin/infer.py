@@ -64,8 +64,8 @@ parser.add_argument('--standard', default=3, type=int)
 
 args = parser.parse_args()
 
-import system_info
-system_info.print_system_info()
+from tools.system_info import print_system_info
+print_system_info()
 
 print(args)
 from model.infer import infer
