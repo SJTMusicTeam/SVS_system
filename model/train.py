@@ -13,25 +13,8 @@ from model.utils.SVSDataset import SVSDataset, SVSCollator
 from model.network import GLU_TransformerSVS,GLU_TransformerSVS_norm,LSTMSVS, GRUSVS_gs, TransformerSVS, TransformerSVS_norm,Transformer_noGLUSVS_norm
 from model.utils.transformer_optim import ScheduledOptim
 from model.utils.loss import MaskedLoss, cal_spread_function, cal_psd2bark_dict, PerceptualEntropy
-from model.utils.utils import train_one_epoch, save_checkpoint, validate, record_info, collect_stats
+from model.utils.utils import train_one_epoch, save_checkpoint, validate, record_info, collect_stats, save_model
 
-
-def save_model(args, epoch, model, optimizer, train_info, dev_info, logger):
-    if args.optimizer == "noam":
-        save_checkpoint({
-            'epoch': epoch,
-            'state_dict': model.state_dict(),
-            'optimizer': optimizer._optimizer.state_dict(),
-        }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
-    else:
-        save_checkpoint({
-            'epoch': epoch,
-            'state_dict': model.state_dict(),
-        }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
-
-    # record training and validation information
-    if args.use_tfboard:
-        record_info(train_info, dev_info, epoch, logger)
 
 def train(args):
     if args.gpu > 0 and torch.cuda.is_available():
