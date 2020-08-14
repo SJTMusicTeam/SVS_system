@@ -335,6 +335,24 @@ def save_checkpoint(state, model_filename):
     return 0
 
 
+def save_model(args, epoch, model, optimizer, train_info, dev_info, logger):
+    if args.optimizer == "noam":
+        save_checkpoint({
+            'epoch': epoch,
+            'state_dict': model.state_dict(),
+            'optimizer': optimizer._optimizer.state_dict(),
+        }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
+    else:
+        save_checkpoint({
+            'epoch': epoch,
+            'state_dict': model.state_dict(),
+        }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
+
+    # record training and validation information
+    if args.use_tfboard:
+        record_info(train_info, dev_info, epoch, logger)
+        
+
 def record_info(train_info, dev_info, epoch, logger):
     loss_info = {
         "train_loss": train_info['loss'],
