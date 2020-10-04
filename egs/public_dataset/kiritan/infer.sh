@@ -1,9 +1,26 @@
 # /usr/bin/bash
 
-# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
+# Copyright 2020 RUC (author: Shuai Guo)
 
-. ./path.sh
+# . ./path.sh
 
-# CUDA_VISIBLE_DEVICES=0
+set -e
 
-python ../../../bin/infer.py -c conf/infer.yaml
+# infer
+echo ============================================================================
+echo "                                infer                                     "
+echo ============================================================================
+
+
+# cmd="python ../../../SVS/bin/infer.py -c conf/infer_rnn.yaml"
+# cmd="python ../../../SVS/bin/infer.py -c conf/infer_rnn_perp.yaml"
+cmd="python ../../../SVS/bin/infer.py -c conf/infer_rnn_norm.yaml"
+
+
+# cmd="python ../../../SVS/bin/infer.py -c conf/infer_puretransformer.yaml"
+# cmd="python ../../../SVS/bin/infer.py -c conf/infer_puretransformer_norm.yaml"
+# cmd="python ../../../SVS/bin/infer.py -c conf/infer_glu.yaml"
+# cmd="python ../../../SVS/bin/infer.py -c conf/infer_glu_dmel_gnorm.yaml"
+# cmd="python ../../../SVS/bin/infer.py -c conf/infer_glu_perp.yaml"
+
+echo $cmd | sh

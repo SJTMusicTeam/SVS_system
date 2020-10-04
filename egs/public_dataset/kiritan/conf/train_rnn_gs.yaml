@@ -23,9 +23,7 @@ n_mels: 80
 frame_length: 0.06
 frame_shift: 0.03
 model_type: GRU_gs
-max_epochs: 200
-batchsize: 1
-num_workers: 10
+
 hidden_size: 512
 embedding_size: 512
 num_rnn_layers: 3
