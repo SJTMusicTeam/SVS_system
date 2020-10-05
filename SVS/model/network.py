@@ -270,7 +270,7 @@ class LSTMSVS(nn.Module):
     """
 
     def __init__(self, embed_size=512, d_model=512, d_output=1324,
-                 num_layers=2, phone_size=87, n_mels=-1,
+                 num_layers=2, phone_size=87, n_mels=-1, double_mel_loss=True,
                  dropout=0.1, device="cuda", use_asr_post=False):
         super(LSTMSVS, self).__init__()
         
@@ -313,9 +313,14 @@ class LSTMSVS(nn.Module):
         if self.use_mel:
             self.output_mel = nn.Linear(d_model * 2, n_mels)
             self.postnet = module.PostNet(n_mels, d_output, (d_output // 2 * 2))
+
+            self.double_mel_loss = double_mel_loss
+            if self.double_mel_loss:
+                self.double_mel = module.PostNet(n_mels, n_mels, n_mels)
         else:
             self.output_fc = nn.Linear(d_model * 2, d_output)
 
+            self.double_mel_loss = False
 
         self._reset_parameters()
 
@@ -345,12 +350,17 @@ class LSTMSVS(nn.Module):
         out = beats + out
         out, (h0, c0) = self.beats_lstm(out)
         if self.use_mel:
-            mel = self.output_mel(out)
-            out = self.postnet(mel)
-            return out, (h0, c0), mel
+            mel_output = self.output_mel(out)
+            if self.double_mel_loss:
+                mel_output2 = self.double_mel(mel_output)
+            else:
+                mel_output2 = mel_output
+            output = self.postnet(mel_output2)
+            # out = self.postnet(mel)
+            return output, (h0, c0),  mel_output, mel_output2
         else:
             out = self.output_fc(out)
-            return out, (h0, c0), None
+            return out, (h0, c0), None, None
 
     def _reset_parameters(self):
         """Initiate parameters in the transformer model."""
