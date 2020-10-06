@@ -108,7 +108,7 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
             output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
                        pos_spec=length)
         elif args.model_type == "LSTM":
-            output, hidden, output_mel = model(phone, pitch, beat)  
+            output, hidden, output_mel, output_mel2 = model(phone, pitch, beat)  
             att = None
         elif args.model_type == "GRU_gs":
             output, att, output_mel = model(spec, phone, pitch, beat, length, args)
@@ -116,6 +116,8 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
         elif args.model_type == "PureTransformer":
             output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
                        pos_spec=length)
+        elif args.model_type == "Conformer":
+            waiting_finish = 1
         # elif args.model_type in ("PureTransformer_norm","PureTransformer_noGLU_norm"):
         #     # this model for global norm 
         #     output, att, output_mel, output_mel2, spec, mel = model(spec, mel, chars, phone, pitch, beat, \
@@ -125,10 +127,10 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
         #     output, att, output_mel, output_mel2, spec, mel = model(spec, mel, chars, phone, pitch, beat,\
         #             pos_char=char_len_list, pos_spec=length) 
 
+        spec_origin = spec.clone()
         if args.normalize:   
             sepc_normalizer = GlobalMVN(args.stats_file)
             mel_normalizer = GlobalMVN(args.stats_mel_file)
-            spec_origin = spec.clone()
             spec,_ = sepc_normalizer(spec,length)
             mel,_ = mel_normalizer(mel,length)
              
@@ -181,19 +183,10 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
         if step % args.train_step_log == 0:
             end = time.time()
 
-            ### normalize inverse 只在infer的时候用，因为需要转换成wav
-            if args.model_type in ("PureTransformer_norm", "GLU_Transformer_norm"):
-                spec,_ = model.normalizer.inverse(spec,length)
-                output,_= model.normalizer.inverse(output,length)
-            elif args.normalize and args.stats_file:
-                global_normalizer = GlobalMVN(args.stats_file)
-                output,_ = global_normalizer.inverse(output,length)
-                spec = spec_origin
-            elif args.normalize:
-                spec = spec_origin
-            else:
-                pass
-            log_figure(step, output, spec, att, length, log_save_dir, args)
+            ### normalize inverse 只在infer的时候用，因为log过程需要转换成wav,和计算mcd等指标
+            if args.normalize and args.stats_file:
+                output,_ = sepc_normalizer.inverse(output,length)
+            log_figure(step, output, spec_origin, att, length, log_save_dir, args)
             out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(step,losses.avg, spec_losses.avg)
         
             if args.perceptual_loss > 0:
@@ -202,7 +195,7 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
                 out_log += "mel_loss {:.4f}; ".format(mel_losses.avg)
                 if args.double_mel_loss:
                     out_log += "dmel_loss {:.4f}; ".format(double_mel_losses.avg)
-            print("{} -- sum_time: {}s".format(out_log, (end-start)))
+            print("{} -- sum_time: {:.2f}s".format(out_log, (end-start)))
 
     info = {'loss': losses.avg, 'spec_loss': spec_losses.avg}
     if args.perceptual_loss > 0:
@@ -258,7 +251,7 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                 output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
                            pos_spec=length)
             elif args.model_type == "LSTM":
-                output, hidden, output_mel = model(phone, pitch, beat)
+                output, hidden, output_mel, output_mel2 = model(phone, pitch, beat) 
                 att = None
             elif args.model_type == "GRU_gs":
                 output, att, output_mel = model(spec, phone, pitch, beat, length, args)
@@ -266,25 +259,17 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
             elif args.model_type == "PureTransformer":
                 output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
                            pos_spec=length)
+            elif args.model_type == "Conformer":
+                waiting_finish = 1
 
-            elif args.model_type in ("PureTransformer_norm","GLU_Transformer_norm","PureTransformer_noGLU_norm"):
-                output, att, output_mel, output_mel2, spec, mel = model(spec, mel,\
-                                             chars, phone,pitch, beat, pos_char=char_len_list, pos_spec=length)
+            spec_origin = spec.clone()
+            if args.normalize:   
+                sepc_normalizer = GlobalMVN(args.stats_file)
+                mel_normalizer = GlobalMVN(args.stats_mel_file)
+                spec,_ = sepc_normalizer(spec,length)
+                mel,_ = mel_normalizer(mel,length)
 
-            ### normalize inverse stage
-            if args.model_type in ("PureTransformer_norm","GLU_Transformer_norm","PureTransformer_noGLU_norm"):
-                spec,_ = model.normalizer.inverse(spec,length)
-                output,_= model.normalizer.inverse(output,length)
-            elif args.normalize and args.stats_file:
-                global_normalizer = GlobalMVN(args.stats_file)
-                output,_ = global_normalizer.inverse(output,length)
-            else:
-                pass
-            
-            
             spec_loss = criterion(output, spec, length_mask)
-
-            mcd_value, length_sum = Metrics.Calculate_melcd_fromLinearSpectrum(output, spec, length, args)
             
             if args.n_mels > 0:
                 mel_loss = criterion(output_mel, mel, length_mel_mask)
@@ -308,8 +293,6 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
             losses.update(dev_loss.item(), phone.size(0))
             spec_losses.update(spec_loss.item(), phone.size(0))
             
-            mcd_metric.update(mcd_value, length_sum)
-            
             if args.perceptual_loss > 0:
                 pe_loss = perceptual_entropy(output, real, imag)
                 pe_losses.update(pe_loss.item(), phone.size(0))
@@ -318,8 +301,14 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                 if args.double_mel_loss:
                     double_mel_losses.update(double_mel_loss.item(), phone.size(0))
 
+            ### normalize inverse stage
+            if args.normalize and args.stats_file:
+                output,_ = sepc_normalizer.inverse(output,length)
+            mcd_value, length_sum = Metrics.Calculate_melcd_fromLinearSpectrum(output, spec_origin, length, args)
+            mcd_metric.update(mcd_value, length_sum)
+
             if step % args.dev_step_log == 0:
-                log_figure(step, output, spec, att, length, log_save_dir, args)
+                log_figure(step, output, spec_origin, att, length, log_save_dir, args)
                 out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f}; mcd_value {:.4f};".format(step,
                                                                       losses.avg, spec_losses.avg, mcd_metric.avg)
                 if args.perceptual_loss > 0:
