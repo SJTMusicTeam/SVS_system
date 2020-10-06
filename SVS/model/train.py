@@ -111,6 +111,7 @@ def train(args):
                         dropout=args.dropout,
                         d_output=args.feat_dim,
                         n_mels=args.n_mels,
+                        double_mel_loss=args.double_mel_loss,
                         device=device,
                         use_asr_post=args.use_asr_post)
     elif args.model_type == "GRU_gs":
@@ -221,6 +222,18 @@ def train(args):
             lr=args.lr,
             betas=(0.9, 0.98),
             eps=1e-09)
+        if args.scheduler == "OneCycleLR":
+            scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, 
+                                                            max_lr=args.lr, 
+                                                            steps_per_epoch=len(train_loader), 
+                                                            epochs=args.max_epochs,
+                                                            verbose=True)
+        elif args.scheduler == "ReduceLROnPlateau":
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 
+                                                                    'min',
+                                                                    verbose=True,
+                                                                    patience=50, 
+                                                                    factor=0.5)
     else:
         raise ValueError('Not Support Optimizer')
 
@@ -274,6 +287,11 @@ def train(args):
         print("{} time: {:.2f}s".format(out_log, end_t_train - start_t_train))
 
         
+        if args.scheduler == "OneCycleLR":
+            scheduler.step()
+        elif args.scheduler == "ReduceLROnPlateau":
+            scheduler.step(train_info['loss'])
+
         '''
         ### Dev Stage
         '''
@@ -301,39 +319,38 @@ def train(args):
         '''
         ### Save model Stage
         '''
-        # if not os.path.exists(args.model_save_dir):
-        #     os.makedirs(args.model_save_dir)
+        if not os.path.exists(args.model_save_dir):
+            os.makedirs(args.model_save_dir)
 
-        # if counter < args.num_saved_model:
-        #     counter += 1 
-        #     if dev_info['spec_loss'] in epoch_to_save.keys():
-        #         counter -= 1
-        #         continue
-        #     epoch_to_save[dev_info['spec_loss']] = epoch
-        #     save_model(args, epoch, model, optimizer, train_info, dev_info, logger)
+        if counter < args.num_saved_model:
+            counter += 1 
+            if dev_info['spec_loss'] in epoch_to_save.keys():
+                counter -= 1
+                continue
+            epoch_to_save[dev_info['spec_loss']] = epoch
+            save_model(args, epoch, model, optimizer, train_info, dev_info, logger)
 
-        # else: 
-        #     sorted_dict_keys = sorted(epoch_to_save.keys(), reverse=True)
-        #     sp_loss = sorted_dict_keys[0] # biggest spec_loss of saved models
-        #     if dev_info['spec_loss'] < sp_loss:
-        #         epoch_to_save[dev_info['spec_loss']] = epoch
-        #         print('---------------------------------------------------------------------------------')
-        #         print('add epoch: {:04d}, sp_loss={:.4f}'.format(epoch, dev_info['spec_loss']))
+        else: 
+            sorted_dict_keys = sorted(epoch_to_save.keys(), reverse=True)
+            sp_loss = sorted_dict_keys[0] # smallest spec_loss of saved models
+            if dev_info['spec_loss'] < sp_loss:
+                epoch_to_save[dev_info['spec_loss']] = epoch
+                print('---------------------------------------------------------------------------------')
+                print('add epoch: {:04d}, sp_loss={:.4f}'.format(epoch, dev_info['spec_loss']))
 
-        #         if os.path.exists("{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch_to_save[sp_loss])):
-        #             os.remove("{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch_to_save[sp_loss]))
-        #             print('model of epoch:{} deleted'.format(epoch_to_save[sp_loss]))
+                if os.path.exists("{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch_to_save[sp_loss])):
+                    os.remove("{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch_to_save[sp_loss]))
+                    print('model of epoch:{} deleted'.format(epoch_to_save[sp_loss]))
 
-        #         print('delete epoch: {:04d}, sp_loss={:.4f}'.format(epoch_to_save[sp_loss], sp_loss))
-        #         epoch_to_save.pop(sp_loss)
+                print('delete epoch: {:04d}, sp_loss={:.4f}'.format(epoch_to_save[sp_loss], sp_loss))
+                epoch_to_save.pop(sp_loss)
                 
-        #         save_model(args, epoch, model, optimizer, train_info, dev_info, logger)
+                save_model(args, epoch, model, optimizer, train_info, dev_info, logger)
 
-        #         print(epoch_to_save)
-        #         print('*********************************************************************************')
+                print(epoch_to_save)
+                print('*********************************************************************************')
 
-        # if len(sorted(epoch_to_save.keys())) > args.num_saved_model:
-        #     raise ValueError("")
+        if len(sorted(epoch_to_save.keys())) > args.num_saved_model:
+            raise ValueError("")
     if args.use_tfboard:
         logger.close()
-
