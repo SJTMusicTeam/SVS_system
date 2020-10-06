@@ -38,6 +38,7 @@ if __name__ == '__main__':
                         help='Max. number of epochs to train')
     parser.add_argument('--lr', default=0.001, type=float)
     parser.add_argument('--optimizer', default='noam', type=str)
+    parser.add_argument('--scheduler', default='None', type=str)
     parser.add_argument('--gradclip', default=-1, type=int,
                         help='gradient clipping. if < 0, no clipping')
     parser.add_argument('--num-frames', default=100, type=int,
