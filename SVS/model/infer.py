@@ -11,9 +11,10 @@ import numpy as np
 
 from SVS.model.utils.gpu_util import use_single_gpu
 from SVS.model.utils.SVSDataset import SVSDataset, SVSCollator
-from SVS.model.network import GLU_TransformerSVS,TransformerSVS,LSTMSVS
+from SVS.model.network import GLU_TransformerSVS, TransformerSVS, LSTMSVS, ConformerSVS
 from SVS.model.utils.loss import MaskedLoss
 from SVS.model.utils.utils import AverageMeter, record_info, log_figure, spectrogram2wav
+from SVS.model.utils.utils import train_one_epoch, save_checkpoint, validate, record_info, collect_stats, save_model
 from SVS.model.layers.global_mvn import GlobalMVN
 import SVS.tools.metrics as Metrics
 
@@ -39,7 +40,7 @@ def infer(args):
                                 dec_nhead=args.dec_nhead,
                                 dec_num_block=args.dec_num_block,
                                 n_mels=args.n_mels,
-                                # double_mel_loss=args.double_mel_loss,
+                                double_mel_loss=args.double_mel_loss,
                                 local_gaussian=args.local_gaussian,
                                 device=device)
     elif args.model_type == "LSTM":
@@ -50,6 +51,7 @@ def infer(args):
                         dropout=args.dropout,
                         d_output=args.feat_dim,
                         n_mels=args.n_mels,
+                        double_mel_loss=args.double_mel_loss,
                         device=device,
                         use_asr_post=args.use_asr_post)
     elif args.model_type == "GRU_gs":
@@ -60,6 +62,7 @@ def infer(args):
                         dropout=args.dropout,
                         d_output=args.feat_dim,
                         n_mels=args.n_mels,
+                        double_mel_loss=args.double_mel_loss,
                         device=device,
                         use_asr_post=args.use_asr_post)
     elif args.model_type == "PureTransformer":
@@ -72,9 +75,40 @@ def infer(args):
                                         dec_nhead=args.dec_nhead,
                                         dec_num_block=args.dec_num_block,
                                         n_mels=args.n_mels,
-                                        # double_mel_loss=args.double_mel_loss,
+                                        double_mel_loss=args.double_mel_loss,
                                         local_gaussian=args.local_gaussian,
                                         device=device)
+    elif args.model_type == "Conformer":
+        model = ConformerSVS(phone_size=args.phone_size,
+                            embed_size=args.embedding_size,
+                            
+                            enc_attention_dim=args.enc_attention_dim, 
+                            enc_attention_heads=args.enc_attention_heads, 
+                            enc_linear_units=args.enc_linear_units, 
+                            enc_num_blocks=args.enc_num_blocks,
+                            enc_dropout_rate=args.enc_dropout_rate, 
+                            enc_positional_dropout_rate=args.enc_positional_dropout_rate, 
+                            enc_attention_dropout_rate=args.enc_attention_dropout_rate,
+                            enc_input_layer=args.enc_input_layer, 
+                            enc_normalize_before=args.enc_normalize_before, 
+                            enc_concat_after=args.enc_concat_after,
+                            enc_positionwise_layer_type=args.enc_positionwise_layer_type, 
+                            enc_positionwise_conv_kernel_size=args.enc_positionwise_conv_kernel_size,
+                            enc_macaron_style=args.enc_macaron_style, 
+                            enc_pos_enc_layer_type=args.enc_pos_enc_layer_type, 
+                            enc_selfattention_layer_type=args.enc_selfattention_layer_type,
+                            enc_activation_type=args.enc_activation_type, 
+                            enc_use_cnn_module=args.enc_use_cnn_module, 
+                            enc_cnn_module_kernel=args.enc_cnn_module_kernel, 
+                            enc_padding_idx=args.enc_padding_idx,
+
+                            output_dim=args.feat_dim,
+                            dec_nhead=args.dec_nhead,
+                            dec_num_block=args.dec_num_block,
+                            n_mels=args.n_mels,
+                            double_mel_loss=args.double_mel_loss,
+                            local_gaussian=args.local_gaussian,
+                            device=device)
     else:
         raise ValueError('Not Support Model Type %s' % args.model_type)
     print(model)
@@ -90,11 +124,11 @@ def infer(args):
     # print(model_dict)
     for k, v in state_dict.items():
         # assert k in model_dict
-        # print(k)
         if k == "normalizer.mean" or k == "normalizer.std" or k == "mel_normalizer.mean" or k == "mel_normalizer.std":
             continue
         if model_dict[k].size() == state_dict[k].size():
             state_dict_new[k] = v
+            # print(k)
         else:
             para_list.append(k)
 
@@ -102,8 +136,9 @@ def infer(args):
 
     if len(para_list) > 0:
         print("Not loading {} because of different sizes".format(", ".join(para_list)))
-    model_dict.update(state_dict_new)
-    model.load_state_dict(model_dict)
+    # model_dict.update(state_dict_new)
+    # model.load_state_dict(model_dict)
+    model.load_state_dict(state_dict_new)
     print("Loaded checkpoint {}".format(args.model_file))
     model = model.to(device)
     model.eval()
@@ -151,7 +186,7 @@ def infer(args):
         f0_distortion_metric, vuv_error_metric = AverageMeter(), AverageMeter()
         # if args.double_mel_loss:
         #     double_mel_losses = AverageMeter()
-    model.train()
+    model.eval()
 
     if not os.path.exists(args.prediction_path):
         os.makedirs(args.prediction_path)
@@ -160,78 +195,95 @@ def infer(args):
     f0_synthesis_all = np.reshape(np.array([]), (-1,1))
     start_t_test = time.time()
 
-    for step, (phone, beat, pitch, spec, real, imag, length, chars, char_len_list, mel) in enumerate(test_loader, 1):
-        # if step >= args.decode_sample:
-        #     break
-        phone = phone.to(device)
-        beat = beat.to(device)
-        pitch = pitch.to(device).float()
-        spec = spec.to(device).float()
-        mel = mel.to(device).float()
-        real = real.to(device).float()
-        imag = imag.to(device).float()
-        length_mask = length.unsqueeze(2)
-        length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
-        length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
-        length_mask = length_mask.to(device)
-        length_mel_mask = length_mel_mask.to(device)
-        length = length.to(device)
-        char_len_list = char_len_list.to(device)
-
-        if not args.use_asr_post:
-            chars = chars.to(device)
+    with torch.no_grad():
+        for step, (phone, beat, pitch, spec, real, imag, length, chars, char_len_list, mel) in enumerate(test_loader, 1):
+            # if step >= args.decode_sample:
+            #     break
+            phone = phone.to(device)
+            beat = beat.to(device)
+            pitch = pitch.to(device).float()
+            spec = spec.to(device).float()
+            mel = mel.to(device).float()
+            real = real.to(device).float()
+            imag = imag.to(device).float()
+            length_mask = length.unsqueeze(2)
+            length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
+            length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
+            length_mask = length_mask.to(device)
+            length_mel_mask = length_mel_mask.to(device)
+            length = length.to(device)
             char_len_list = char_len_list.to(device)
-        else:
-            phone = phone.float()
-        
-        if args.model_type == "GLU_Transformer":
-            output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
+
+            if not args.use_asr_post:
+                chars = chars.to(device)
+                char_len_list = char_len_list.to(device)
+            else:
+                phone = phone.float()
+            
+            if args.model_type == "GLU_Transformer":
+                output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
                         pos_spec=length)
-        elif args.model_type == "LSTM":
-            output, hidden, output_mel = model(phone, pitch, beat)
-            att = None
-        elif args.model_type == "GRU_gs":
-            output, att, output_mel = model(spec, phone, pitch, beat, length, args)
-            att = None
-        elif args.model_type == "PureTransformer":
-            output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
+            elif args.model_type == "LSTM":
+                output, hidden, output_mel, output_mel2 = model(phone, pitch, beat)  
+                att = None
+            elif args.model_type == "GRU_gs":
+                output, att, output_mel = model(spec, phone, pitch, beat, length, args)
+                att = None
+            elif args.model_type == "PureTransformer":
+                output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
                         pos_spec=length)
+            elif args.model_type == "Conformer":
+                output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                            pos_spec=length)
 
-        elif args.model_type in ("PureTransformer_norm","GLU_Transformer_norm","PureTransformer_noGLU_norm"):
-            output, att, output_mel, output_mel2, spec, mel = model(spec, mel,\
-                                            chars, phone,pitch, beat, pos_char=char_len_list, pos_spec=length)
-        
-        if args.normalize and args.stats_file:
-            global_normalizer = GlobalMVN(args.stats_file)
-            output,_ = global_normalizer.inverse(output,length)
-        else:
-            pass
+            spec_origin = spec.clone()
+            # spec_origin = spec
+            if args.normalize:   
+                sepc_normalizer = GlobalMVN(args.stats_file)
+                mel_normalizer = GlobalMVN(args.stats_mel_file)
+                spec,_ = sepc_normalizer(spec,length)
+                mel,_ = mel_normalizer(mel,length)
 
-        spec_loss = criterion(output, spec, length_mask)
-        if args.n_mels > 0:
-            mel_loss = criterion(output_mel, mel, length_mel_mask)
-        else:
-            mel_loss = 0
+            spec_loss = criterion(output, spec, length_mask)
+            if args.n_mels > 0:
+                mel_loss = criterion(output_mel, mel, length_mel_mask)
+            else:
+                mel_loss = 0
 
-        final_loss = mel_loss + spec_loss
+            final_loss = mel_loss + spec_loss
 
-        losses.update(final_loss.item(), phone.size(0))
-        spec_losses.update(spec_loss.item(), phone.size(0))
-        if args.n_mels > 0:
-            mel_losses.update(mel_loss.item(), phone.size(0))
+            losses.update(final_loss.item(), phone.size(0))
+            spec_losses.update(spec_loss.item(), phone.size(0))
+            if args.n_mels > 0:
+                mel_losses.update(mel_loss.item(), phone.size(0))
 
-        mcd_value, length_sum = Metrics.Calculate_melcd_fromLinearSpectrum(output, spec, length, args)
-        f0_distortion_value, voiced_frame_number_step, vuv_error_value, frame_number_step, f0_ground_truth_step, f0_synthesis_step \
-                            = Metrics.Calculate_f0RMSE_VUV_CORR_fromWav(output, spec, length, args, "test")
-        f0_ground_truth_all = np.concatenate((f0_ground_truth_all, f0_ground_truth_step), axis=0)
-        f0_synthesis_all = np.concatenate((f0_synthesis_all, f0_synthesis_step), axis=0)
+            ### normalize inverse stage
+            if args.normalize and args.stats_file:
+                output,_ = sepc_normalizer.inverse(output,length)
+                # spec,_ = sepc_normalizer.inverse(spec,length)
+            
+            mcd_value, length_sum = Metrics.Calculate_melcd_fromLinearSpectrum(output, spec_origin, length, args)
+            f0_distortion_value, voiced_frame_number_step, vuv_error_value, frame_number_step, f0_ground_truth_step, f0_synthesis_step \
+                                = Metrics.Calculate_f0RMSE_VUV_CORR_fromWav(output, spec_origin, length, args, "test")
+            f0_ground_truth_all = np.concatenate((f0_ground_truth_all, f0_ground_truth_step), axis=0)
+            f0_synthesis_all = np.concatenate((f0_synthesis_all, f0_synthesis_step), axis=0)
 
-        mcd_metric.update(mcd_value, length_sum)
-        f0_distortion_metric.update(f0_distortion_value, voiced_frame_number_step)
-        vuv_error_metric.update(vuv_error_value, frame_number_step)
+            mcd_metric.update(mcd_value, length_sum)
+            f0_distortion_metric.update(f0_distortion_value, voiced_frame_number_step)
+            vuv_error_metric.update(vuv_error_value, frame_number_step)
 
-        if step % 1 == 0:
-            log_figure(step, output, spec, att, length, args.prediction_path, args)
+            if step % 1 == 0:
+                log_figure(step, output, spec_origin, att, length, args.prediction_path, args)
+                out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f}; mcd_value {:.4f}; ".format(step,
+                                                                        losses.avg, spec_losses.avg, mcd_metric.avg)
+                if args.perceptual_loss > 0:
+                    out_log += " pe_loss {:.4f}; ".format(pe_losses.avg)
+                if args.n_mels > 0:
+                    out_log += " mel_loss {:.4f}; ".format(mel_losses.avg)
+                    if args.double_mel_loss:
+                        out_log += " dmel_loss {:.4f}; ".format(double_mel_losses.avg)
+                end = time.time()
+                print("{} -- sum_time: {}s".format(out_log, (end-start_t_test)))
 
     end_t_test = time.time()
 
