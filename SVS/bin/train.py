@@ -37,8 +37,10 @@ if __name__ == '__main__':
     parser.add_argument('--max-epochs', default=20, type=int,
                         help='Max. number of epochs to train')
     parser.add_argument('--lr', default=0.001, type=float)
+
     parser.add_argument('--optimizer', default='noam', type=str)
     parser.add_argument('--scheduler', default='None', type=str)
+    
     parser.add_argument('--gradclip', default=-1, type=int,
                         help='gradient clipping. if < 0, no clipping')
     parser.add_argument('--num-frames', default=100, type=int,
@@ -84,8 +86,8 @@ if __name__ == '__main__':
     parser.add_argument('--use_asr_post', default=False, type=bool)
     parser.add_argument('--sing_quality', default="conf/sing_quality.csv", type=str)
     parser.add_argument('--standard', default=-1, type=int)
-    parser.add_argument('--train_step_log', default=100, type=int)
-    parser.add_argument('--dev_step_log', default=10, type=int)
+    parser.add_argument('--train_step_log', default=20, type=int)
+    parser.add_argument('--dev_step_log', default=2, type=int)
 
     parser.add_argument('--stats_file',default="",type=str)
     parser.add_argument('--stats_mel_file',default="",type=str)
@@ -96,6 +98,28 @@ if __name__ == '__main__':
     parser.add_argument('--accumulation_steps', default=1, type=int)
     parser.add_argument('--auto_select_gpu',default=True,type=bool)
     parser.add_argument('--gpu_id', default=1, type=int)
+
+
+    parser.add_argument('--enc_attention_dim', default=256, type=int)
+    parser.add_argument('--enc_attention_heads', default=4, type=int)
+    parser.add_argument('--enc_linear_units', default=2048, type=int)
+    parser.add_argument('--enc_num_blocks', default=6, type=int)
+    parser.add_argument('--enc_dropout_rate', default=0.1, type=float)
+    parser.add_argument('--enc_positional_dropout_rate', default=0.1, type=float)
+    parser.add_argument('--enc_attention_dropout_rate', default=0.0, type=float)
+    parser.add_argument('--enc_input_layer', default="conv2d", type=str)
+    parser.add_argument('--enc_normalize_before', default=True, type=bool)
+    parser.add_argument('--enc_concat_after', default=False, type=bool)
+    parser.add_argument('--enc_positionwise_layer_type', default="linear", type=str)
+    parser.add_argument('--enc_positionwise_conv_kernel_size', default=1, type=int)
+    parser.add_argument('--enc_macaron_style', default=False, type=bool)
+    parser.add_argument('--enc_pos_enc_layer_type', default="abs_pos", type=str)
+    parser.add_argument('--enc_selfattention_layer_type', default="selfattn", type=str)
+    parser.add_argument('--enc_activation_type', default="swish", type=str)
+    parser.add_argument('--enc_use_cnn_module', default=False, type=bool)
+    parser.add_argument('--enc_cnn_module_kernel', default=31, type=int)
+    parser.add_argument('--enc_padding_idx', default=-1, type=int)
+    parser.add_argument('--dec_dropout', default=0.1, type=float)
 
     args = parser.parse_args()
 

@@ -108,6 +108,7 @@ def infer(args):
                             n_mels=args.n_mels,
                             double_mel_loss=args.double_mel_loss,
                             local_gaussian=args.local_gaussian,
+                            dec_dropout=args.dec_dropout,
                             device=device)
     else:
         raise ValueError('Not Support Model Type %s' % args.model_type)
@@ -184,8 +185,8 @@ def infer(args):
         mel_losses = AverageMeter()
         mcd_metric = AverageMeter()
         f0_distortion_metric, vuv_error_metric = AverageMeter(), AverageMeter()
-        # if args.double_mel_loss:
-        #     double_mel_losses = AverageMeter()
+        if args.double_mel_loss:
+            double_mel_losses = AverageMeter()
     model.eval()
 
     if not os.path.exists(args.prediction_path):

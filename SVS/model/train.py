@@ -10,13 +10,48 @@ import torch
 import time
 from SVS.model.utils.gpu_util import use_single_gpu
 from SVS.model.utils.SVSDataset import SVSDataset, SVSCollator
-from SVS.model.network import GLU_TransformerSVS,LSTMSVS, GRUSVS_gs, TransformerSVS
+from SVS.model.network import GLU_TransformerSVS,LSTMSVS, GRUSVS_gs, TransformerSVS, ConformerSVS
 from SVS.model.utils.transformer_optim import ScheduledOptim
 from SVS.model.utils.loss import MaskedLoss, cal_spread_function, cal_psd2bark_dict, PerceptualEntropy
 from SVS.model.utils.utils import train_one_epoch, save_checkpoint, validate, record_info, collect_stats, save_model
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+def Auto_save_model(args, epoch, model, optimizer, train_info, dev_info, logger, 
+                    counter, epoch_to_save, save_loss_select="loss"):
+    if counter < args.num_saved_model:
+        counter += 1 
+        # if dev_info[save_loss_select] in epoch_to_save.keys():
+        #     counter -= 1
+        #     continue
+        epoch_to_save[dev_info[save_loss_select]] = epoch
+        save_model(args, epoch, model, optimizer, train_info, dev_info, logger)
+
+    else: 
+        sorted_dict_keys = sorted(epoch_to_save.keys(), reverse=True)
+        select_loss = sorted_dict_keys[0] # smallest spec_loss of saved models
+        if dev_info[save_loss_select] < select_loss:
+            epoch_to_save[dev_info[save_loss_select]] = epoch
+            print('---------------------------------------------------------------------------------')
+            print(f'### - {save_loss_select} - ###')
+            print('add epoch: {:04d}, {}={:.4f}'.format(epoch, save_loss_select, dev_info[save_loss_select]))
+
+            if os.path.exists("{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch_to_save[select_loss])):
+                os.remove("{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch_to_save[select_loss]))
+                print('model of epoch:{} deleted'.format(epoch_to_save[select_loss]))
+
+            print('delete epoch: {:04d}, {}={:.4f}'.format(epoch_to_save[select_loss], save_loss_select, select_loss))
+            epoch_to_save.pop(select_loss)
+            
+            save_model(args, epoch, model, optimizer, train_info, dev_info, logger)
+
+            print(epoch_to_save)
+            print('*********************************************************************************')
+    if len(sorted(epoch_to_save.keys())) > args.num_saved_model:
+        raise ValueError("")
+
+    return counter, epoch_to_save
 
 def train(args):
     if args.gpu > 0 and torch.cuda.is_available() and args.auto_select_gpu == True:
@@ -126,18 +161,50 @@ def train(args):
                         use_asr_post=args.use_asr_post)
     elif args.model_type == "PureTransformer":
         model = TransformerSVS(phone_size=args.phone_size,
-                                        embed_size=args.embedding_size,
-                                        hidden_size=args.hidden_size,
-                                        glu_num_layers=args.glu_num_layers,
-                                        dropout=args.dropout,
-                                        output_dim=args.feat_dim,
-                                        dec_nhead=args.dec_nhead,
-                                        dec_num_block=args.dec_num_block,
-                                        n_mels=args.n_mels,
-                                        double_mel_loss=args.double_mel_loss,
-                                        local_gaussian=args.local_gaussian,
-                                        device=device)
-    
+                                embed_size=args.embedding_size,
+                                hidden_size=args.hidden_size,
+                                glu_num_layers=args.glu_num_layers,
+                                dropout=args.dropout,
+                                output_dim=args.feat_dim,
+                                dec_nhead=args.dec_nhead,
+                                dec_num_block=args.dec_num_block,
+                                n_mels=args.n_mels,
+                                double_mel_loss=args.double_mel_loss,
+                                local_gaussian=args.local_gaussian,
+                                device=device)
+    elif args.model_type == "Conformer":
+        model = ConformerSVS(phone_size=args.phone_size,
+                            embed_size=args.embedding_size,
+
+                            enc_attention_dim=args.enc_attention_dim, 
+                            enc_attention_heads=args.enc_attention_heads, 
+                            enc_linear_units=args.enc_linear_units, 
+                            enc_num_blocks=args.enc_num_blocks,
+                            enc_dropout_rate=args.enc_dropout_rate, 
+                            enc_positional_dropout_rate=args.enc_positional_dropout_rate, 
+                            enc_attention_dropout_rate=args.enc_attention_dropout_rate,
+                            enc_input_layer=args.enc_input_layer, 
+                            enc_normalize_before=args.enc_normalize_before, 
+                            enc_concat_after=args.enc_concat_after,
+                            enc_positionwise_layer_type=args.enc_positionwise_layer_type, 
+                            enc_positionwise_conv_kernel_size=args.enc_positionwise_conv_kernel_size,
+                            enc_macaron_style=args.enc_macaron_style, 
+                            enc_pos_enc_layer_type=args.enc_pos_enc_layer_type, 
+                            enc_selfattention_layer_type=args.enc_selfattention_layer_type,
+                            enc_activation_type=args.enc_activation_type, 
+                            enc_use_cnn_module=args.enc_use_cnn_module, 
+                            enc_cnn_module_kernel=args.enc_cnn_module_kernel, 
+                            enc_padding_idx=args.enc_padding_idx,
+
+                            output_dim=args.feat_dim,
+                            dec_nhead=args.dec_nhead,
+                            dec_num_block=args.dec_num_block,
+                            n_mels=args.n_mels,
+                            double_mel_loss=args.double_mel_loss,
+                            local_gaussian=args.local_gaussian,
+                            dec_dropout=args.dec_dropout,
+                            device=device)
+
     elif args.model_type == "USTC_DAR":
         waiting_finish = 1
     
@@ -226,8 +293,7 @@ def train(args):
             scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, 
                                                             max_lr=args.lr, 
                                                             steps_per_epoch=len(train_loader), 
-                                                            epochs=args.max_epochs,
-                                                            verbose=True)
+                                                            epochs=args.max_epochs)
         elif args.scheduler == "ReduceLROnPlateau":
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 
                                                                     'min',
@@ -260,8 +326,11 @@ def train(args):
         loss_perceptual_entropy = None
 
     # Training
-    epoch_to_save = {}
-    counter = 0 
+    total_loss_epoch_to_save = {}
+    total_loss_counter = 0 
+    spec_loss_epoch_to_save = {}
+    spec_loss_counter = 0 
+
     # args.num_saved_model = 5
 
     for epoch in range(start_epoch + 1, 1 + args.max_epochs):
@@ -322,35 +391,10 @@ def train(args):
         if not os.path.exists(args.model_save_dir):
             os.makedirs(args.model_save_dir)
 
-        if counter < args.num_saved_model:
-            counter += 1 
-            if dev_info['spec_loss'] in epoch_to_save.keys():
-                counter -= 1
-                continue
-            epoch_to_save[dev_info['spec_loss']] = epoch
-            save_model(args, epoch, model, optimizer, train_info, dev_info, logger)
-
-        else: 
-            sorted_dict_keys = sorted(epoch_to_save.keys(), reverse=True)
-            sp_loss = sorted_dict_keys[0] # smallest spec_loss of saved models
-            if dev_info['spec_loss'] < sp_loss:
-                epoch_to_save[dev_info['spec_loss']] = epoch
-                print('---------------------------------------------------------------------------------')
-                print('add epoch: {:04d}, sp_loss={:.4f}'.format(epoch, dev_info['spec_loss']))
-
-                if os.path.exists("{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch_to_save[sp_loss])):
-                    os.remove("{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch_to_save[sp_loss]))
-                    print('model of epoch:{} deleted'.format(epoch_to_save[sp_loss]))
-
-                print('delete epoch: {:04d}, sp_loss={:.4f}'.format(epoch_to_save[sp_loss], sp_loss))
-                epoch_to_save.pop(sp_loss)
-                
-                save_model(args, epoch, model, optimizer, train_info, dev_info, logger)
-
-                print(epoch_to_save)
-                print('*********************************************************************************')
-
-        if len(sorted(epoch_to_save.keys())) > args.num_saved_model:
-            raise ValueError("")
+        total_loss_counter, total_loss_epoch_to_save = Auto_save_model(args, epoch, model, optimizer, train_info, 
+                        dev_info, logger, total_loss_counter, total_loss_epoch_to_save, save_loss_select="loss")
+        spec_loss_counter, spec_loss_epoch_to_save = Auto_save_model(args, epoch, model, optimizer, train_info, 
+                        dev_info, logger, spec_loss_counter, spec_loss_epoch_to_save, save_loss_select="spec_loss")
+        
     if args.use_tfboard:
         logger.close()

@@ -117,15 +117,9 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
             output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
                        pos_spec=length)
         elif args.model_type == "Conformer":
-            waiting_finish = 1
-        # elif args.model_type in ("PureTransformer_norm","PureTransformer_noGLU_norm"):
-        #     # this model for global norm 
-        #     output, att, output_mel, output_mel2, spec, mel = model(spec, mel, chars, phone, pitch, beat, \
-        #             pos_char=char_len_list, pos_spec=length) 
-        # elif args.model_type == "GLU_Transformer_norm":
-        #     # this model for global norm 
-        #     output, att, output_mel, output_mel2, spec, mel = model(spec, mel, chars, phone, pitch, beat,\
-        #             pos_char=char_len_list, pos_spec=length) 
+            # print(f"chars: {np.shape(chars)}, phone: {np.shape(phone)}, length: {np.shape(length)}")
+            output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                        pos_spec=length)
 
         spec_origin = spec.clone()
         if args.normalize:   
@@ -133,7 +127,9 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
             mel_normalizer = GlobalMVN(args.stats_mel_file)
             spec,_ = sepc_normalizer(spec,length)
             mel,_ = mel_normalizer(mel,length)
-             
+
+        # print(np.shape(output), np.shape(spec), np.shape(spec_origin))
+        # quit()
         spec_loss = criterion(output, spec, length_mask)
         
         if args.n_mels > 0:
@@ -170,7 +166,7 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
             optimizer.zero_grad()               
 
 
-        losses.update(train_loss.item(), phone.size(0))
+        losses.update(final_loss.item(), phone.size(0))
         spec_losses.update(spec_loss.item(), phone.size(0))
         
         if args.perceptual_loss > 0:
@@ -260,7 +256,8 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                 output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
                            pos_spec=length)
             elif args.model_type == "Conformer":
-                waiting_finish = 1
+                output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                           pos_spec=length)
 
             spec_origin = spec.clone()
             if args.normalize:   
@@ -290,11 +287,11 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
             else:
                 final_loss = dev_loss
 
-            losses.update(dev_loss.item(), phone.size(0))
+            losses.update(final_loss.item(), phone.size(0))
             spec_losses.update(spec_loss.item(), phone.size(0))
             
             if args.perceptual_loss > 0:
-                pe_loss = perceptual_entropy(output, real, imag)
+                # pe_loss = perceptual_entropy(output, real, imag)
                 pe_losses.update(pe_loss.item(), phone.size(0))
             if args.n_mels > 0:
                 mel_losses.update(mel_loss.item(), phone.size(0))
