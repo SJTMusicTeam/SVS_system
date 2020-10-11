@@ -3,8 +3,10 @@ test_align: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/align
 test_pitch: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/pitch_beat_extraction/dev
 test_wav: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info/dev
 
-model_file: exp/rnn_test/epoch_198.pth.tar
-prediction_path: exp/rnn_test/result_cbhg
+model_file: exp/rnn_norm/epoch_15.pth.tar
+stats_file: exp/rnn_test/feats_stats.npz
+stats_mel_file: exp/rnn_test/feats_mel_stats.npz
+prediction_path: exp/rnn_norm/result_cbhg
 
 # gpu related
 auto_select_gpu: False
@@ -12,7 +14,7 @@ gpu_id: 0
 
 # model related
 model_type: LSTM
-normalize: False
+normalize: True
 
 hidden_size: 512
 embedding_size: 512
@@ -30,5 +32,4 @@ char_max_len: 80
 phone_size: 68
 seed: 777
 
-# stats_file: exp/GLU_Transformer/model/feats_stats.npz
-# stats_mel_file: exp/GLU_Transformer/model/feats_mel_stats.npz
+
