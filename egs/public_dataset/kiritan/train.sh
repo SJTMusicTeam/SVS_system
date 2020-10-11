@@ -6,7 +6,7 @@
 
 set -e
 
-stage=3
+stage=4
  
 
 if [ $stage -le 1 ]; then
@@ -20,7 +20,7 @@ if [ $stage -le 2 ]; then
   echo "       data preprocessing & format into different set(trn/val/tst)        "
   echo ============================================================================
 
-  cmd="python ../../../tools/prepare_data.py kiritan_singing/wav kiritan_singing/mono_label kiritan_data"
+  cmd="python ../../../SVS/tools/prepare_data.py kiritan_singing/wav kiritan_singing/mono_label kiritan_data"
   echo $cmd | sh
   
 fi
@@ -31,7 +31,26 @@ if [ $stage -le 3 ]; then
   echo "                          collect_stats                                   "
   echo ============================================================================
 
-  cmd="python ../../../bin/train.py --collect_stats=True -c conf/train_rnn_gs.yaml"
+  
+  cmd="python ../../../SVS/bin/train.py --collect_stats=True -c conf/train_rnn.yaml"
+  # cmd="python ../../../SVS/bin/train.py --collect_stats=True -c conf/train_rnn_norm.yaml"
+  # cmd="python ../../../SVS/bin/train.py --collect_stats=True -c conf/train_rnn_perp.yaml"
+  # cmd="python ../../../SVS/bin/train.py --collect_stats=True -c conf/train_rnn_norm_perp.yaml"
+  # cmd="python ../../../SVS/bin/train.py --collect_stats=True -c conf/train_rnn_dmel_gnorm_perp.yaml"
+
+
+  # cmd="python ../../../SVS/bin/train.py --collect_stats=True -c conf/train_puretransformer.yaml"
+  # cmd="python ../../../SVS/bin/train.py --collect_stats=True -c conf/train_puretransformer_norm.yaml"
+
+  # cmd="python ../../../SVS/bin/train.py --collect_stats=True -c conf/train_glu.yaml"
+  # cmd="python ../../../SVS/bin/train.py --collect_stats=True -c conf/train_glu_norm.yaml"
+  # cmd="python ../../../SVS/bin/train.py --collect_stats=True -c conf/train_glu_dmel.yaml"
+  # cmd="python ../../../SVS/bin/train.py --collect_stats=True -c conf/train_glu_perp.yaml"
+  # cmd="python ../../../SVS/bin/train.py --collect_stats=True -c conf/train_glu_dmel_gnorm.yaml"
+  # cmd="python ../../../SVS/bin/train.py --collect_stats=True -c conf/train_glu_perp_gnorm.yaml"
+  # cmd="python ../../../SVS/bin/train.py --collect_stats=True -c conf/train_glu_dmel_gnorm_perp.yaml"
+  
+
   echo $cmd | sh
   
 fi
@@ -42,6 +61,24 @@ if [ $stage -le 4 ]; then
   echo "                                train                                     "
   echo ============================================================================
 
-  cmd="python ../../../bin/train.py -c conf/train_rnn_gs.yaml"
+  
+  cmd="python ../../../SVS/bin/train.py -c conf/train_rnn.yaml"
+  # cmd="python ../../../SVS/bin/train.py -c conf/train_rnn_norm.yaml"
+  # cmd="python ../../../SVS/bin/train.py -c conf/train_rnn_perp.yaml"
+  # cmd="python ../../../SVS/bin/train.py -c conf/train_rnn_norm_perp.yaml"
+  # cmd="python ../../../SVS/bin/train.py -c conf/train_rnn_dmel_gnorm_perp.yaml"
+
+
+  # cmd="python ../../../SVS/bin/train.py -c conf/train_puretransformer.yaml"
+  # cmd="python ../../../SVS/bin/train.py -c conf/train_puretransformer_norm.yaml"
+  
+  # cmd="python ../../../SVS/bin/train.py -c conf/train_glu.yaml"
+  # cmd="python ../../../SVS/bin/train.py -c conf/train_glu_norm.yaml"
+  # cmd="python ../../../SVS/bin/train.py -c conf/train_glu_dmel.yaml"
+  # cmd="python ../../../SVS/bin/train.py -c conf/train_glu_perp.yaml"
+  # cmd="python ../../../SVS/bin/train.py -c conf/train_glu_dmel_gnorm.yaml"
+  # cmd="python ../../../SVS/bin/train.py -c conf/train_glu_perp_gnorm.yaml"
+  # cmd="python ../../../SVS/bin/train.py -c conf/train_glu_dmel_gnorm_perp.yaml"
+
   echo $cmd | sh
 fi
