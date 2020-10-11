@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi, Hailan Lin)
+# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi, Shuai Guo, Hailan Lin)
 
 # debug only
 # import sys
@@ -19,8 +19,194 @@ from torch.nn.init import constant_
 import SVS.model.layers.module as module
 from SVS.model.layers.pretrain_module import clones,FFN,Attention
 from SVS.model.layers.global_mvn import GlobalMVN
+from SVS.model.layers.conformer_related import Conformer_block
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def make_pad_mask(lengths, xs=None, length_dim=-1):
+    """Make mask tensor containing indices of padded part.
+    Args:
+        lengths (LongTensor or List): Batch of lengths (B,).
+        xs (Tensor, optional): The reference tensor.
+            If set, masks will be the same shape as this tensor.
+        length_dim (int, optional): Dimension indicator of the above tensor.
+            See the example.
+    Returns:
+        Tensor: Mask tensor containing indices of padded part.
+                dtype=torch.uint8 in PyTorch 1.2-
+                dtype=torch.bool in PyTorch 1.2+ (including 1.2)
+    Examples:
+        With only lengths.
+        >>> lengths = [5, 3, 2]
+        >>> make_non_pad_mask(lengths)
+        masks = [[0, 0, 0, 0 ,0],
+                 [0, 0, 0, 1, 1],
+                 [0, 0, 1, 1, 1]]
+        With the reference tensor.
+        >>> xs = torch.zeros((3, 2, 4))
+        >>> make_pad_mask(lengths, xs)
+        tensor([[[0, 0, 0, 0],
+                 [0, 0, 0, 0]],
+                [[0, 0, 0, 1],
+                 [0, 0, 0, 1]],
+                [[0, 0, 1, 1],
+                 [0, 0, 1, 1]]], dtype=torch.uint8)
+        >>> xs = torch.zeros((3, 2, 6))
+        >>> make_pad_mask(lengths, xs)
+        tensor([[[0, 0, 0, 0, 0, 1],
+                 [0, 0, 0, 0, 0, 1]],
+                [[0, 0, 0, 1, 1, 1],
+                 [0, 0, 0, 1, 1, 1]],
+                [[0, 0, 1, 1, 1, 1],
+                 [0, 0, 1, 1, 1, 1]]], dtype=torch.uint8)
+        With the reference tensor and dimension indicator.
+        >>> xs = torch.zeros((3, 6, 6))
+        >>> make_pad_mask(lengths, xs, 1)
+        tensor([[[0, 0, 0, 0, 0, 0],
+                 [0, 0, 0, 0, 0, 0],
+                 [0, 0, 0, 0, 0, 0],
+                 [0, 0, 0, 0, 0, 0],
+                 [0, 0, 0, 0, 0, 0],
+                 [1, 1, 1, 1, 1, 1]],
+                [[0, 0, 0, 0, 0, 0],
+                 [0, 0, 0, 0, 0, 0],
+                 [0, 0, 0, 0, 0, 0],
+                 [1, 1, 1, 1, 1, 1],
+                 [1, 1, 1, 1, 1, 1],
+                 [1, 1, 1, 1, 1, 1]],
+                [[0, 0, 0, 0, 0, 0],
+                 [0, 0, 0, 0, 0, 0],
+                 [1, 1, 1, 1, 1, 1],
+                 [1, 1, 1, 1, 1, 1],
+                 [1, 1, 1, 1, 1, 1],
+                 [1, 1, 1, 1, 1, 1]]], dtype=torch.uint8)
+        >>> make_pad_mask(lengths, xs, 2)
+        tensor([[[0, 0, 0, 0, 0, 1],
+                 [0, 0, 0, 0, 0, 1],
+                 [0, 0, 0, 0, 0, 1],
+                 [0, 0, 0, 0, 0, 1],
+                 [0, 0, 0, 0, 0, 1],
+                 [0, 0, 0, 0, 0, 1]],
+                [[0, 0, 0, 1, 1, 1],
+                 [0, 0, 0, 1, 1, 1],
+                 [0, 0, 0, 1, 1, 1],
+                 [0, 0, 0, 1, 1, 1],
+                 [0, 0, 0, 1, 1, 1],
+                 [0, 0, 0, 1, 1, 1]],
+                [[0, 0, 1, 1, 1, 1],
+                 [0, 0, 1, 1, 1, 1],
+                 [0, 0, 1, 1, 1, 1],
+                 [0, 0, 1, 1, 1, 1],
+                 [0, 0, 1, 1, 1, 1],
+                 [0, 0, 1, 1, 1, 1]]], dtype=torch.uint8)
+    """
+    if length_dim == 0:
+        raise ValueError("length_dim cannot be 0: {}".format(length_dim))
+
+    if not isinstance(lengths, list):
+        lengths = lengths.tolist()
+    bs = int(len(lengths))
+    if xs is None:
+        maxlen = int(max(lengths))
+    else:
+        maxlen = xs.size(length_dim)
+
+    seq_range = torch.arange(0, maxlen, dtype=torch.int64)
+    seq_range_expand = seq_range.unsqueeze(0).expand(bs, maxlen)
+    seq_length_expand = seq_range_expand.new(lengths).unsqueeze(-1)
+    mask = seq_range_expand >= seq_length_expand
+
+    if xs is not None:
+        assert xs.size(0) == bs, (xs.size(0), bs)
+
+        if length_dim < 0:
+            length_dim = xs.dim() + length_dim
+        # ind = (:, None, ..., None, :, , None, ..., None)
+        ind = tuple(
+            slice(None) if i in (0, length_dim) else None for i in range(xs.dim())
+        )
+        mask = mask[ind].expand_as(xs).to(xs.device)
+    return mask
+
+
+def make_non_pad_mask(lengths, xs=None, length_dim=-1):
+    """Make mask tensor containing indices of non-padded part.
+    Args:
+        lengths (LongTensor or List): Batch of lengths (B,).
+        xs (Tensor, optional): The reference tensor.
+            If set, masks will be the same shape as this tensor.
+        length_dim (int, optional): Dimension indicator of the above tensor.
+            See the example.
+    Returns:
+        ByteTensor: mask tensor containing indices of padded part.
+                    dtype=torch.uint8 in PyTorch 1.2-
+                    dtype=torch.bool in PyTorch 1.2+ (including 1.2)
+    Examples:
+        With only lengths.
+        >>> lengths = [5, 3, 2]
+        >>> make_non_pad_mask(lengths)
+        masks = [[1, 1, 1, 1 ,1],
+                 [1, 1, 1, 0, 0],
+                 [1, 1, 0, 0, 0]]
+        With the reference tensor.
+        >>> xs = torch.zeros((3, 2, 4))
+        >>> make_non_pad_mask(lengths, xs)
+        tensor([[[1, 1, 1, 1],
+                 [1, 1, 1, 1]],
+                [[1, 1, 1, 0],
+                 [1, 1, 1, 0]],
+                [[1, 1, 0, 0],
+                 [1, 1, 0, 0]]], dtype=torch.uint8)
+        >>> xs = torch.zeros((3, 2, 6))
+        >>> make_non_pad_mask(lengths, xs)
+        tensor([[[1, 1, 1, 1, 1, 0],
+                 [1, 1, 1, 1, 1, 0]],
+                [[1, 1, 1, 0, 0, 0],
+                 [1, 1, 1, 0, 0, 0]],
+                [[1, 1, 0, 0, 0, 0],
+                 [1, 1, 0, 0, 0, 0]]], dtype=torch.uint8)
+        With the reference tensor and dimension indicator.
+        >>> xs = torch.zeros((3, 6, 6))
+        >>> make_non_pad_mask(lengths, xs, 1)
+        tensor([[[1, 1, 1, 1, 1, 1],
+                 [1, 1, 1, 1, 1, 1],
+                 [1, 1, 1, 1, 1, 1],
+                 [1, 1, 1, 1, 1, 1],
+                 [1, 1, 1, 1, 1, 1],
+                 [0, 0, 0, 0, 0, 0]],
+                [[1, 1, 1, 1, 1, 1],
+                 [1, 1, 1, 1, 1, 1],
+                 [1, 1, 1, 1, 1, 1],
+                 [0, 0, 0, 0, 0, 0],
+                 [0, 0, 0, 0, 0, 0],
+                 [0, 0, 0, 0, 0, 0]],
+                [[1, 1, 1, 1, 1, 1],
+                 [1, 1, 1, 1, 1, 1],
+                 [0, 0, 0, 0, 0, 0],
+                 [0, 0, 0, 0, 0, 0],
+                 [0, 0, 0, 0, 0, 0],
+                 [0, 0, 0, 0, 0, 0]]], dtype=torch.uint8)
+        >>> make_non_pad_mask(lengths, xs, 2)
+        tensor([[[1, 1, 1, 1, 1, 0],
+                 [1, 1, 1, 1, 1, 0],
+                 [1, 1, 1, 1, 1, 0],
+                 [1, 1, 1, 1, 1, 0],
+                 [1, 1, 1, 1, 1, 0],
+                 [1, 1, 1, 1, 1, 0]],
+                [[1, 1, 1, 0, 0, 0],
+                 [1, 1, 1, 0, 0, 0],
+                 [1, 1, 1, 0, 0, 0],
+                 [1, 1, 1, 0, 0, 0],
+                 [1, 1, 1, 0, 0, 0],
+                 [1, 1, 1, 0, 0, 0]],
+                [[1, 1, 0, 0, 0, 0],
+                 [1, 1, 0, 0, 0, 0],
+                 [1, 1, 0, 0, 0, 0],
+                 [1, 1, 0, 0, 0, 0],
+                 [1, 1, 0, 0, 0, 0],
+                 [1, 1, 0, 0, 0, 0]]], dtype=torch.uint8)
+    """
+    return ~make_pad_mask(lengths, xs, length_dim)
 
 class Encoder(nn.Module):
     """
@@ -94,6 +280,51 @@ class SA_Encoder(nn.Module):
             attns.append(attn) 
         return x , text_phone
 
+class Conformer_Encoder(nn.Module):
+    """
+    Conformer_Encoder Network 
+    """
+    def __init__(self, phone_size, embed_size,
+                attention_dim=256, attention_heads=4, linear_units=2048, num_blocks=6,
+                dropout_rate=0.1, positional_dropout_rate=0.1, attention_dropout_rate=0.0,
+                input_layer="conv2d", normalize_before=True, concat_after=False,
+                positionwise_layer_type="linear", positionwise_conv_kernel_size=1,
+                macaron_style=False, pos_enc_layer_type="abs_pos", selfattention_layer_type="selfattn",
+                activation_type="swish", use_cnn_module=False,cnn_module_kernel=31, padding_idx=-1):
+        super(Conformer_Encoder, self).__init__()
+        self.emb_phone = nn.Embedding(phone_size, embed_size)
+        self.conformer_block = Conformer_block( embed_size,
+                                                attention_dim, attention_heads, linear_units, num_blocks,
+                                                dropout_rate, positional_dropout_rate, attention_dropout_rate,
+                                                input_layer, normalize_before, concat_after,
+                                                positionwise_layer_type, positionwise_conv_kernel_size,
+                                                macaron_style, pos_enc_layer_type, selfattention_layer_type,
+                                                activation_type, use_cnn_module, cnn_module_kernel, padding_idx)
+
+    def forward(self, text_phone, pos, length):
+
+        if self.training:
+            query_mask = pos.ne(0).type(torch.float)
+        else:
+            query_mask = None
+        mask = pos.eq(0).unsqueeze(1).repeat(1, text_phone.size(1), 1)
+        
+        embedded_phone = self.emb_phone(text_phone)
+        
+        # print(text_phone)
+        # print(mask)
+
+        # print(f"embedded_phone: {np.shape(embedded_phone)}")
+
+        # length = torch.max(length,dim=1)[0]    # length = [batch size]
+        # embedded_phone = embedded_phone[:, : max(length)]       # for data parallel
+        # src_mask = make_non_pad_mask(length.tolist()).to(embedded_phone.device).unsqueeze(-2)
+
+        # print(f"length: {length}, text_phone: {np.shape(text_phone)}, src_mask: {np.shape(mask)}, embedded_phone: {np.shape(embedded_phone)}")
+
+        x, masks = self.conformer_block(embedded_phone, mask)
+        
+        return x , text_phone
 
 class Encoder_Postnet(nn.Module):
     """
@@ -163,7 +394,8 @@ class Encoder_Postnet(nn.Module):
         out = out + pos_out
         
         return out
-    
+
+
 class Decoder_noGLU(nn.Module):
     """
     Decoder Network
@@ -523,6 +755,75 @@ class TransformerSVS(nn.Module):
 
         return output, att_weight, mel_output, mel_output2
 
+class ConformerSVS(nn.Module):
+    """
+    Conformer Transformer Network
+    """
+    def __init__(self, phone_size, embed_size, \
+                 dec_num_block, dec_nhead, output_dim, n_mels=-1, double_mel_loss=True, local_gaussian=False, dec_dropout=0.1, \
+                 enc_attention_dim=256, enc_attention_heads=4, enc_linear_units=2048, enc_num_blocks=6, \
+                 enc_dropout_rate=0.1, enc_positional_dropout_rate=0.1, enc_attention_dropout_rate=0.0, \
+                 enc_input_layer="conv2d", enc_normalize_before=True, enc_concat_after=False, \
+                 enc_positionwise_layer_type="linear", enc_positionwise_conv_kernel_size=1, \
+                 enc_macaron_style=False, enc_pos_enc_layer_type="abs_pos", enc_selfattention_layer_type="selfattn", \
+                 enc_activation_type="swish", enc_use_cnn_module=False, enc_cnn_module_kernel=31, enc_padding_idx=-1, \
+                 device="cuda"):
+        super(ConformerSVS, self).__init__()
+        self.encoder = Conformer_Encoder(phone_size, embed_size,
+                                         attention_dim=enc_attention_dim, 
+                                         attention_heads=enc_attention_heads, 
+                                         linear_units=enc_linear_units, 
+                                         num_blocks=enc_num_blocks,
+                                         dropout_rate=enc_dropout_rate, 
+                                         positional_dropout_rate=enc_positional_dropout_rate, 
+                                         attention_dropout_rate=enc_attention_dropout_rate,
+                                         input_layer=enc_input_layer, 
+                                         normalize_before=enc_normalize_before, 
+                                         concat_after=enc_concat_after,
+                                         positionwise_layer_type=enc_positionwise_layer_type, 
+                                         positionwise_conv_kernel_size=enc_positionwise_conv_kernel_size,
+                                         macaron_style=enc_macaron_style, 
+                                         pos_enc_layer_type=enc_pos_enc_layer_type, 
+                                         selfattention_layer_type=enc_selfattention_layer_type,
+                                         activation_type=enc_activation_type, 
+                                         use_cnn_module=enc_use_cnn_module,
+                                         cnn_module_kernel=enc_cnn_module_kernel, 
+                                         padding_idx=enc_padding_idx)
+        self.enc_postnet = Encoder_Postnet(embed_size)
+
+        self.use_mel = (n_mels > 0)
+        if self.use_mel:
+            self.double_mel_loss = double_mel_loss
+        else:
+            self.double_mel_loss = False
+
+        if self.use_mel:
+            self.decoder = Decoder(dec_num_block, embed_size, n_mels, dec_nhead, dec_dropout,
+                                   local_gaussian=local_gaussian, device=device)
+            if self.double_mel_loss:
+                self.double_mel = module.PostNet(n_mels, n_mels, n_mels)
+            self.postnet = module.PostNet(n_mels, output_dim, (output_dim // 2 * 2))
+        else:
+            self.decoder = Decoder(dec_num_block, embed_size, output_dim, dec_nhead, dec_dropout,
+                                   local_gaussian=local_gaussian, device=device)
+            self.postnet = module.PostNet(output_dim, output_dim, (output_dim // 2 * 2))
+
+    def forward(self, characters, phone, pitch, beat, pos_text=True, pos_char=None,
+                pos_spec=None):
+
+        
+
+        encoder_out, text_phone = self.encoder(characters.squeeze(2), pos=pos_char, length=pos_spec)
+        post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat)
+        mel_output, att_weight = self.decoder(post_out, pos=pos_spec)
+
+        if self.double_mel_loss:
+            mel_output2 = self.double_mel(mel_output)
+        else:
+            mel_output2 = mel_output
+        output = self.postnet(mel_output2)
+
+        return output, att_weight, mel_output, mel_output2
 
 ### Reproduce the DAR model from USTC
 

@@ -73,7 +73,7 @@ parser.add_argument('--auto_select_gpu',default=True,type=bool)
 parser.add_argument('--gpu_id', default=1, type=int)
 
 parser.add_argument('--enc_attention_dim', default=256, type=int)
-parser.add_argument('--enc_attention_head', default=4, type=int)
+parser.add_argument('--enc_attention_heads', default=4, type=int)
 parser.add_argument('--enc_linear_units', default=2048, type=int)
 parser.add_argument('--enc_num_blocks', default=6, type=int)
 parser.add_argument('--enc_dropout_rate', default=0.1, type=float)
@@ -91,6 +91,7 @@ parser.add_argument('--enc_activation_type', default="swish", type=str)
 parser.add_argument('--enc_use_cnn_module', default=False, type=bool)
 parser.add_argument('--enc_cnn_module_kernel', default=31, type=int)
 parser.add_argument('--enc_padding_idx', default=-1, type=int)
+parser.add_argument('--dec_dropout', default=0.1, type=float)
 
 parser.add_argument('--double_mel_loss', default=False, type=float)
 
