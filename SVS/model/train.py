@@ -26,7 +26,7 @@ def Auto_save_model(args, epoch, model, optimizer, train_info, dev_info, logger,
         #     counter -= 1
         #     continue
         epoch_to_save[dev_info[save_loss_select]] = epoch
-        save_model(args, epoch, model, optimizer, train_info, dev_info, logger)
+        save_model(args, epoch, model, optimizer, train_info, dev_info, logger, save_loss_select)
 
     else: 
         sorted_dict_keys = sorted(epoch_to_save.keys(), reverse=True)
@@ -37,14 +37,14 @@ def Auto_save_model(args, epoch, model, optimizer, train_info, dev_info, logger,
             print(f'### - {save_loss_select} - ###')
             print('add epoch: {:04d}, {}={:.4f}'.format(epoch, save_loss_select, dev_info[save_loss_select]))
 
-            if os.path.exists("{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch_to_save[select_loss])):
-                os.remove("{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch_to_save[select_loss]))
+            if os.path.exists("{}/epoch_{}_{}.pth.tar".format(args.model_save_dir, save_loss_select, epoch_to_save[select_loss])):
+                os.remove("{}/epoch_{}_{}.pth.tar".format(args.model_save_dir, save_loss_select, epoch_to_save[select_loss]))
                 print('model of epoch:{} deleted'.format(epoch_to_save[select_loss]))
 
             print('delete epoch: {:04d}, {}={:.4f}'.format(epoch_to_save[select_loss], save_loss_select, select_loss))
             epoch_to_save.pop(select_loss)
             
-            save_model(args, epoch, model, optimizer, train_info, dev_info, logger)
+            save_model(args, epoch, model, optimizer, train_info, dev_info, logger, save_loss_select)
 
             print(epoch_to_save)
             print('*********************************************************************************')
