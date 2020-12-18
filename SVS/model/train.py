@@ -10,7 +10,7 @@ import torch
 import time
 from SVS.model.utils.gpu_util import use_single_gpu
 from SVS.model.utils.SVSDataset import SVSDataset, SVSCollator
-from SVS.model.network import GLU_TransformerSVS,LSTMSVS, GRUSVS_gs, TransformerSVS, ConformerSVS
+from SVS.model.network import GLU_TransformerSVS,LSTMSVS, GRUSVS_gs, TransformerSVS, ConformerSVS, ConformerSVS_FULL, USTC_SVS
 from SVS.model.utils.transformer_optim import ScheduledOptim
 from SVS.model.utils.loss import MaskedLoss, cal_spread_function, cal_psd2bark_dict, PerceptualEntropy
 from SVS.model.utils.utils import train_one_epoch, save_checkpoint, validate, record_info, collect_stats, save_model
@@ -54,23 +54,30 @@ def Auto_save_model(args, epoch, model, optimizer, train_info, dev_info, logger,
     return counter, epoch_to_save
 
 def train(args):
-    if args.gpu > 0 and torch.cuda.is_available() and args.auto_select_gpu == True:
+
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+
+    if torch.cuda.is_available() and args.auto_select_gpu == True:
         cvd = use_single_gpu()
         print(f"GPU {cvd} is used")
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
         # torch.backends.cudnn.enabled = False
-    else:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    elif args.gpu_id >= 0 and torch.cuda.is_available() and args.auto_select_gpu == False :
         torch.cuda.set_device(args.gpu_id)
         print(f"GPU {args.gpu_id} is used")
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
         # torch.backends.cudnn.enabled = False
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
+    else:
+        device = torch.device("cpu")
+        print(f"Warning: CPU is used")
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     train_set = SVSDataset(align_root_path=args.train_align,
                            pitch_beat_root_path=args.train_pitch,
@@ -119,7 +126,7 @@ def train(args):
                                                collate_fn=collate_fn_svs,
                                                pin_memory=True)
     # print(dev_set[0][3].shape)
-    assert args.feat_dim == dev_set[0][3].shape[1]
+    assert args.feat_dim == dev_set[0][3].shape[1] or args.feat_dim == dev_set[0][6].shape[1]
     if args.collect_stats:
         collect_stats(train_loader,args)
         print(f"collect_stats finished !")
@@ -204,9 +211,70 @@ def train(args):
                             local_gaussian=args.local_gaussian,
                             dec_dropout=args.dec_dropout,
                             device=device)
+    elif args.model_type == "Comformer_full":
+        model = ConformerSVS_FULL(phone_size=args.phone_size,
+                                embed_size=args.embedding_size,
+                                output_dim=args.feat_dim,
+                                n_mels=args.n_mels,
+
+                                enc_attention_dim=args.enc_attention_dim, 
+                                enc_attention_heads=args.enc_attention_heads, 
+                                enc_linear_units=args.enc_linear_units, 
+                                enc_num_blocks=args.enc_num_blocks,
+                                enc_dropout_rate=args.enc_dropout_rate, 
+                                enc_positional_dropout_rate=args.enc_positional_dropout_rate, 
+                                enc_attention_dropout_rate=args.enc_attention_dropout_rate,
+                                enc_input_layer=args.enc_input_layer, 
+                                enc_normalize_before=args.enc_normalize_before, 
+                                enc_concat_after=args.enc_concat_after,
+                                enc_positionwise_layer_type=args.enc_positionwise_layer_type, 
+                                enc_positionwise_conv_kernel_size=args.enc_positionwise_conv_kernel_size,
+                                enc_macaron_style=args.enc_macaron_style, 
+                                enc_pos_enc_layer_type=args.enc_pos_enc_layer_type, 
+                                enc_selfattention_layer_type=args.enc_selfattention_layer_type,
+                                enc_activation_type=args.enc_activation_type, 
+                                enc_use_cnn_module=args.enc_use_cnn_module, 
+                                enc_cnn_module_kernel=args.enc_cnn_module_kernel, 
+                                enc_padding_idx=args.enc_padding_idx,
+
+                                dec_attention_dim=args.dec_attention_dim, 
+                                dec_attention_heads=args.dec_attention_heads, 
+                                dec_linear_units=args.dec_linear_units, 
+                                dec_num_blocks=args.dec_num_blocks,
+                                dec_dropout_rate=args.dec_dropout_rate, 
+                                dec_positional_dropout_rate=args.dec_positional_dropout_rate, 
+                                dec_attention_dropout_rate=args.dec_attention_dropout_rate,
+                                dec_input_layer=args.dec_input_layer, 
+                                dec_normalize_before=args.dec_normalize_before, 
+                                dec_concat_after=args.dec_concat_after,
+                                dec_positionwise_layer_type=args.dec_positionwise_layer_type, 
+                                dec_positionwise_conv_kernel_size=args.dec_positionwise_conv_kernel_size,
+                                dec_macaron_style=args.dec_macaron_style, 
+                                dec_pos_enc_layer_type=args.dec_pos_enc_layer_type, 
+                                dec_selfattention_layer_type=args.dec_selfattention_layer_type,
+                                dec_activation_type=args.dec_activation_type, 
+                                dec_use_cnn_module=args.dec_use_cnn_module, 
+                                dec_cnn_module_kernel=args.dec_cnn_module_kernel, 
+                                dec_padding_idx=args.dec_padding_idx,
+                                device=device)
 
     elif args.model_type == "USTC_DAR":
-        waiting_finish = 1
+        model = USTC_SVS(phone_size=args.phone_size, 
+                        embed_size=args.embedding_size,
+                        middle_dim_fc=args.middle_dim_fc, 
+                        output_dim=args.feat_dim, 
+                        multi_history_num=args.multi_history_num, 
+                        middle_dim_prenet=args.middle_dim_prenet, 
+                        n_blocks_prenet=args.n_blocks_prenet, 
+                        n_heads_prenet=args.n_heads_prenet, 
+                        kernel_size_prenet=args.kernel_size_prenet,
+                        bi_d_model=args.bi_d_model, 
+                        bi_num_layers=args.bi_num_layers, 
+                        uni_d_model=args.uni_d_model, 
+                        uni_num_layers=args.uni_num_layers, 
+                        dropout=args.dropout, 
+                        feedbackLink_drop_rate=args.feedbackLink_drop_rate,
+                        device=device)
     
 
     else:
@@ -300,6 +368,10 @@ def train(args):
                                                                     verbose=True,
                                                                     patience=50, 
                                                                     factor=0.5)
+        elif args.scheduler == "ExponentialLR":
+            scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer,
+                                                                verbose=True,
+                                                                gamma=0.9886)
     else:
         raise ValueError('Not Support Optimizer')
 
@@ -330,6 +402,7 @@ def train(args):
     total_loss_counter = 0 
     spec_loss_epoch_to_save = {}
     spec_loss_counter = 0 
+    total_learning_step = 0
 
     # args.num_saved_model = 5
 
@@ -354,13 +427,7 @@ def train(args):
         if args.perceptual_loss > 0:
             out_log += 'pe_loss: {:.4f}, '.format(train_info['pe_loss'])
         print("{} time: {:.2f}s".format(out_log, end_t_train - start_t_train))
-
         
-        if args.scheduler == "OneCycleLR":
-            scheduler.step()
-        elif args.scheduler == "ReduceLROnPlateau":
-            scheduler.step(train_info['loss'])
-
         '''
         ### Dev Stage
         '''
@@ -385,16 +452,30 @@ def train(args):
 
         torch.backends.cudnn.enabled = True
 
+        if args.scheduler == "OneCycleLR":
+            scheduler.step()
+        elif args.scheduler == "ReduceLROnPlateau":
+            scheduler.step(dev_info['loss'])
+        elif args.scheduler == "ExponentialLR":
+            before = total_learning_step // args.lr_decay_learning_steps
+            total_learning_step += len(train_loader)
+            after = total_learning_step // args.lr_decay_learning_steps
+            if after > before:      # decay per 250 learning steps
+                scheduler.step()
+            
+
         '''
         ### Save model Stage
         '''
         if not os.path.exists(args.model_save_dir):
             os.makedirs(args.model_save_dir)
-
+        
         total_loss_counter, total_loss_epoch_to_save = Auto_save_model(args, epoch, model, optimizer, train_info, 
                         dev_info, logger, total_loss_counter, total_loss_epoch_to_save, save_loss_select="loss")
-        spec_loss_counter, spec_loss_epoch_to_save = Auto_save_model(args, epoch, model, optimizer, train_info, 
-                        dev_info, logger, spec_loss_counter, spec_loss_epoch_to_save, save_loss_select="spec_loss")
+
+        if dev_info['spec_loss'] != 0:      # spec_loss 有意义时再存模型，比如 USTC DAR model 不需要计算线性谱spec loss
+            spec_loss_counter, spec_loss_epoch_to_save = Auto_save_model(args, epoch, model, optimizer, train_info, 
+                            dev_info, logger, spec_loss_counter, spec_loss_epoch_to_save, save_loss_select="spec_loss")
         
     if args.use_tfboard:
         logger.close()

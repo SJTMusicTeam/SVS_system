@@ -19,9 +19,13 @@ frame_length: 0.06
 frame_shift: 0.03
 
 # model related
-model_save_dir: exp/GLU_Transformer/model
+model_save_dir: exp/10_9_GLU/model
+stats_file: exp/10_9_GLU/model/feats_stats.npz
+stats_mel_file: exp/10_9_GLU/model/feats_mel_stats.npz
+
 model_type: GLU_Transformer
 normalize: False
+double_mel_loss: False
 
 hidden_size: 256
 embedding_size: 256
@@ -38,12 +42,12 @@ resume: True
 max_epochs: 300
 gradclip: 5
 
-batchsize: 8 # was 4
-num_workers: 0 # was 10
+batchsize: 10 # was 4
+num_workers: 18 # was 10
 
 accumulation_steps: 1
 auto_select_gpu: False
-gpu_id: 3
+gpu_id: 5
 
 optimizer: noam
 noam_scale: 1.0
@@ -55,6 +59,5 @@ seed: 777
 gpu: 1
 
 # collect_stats: True
-stats_file: exp/GLU_Transformer/model/feats_stats.npz
-stats_mel_file: exp/GLU_Transformer/model/feats_mel_stats.npz
+
 

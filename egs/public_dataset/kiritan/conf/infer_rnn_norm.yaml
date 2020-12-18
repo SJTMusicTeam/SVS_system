@@ -3,10 +3,15 @@ test_align: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/align
 test_pitch: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/pitch_beat_extraction/dev
 test_wav: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info/dev
 
-model_file: exp/rnn_norm/epoch_15.pth.tar
-stats_file: exp/rnn_test/feats_stats.npz
-stats_mel_file: exp/rnn_test/feats_mel_stats.npz
-prediction_path: exp/rnn_norm/result_cbhg
+# model_file: exp/10_6_rnn_norm/epoch_91.pth.tar
+# stats_file: exp/10_6_rnn_norm/feats_stats.npz
+# stats_mel_file: exp/10_6_rnn_norm/feats_mel_stats.npz
+
+model_file: /data1/gs/jiatong/SVS_system/egs/public_dataset/kiritan/exp/10_6_rnn_norm/epoch_107.pth.tar
+stats_file: /data1/gs/jiatong/SVS_system/egs/public_dataset/kiritan/exp/10_6_rnn_norm/feats_stats.npz
+stats_mel_file: /data1/gs/jiatong/SVS_system/egs/public_dataset/kiritan/exp/10_6_rnn_norm/feats_mel_stats.npz
+
+prediction_path: /data1/gs/jiatong/SVS_system/egs/public_dataset/kiritan/exp/10_6_rnn_norm/result_cbhg_epoch_107
 
 # gpu related
 auto_select_gpu: False
@@ -16,8 +21,8 @@ gpu_id: 0
 model_type: LSTM
 normalize: True
 
-hidden_size: 512
-embedding_size: 512
+hidden_size: 256
+embedding_size: 256
 num_rnn_layers: 3
 
 # feature related
@@ -31,5 +36,4 @@ num_frames: 500
 char_max_len: 80
 phone_size: 68
 seed: 777
-
 

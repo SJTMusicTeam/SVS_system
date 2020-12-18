@@ -10,18 +10,20 @@ val_wav: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info
 # sing_quality: conf/sing_quality.csv
 
 model_type: LSTM
-normalize: False # for utterence normalize
-model_save_dir: exp/rnn_norm
+model_save_dir: /data7/gs/SVS_model/10_12_rnn_norm/model
+stats_file: /data7/gs/SVS_model/10_12_rnn_norm/model/feats_stats.npz
+stats_mel_file: /data7/gs/SVS_model/10_12_rnn_norm/model/feats_mel_stats.npz
+
 normalize: True
 double_mel_loss: False
 
 batchsize: 10
-num_workers: 0
-accumulation_steps: 4
+num_workers: 18
+accumulation_steps: 1
 auto_select_gpu: False
-gpu_id: 4
+gpu_id: 1
 
-max_epochs: 250
+max_epochs: 300
 
 resume: True
 mask_free: False
@@ -34,8 +36,8 @@ n_mels: 80
 frame_length: 0.06
 frame_shift: 0.03
 
-hidden_size: 512
-embedding_size: 512
+hidden_size: 256
+embedding_size: 256
 num_rnn_layers: 3
 num_frames: 500
 char_max_len: 100
@@ -45,9 +47,8 @@ phone_size: 68
 seed: 777
 gpu: 1
 
-# train_step_log: 20
-# dev_step_log: 2
+train_step_log: 20
+dev_step_log: 2
 
 # collect_stats: True
-stats_file: exp/rnn_norm/feats_stats.npz
-stats_mel_file: exp/rnn_norm/feats_mel_stats.npz
+

@@ -11,7 +11,7 @@ import numpy as np
 
 from SVS.model.utils.gpu_util import use_single_gpu
 from SVS.model.utils.SVSDataset import SVSDataset, SVSCollator
-from SVS.model.network import GLU_TransformerSVS, TransformerSVS, LSTMSVS, ConformerSVS
+from SVS.model.network import GLU_TransformerSVS, TransformerSVS, LSTMSVS, ConformerSVS, ConformerSVS_FULL
 from SVS.model.utils.loss import MaskedLoss
 from SVS.model.utils.utils import AverageMeter, record_info, log_figure, spectrogram2wav
 from SVS.model.utils.utils import train_one_epoch, save_checkpoint, validate, record_info, collect_stats, save_model
@@ -110,6 +110,52 @@ def infer(args):
                             local_gaussian=args.local_gaussian,
                             dec_dropout=args.dec_dropout,
                             device=device)
+    elif args.model_type == "Comformer_full":
+        model = ConformerSVS_FULL(phone_size=args.phone_size,
+                                embed_size=args.embedding_size,
+                                output_dim=args.feat_dim,
+                                n_mels=args.n_mels,
+
+                                enc_attention_dim=args.enc_attention_dim, 
+                                enc_attention_heads=args.enc_attention_heads, 
+                                enc_linear_units=args.enc_linear_units, 
+                                enc_num_blocks=args.enc_num_blocks,
+                                enc_dropout_rate=args.enc_dropout_rate, 
+                                enc_positional_dropout_rate=args.enc_positional_dropout_rate, 
+                                enc_attention_dropout_rate=args.enc_attention_dropout_rate,
+                                enc_input_layer=args.enc_input_layer, 
+                                enc_normalize_before=args.enc_normalize_before, 
+                                enc_concat_after=args.enc_concat_after,
+                                enc_positionwise_layer_type=args.enc_positionwise_layer_type, 
+                                enc_positionwise_conv_kernel_size=args.enc_positionwise_conv_kernel_size,
+                                enc_macaron_style=args.enc_macaron_style, 
+                                enc_pos_enc_layer_type=args.enc_pos_enc_layer_type, 
+                                enc_selfattention_layer_type=args.enc_selfattention_layer_type,
+                                enc_activation_type=args.enc_activation_type, 
+                                enc_use_cnn_module=args.enc_use_cnn_module, 
+                                enc_cnn_module_kernel=args.enc_cnn_module_kernel, 
+                                enc_padding_idx=args.enc_padding_idx,
+
+                                dec_attention_dim=args.dec_attention_dim, 
+                                dec_attention_heads=args.dec_attention_heads, 
+                                dec_linear_units=args.dec_linear_units, 
+                                dec_num_blocks=args.dec_num_blocks,
+                                dec_dropout_rate=args.dec_dropout_rate, 
+                                dec_positional_dropout_rate=args.dec_positional_dropout_rate, 
+                                dec_attention_dropout_rate=args.dec_attention_dropout_rate,
+                                dec_input_layer=args.dec_input_layer, 
+                                dec_normalize_before=args.dec_normalize_before, 
+                                dec_concat_after=args.dec_concat_after,
+                                dec_positionwise_layer_type=args.dec_positionwise_layer_type, 
+                                dec_positionwise_conv_kernel_size=args.dec_positionwise_conv_kernel_size,
+                                dec_macaron_style=args.dec_macaron_style, 
+                                dec_pos_enc_layer_type=args.dec_pos_enc_layer_type, 
+                                dec_selfattention_layer_type=args.dec_selfattention_layer_type,
+                                dec_activation_type=args.dec_activation_type, 
+                                dec_use_cnn_module=args.dec_use_cnn_module, 
+                                dec_cnn_module_kernel=args.dec_cnn_module_kernel, 
+                                dec_padding_idx=args.dec_padding_idx,
+                                device=device)
     else:
         raise ValueError('Not Support Model Type %s' % args.model_type)
     print(model)
@@ -234,6 +280,9 @@ def infer(args):
                 output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
                         pos_spec=length)
             elif args.model_type == "Conformer":
+                output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                            pos_spec=length)
+            elif args.model_type == "Comformer_full":
                 output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
                             pos_spec=length)
 
