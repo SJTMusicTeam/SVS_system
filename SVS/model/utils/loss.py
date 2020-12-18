@@ -208,7 +208,7 @@ class PerceptualEntropy(nn.Module):
             t = torch.div(t, renormalize[i].narrow(1, 0, t.shape[1]))
 
             t = torch.max(t, bound)
-            t.retain_grad()
+            # t.retain_grad()
 
             # compare to original model, we remove round, since it is not supported for auto-diff
             pe_real = torch.log2(
@@ -289,5 +289,6 @@ def _test_perceptual_entropy(filename):
 
 
 if __name__ == "__main__":
-    test_perceptual_entropy("male.wav")
+    _test_perceptual_entropy("/data1/gs/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info/train/1/0001.wav")
+    
     

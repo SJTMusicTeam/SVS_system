@@ -19,9 +19,9 @@ frame_length: 0.06
 frame_shift: 0.03
 
 # model related
-model_save_dir: exp/10_3_GLU_128_Transformer_dmel_gnorm/model
-stats_file: exp/10_3_GLU_128_Transformer_dmel_gnorm/model/feats_stats.npz
-stats_mel_file: exp/10_3_GLU_128_Transformer_dmel_gnorm/model/feats_mel_stats.npz
+model_save_dir: exp/10_6_GLU_128_1_Transformer_dmel_gnorm_256_3/model
+stats_file: exp/10_6_GLU_128_1_Transformer_dmel_gnorm_256_3/model/feats_stats.npz
+stats_mel_file: exp/10_6_GLU_128_1_Transformer_dmel_gnorm_256_3/model/feats_mel_stats.npz
 
 # model_save_dir: exp/gnormal_kiritan_glu_dmel/model
 # stats_file: exp/gnormal_kiritan_glu_dmel/model/feats_stats.npz
@@ -31,9 +31,9 @@ model_type: GLU_Transformer
 normalize: True
 double_mel_loss: True
 
-hidden_size: 128
-embedding_size: 128
-glu_num_layers: 1
+hidden_size: 256
+embedding_size: 256
+glu_num_layers: 3
 
 # resume: True
 
@@ -50,15 +50,15 @@ max_epochs: 300
 gradclip: 5
 
 batchsize: 10 # was 4
-num_workers: 0 # was 10
+num_workers: 18 # was 10
 
-accumulation_steps: 4
+accumulation_steps: 1
 auto_select_gpu: False
-gpu_id: 1
+gpu_id: 6
 
 optimizer: noam
 noam_scale: 1.0
-gradient_accumulation_steps: 1
+# gradient_accumulation_steps: 1
 noam_warmup_steps: 4000
 train_step_log: 20
 dev_step_log: 2
