@@ -348,18 +348,18 @@ def save_checkpoint(state, model_filename):
     return 0
 
 
-def save_model(args, epoch, model, optimizer, train_info, dev_info, logger):
+def save_model(args, epoch, model, optimizer, train_info, dev_info, logger, save_loss_select):
     if args.optimizer == "noam":
         save_checkpoint({
             'epoch': epoch,
             'state_dict': model.state_dict(),
             'optimizer': optimizer._optimizer.state_dict(),
-        }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
+        }, "{}/epoch_{}_{}.pth.tar".format(args.model_save_dir, save_loss_select, epoch))
     else:
         save_checkpoint({
             'epoch': epoch,
             'state_dict': model.state_dict(),
-        }, "{}/epoch_{}.pth.tar".format(args.model_save_dir, epoch))
+        }, "{}/epoch_{}_{}.pth.tar".format(args.model_save_dir, save_loss_select, epoch))
 
     # record training and validation information
     if args.use_tfboard:
@@ -458,3 +458,40 @@ def log_figure(step, output, spec, att, length, save_dir, args):
         plt.subplot(1, 4, 4)
         specshow(att[3])
         plt.savefig(os.path.join(save_dir, '{}_att.png'.format(step)))
+
+def Calculate_time(elapsed_time):
+    elapsed_hours = int(elapsed_time / 3600)
+    elapsed_mins = int( (elapsed_time - (elapsed_hours * 3600)) / 60 )
+    elapsed_secs = int(elapsed_time - (elapsed_hours * 3600) - (elapsed_mins * 60))
+    return elapsed_hours, elapsed_mins, elapsed_secs
+
+def Calculate_time_path(path):
+    num_list = os.listdir(path)
+    total_time = 0
+    for number in num_list:
+        # print(number)
+        number_path = os.path.join(path, number)
+        # print(number_path)
+        wav_name_list = os.listdir(number_path)
+        for wav_name in wav_name_list:
+            wav_path = os.path.join(number_path, wav_name)
+            print(wav_path)
+            time = librosa.get_duration(filename=wav_path)
+            print(time)
+            total_time += time
+    return total_time
+
+def Calculate_dataset_duration(dataset_path):
+    train_path = os.path.join(dataset_path, "train")
+    dev_path = os.path.join(dataset_path, "dev")
+    test_path = os.path.join(dataset_path, "test")
+
+    total_time = Calculate_time_path(train_path) + Calculate_time_path(dev_path) + Calculate_time_path(test_path)
+    hours, mins, secs = Calculate_time(total_time)
+    print(f"Time: {hours}h {mins}m {secs}s'")
+
+if __name__ == "__main__":
+    # path = "/data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info"
+    path = "/data5/jiatong/SVS_system/SVS/data/public_dataset/hts_data/wav_info"
+
+    Calculate_dataset_duration(path)
