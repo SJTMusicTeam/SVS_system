@@ -3,15 +3,12 @@ test_align: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/align
 test_pitch: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/pitch_beat_extraction/dev
 test_wav: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info/dev
 
-model_file: exp/10_7_GLU_Transformer_perp_256_3/model/epoch_153.pth.tar
-prediction_path: exp/10_7_GLU_Transformer_perp_256_3/result_cbhg
-
-stats_file: exp/10_7_GLU_Transformer_perp_256_3/model/feats_stats.npz
-stats_mel_file: exp/10_7_GLU_Transformer_perp_256_3/model/feats_mel_stats.npz
+model_file: exp/10_6_GLU_128_1_Transformer_dmel_256_3/model/epoch_144.pth.tar
+prediction_path: exp/10_6_GLU_128_1_Transformer_dmel_256_3/result_cbhg
 
 # gpu related
 auto_select_gpu: False
-gpu_id: 0
+gpu_id: 4
 
 decode_sample: 10
 
@@ -26,7 +23,7 @@ frame_shift: 0.03
 # model related
 model_type: GLU_Transformer
 normalize: False
-perceptual_loss: 0.1
+double_mel_loss: True
 
 hidden_size: 256
 embedding_size: 256
@@ -40,4 +37,5 @@ local_gaussian: True
 seed: 777
 
 
-
+stats_file: exp/10_6_GLU_128_1_Transformer_dmel_256_3/model/feats_stats.npz
+stats_mel_file: exp/10_6_GLU_128_1_Transformer_dmel_256_3/model/feats_mel_stats.npz

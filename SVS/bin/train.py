@@ -32,8 +32,7 @@ if __name__ == '__main__':
     parser.add_argument('--pretrain-encoder',default='',)
     parser.add_argument('--resume', type=bool, default=False,
                         help='Resume the optimization from snapshot')
-    parser.add_argument('--gpu', '-g', default=-1, type=int,
-                        help='GPU ID (negative value indicates CPU)')
+    
     parser.add_argument('--max-epochs', default=20, type=int,
                         help='Max. number of epochs to train')
     parser.add_argument('--lr', default=0.001, type=float)
@@ -97,7 +96,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--accumulation_steps', default=1, type=int)
     parser.add_argument('--auto_select_gpu',default=True,type=bool)
-    parser.add_argument('--gpu_id', default=1, type=int)
+    parser.add_argument('--gpu_id', '-g', default=-1, type=int,
+                        help='GPU ID (negative value indicates CPU)')
 
 
     parser.add_argument('--enc_attention_dim', default=256, type=int)
@@ -119,7 +119,45 @@ if __name__ == '__main__':
     parser.add_argument('--enc_use_cnn_module', default=False, type=bool)
     parser.add_argument('--enc_cnn_module_kernel', default=31, type=int)
     parser.add_argument('--enc_padding_idx', default=-1, type=int)
+
+    parser.add_argument('--dec_attention_dim', default=256, type=int)
+    parser.add_argument('--dec_attention_heads', default=4, type=int)
+    parser.add_argument('--dec_linear_units', default=2048, type=int)
+    parser.add_argument('--dec_num_blocks', default=6, type=int)
+    parser.add_argument('--dec_dropout_rate', default=0.1, type=float)
+    parser.add_argument('--dec_positional_dropout_rate', default=0.1, type=float)
+    parser.add_argument('--dec_attention_dropout_rate', default=0.0, type=float)
+    parser.add_argument('--dec_input_layer', default="conv2d", type=str)
+    parser.add_argument('--dec_normalize_before', default=True, type=bool)
+    parser.add_argument('--dec_concat_after', default=False, type=bool)
+    parser.add_argument('--dec_positionwise_layer_type', default="linear", type=str)
+    parser.add_argument('--dec_positionwise_conv_kernel_size', default=1, type=int)
+    parser.add_argument('--dec_macaron_style', default=False, type=bool)
+    parser.add_argument('--dec_pos_enc_layer_type', default="abs_pos", type=str)
+    parser.add_argument('--dec_selfattention_layer_type', default="selfattn", type=str)
+    parser.add_argument('--dec_activation_type', default="swish", type=str)
+    parser.add_argument('--dec_use_cnn_module', default=False, type=bool)
+    parser.add_argument('--dec_cnn_module_kernel', default=31, type=int)
+    parser.add_argument('--dec_padding_idx', default=-1, type=int)
+
     parser.add_argument('--dec_dropout', default=0.1, type=float)
+
+    # USTC_DAR related
+    parser.add_argument('--middle_dim_fc', default=512, type=int)
+    parser.add_argument('--multi_history_num', default=2, type=int)
+    parser.add_argument('--middle_dim_prenet', default=64, type=int)
+    parser.add_argument('--n_blocks_prenet', default=3, type=int)
+    parser.add_argument('--n_heads_prenet', default=2, type=int)
+    parser.add_argument('--kernel_size_prenet', default=2, type=int)
+    parser.add_argument('--bi_d_model', default=256, type=int)
+    parser.add_argument('--bi_num_layers', default=1, type=int)
+    parser.add_argument('--uni_d_model', default=128, type=int)
+    parser.add_argument('--uni_num_layers', default=1, type=int)
+    parser.add_argument('--feedbackLink_drop_rate', default=0.75, type=float)
+
+    parser.add_argument('--lr_decay_learning_steps', default=250, type=int, help='how many learning_steps use lr_decay')
+
+    
 
     args = parser.parse_args()
 

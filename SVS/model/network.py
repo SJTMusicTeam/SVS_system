@@ -395,7 +395,6 @@ class Encoder_Postnet(nn.Module):
         
         return out
 
-
 class Decoder_noGLU(nn.Module):
     """
     Decoder Network
@@ -452,6 +451,41 @@ class Decoder(nn.Module):
         memory, att_weight = self.decoder(src, mask=mask, query_mask=query_mask)
         output = self.output_fc(memory)
         return output, att_weight
+
+class Conformer_Decoder(nn.Module):
+    """
+    Conformer_Decoder Network 
+    """
+    def __init__(self, embed_size, n_mels,
+                attention_dim=256, attention_heads=4, linear_units=2048, num_blocks=6,
+                dropout_rate=0.1, positional_dropout_rate=0.1, attention_dropout_rate=0.0,
+                input_layer="conv2d", normalize_before=True, concat_after=False,
+                positionwise_layer_type="linear", positionwise_conv_kernel_size=1,
+                macaron_style=False, pos_enc_layer_type="abs_pos", selfattention_layer_type="selfattn",
+                activation_type="swish", use_cnn_module=False,cnn_module_kernel=31, padding_idx=-1):
+        super(Conformer_Decoder, self).__init__()
+        
+        self.conformer_block = Conformer_block( embed_size,
+                                                attention_dim, attention_heads, linear_units, num_blocks,
+                                                dropout_rate, positional_dropout_rate, attention_dropout_rate,
+                                                input_layer, normalize_before, concat_after,
+                                                positionwise_layer_type, positionwise_conv_kernel_size,
+                                                macaron_style, pos_enc_layer_type, selfattention_layer_type,
+                                                activation_type, use_cnn_module, cnn_module_kernel, padding_idx)
+        self.output_fc = nn.Linear(embed_size, n_mels)
+
+    def forward(self, src, pos):
+
+        if self.training:
+            query_mask = pos.ne(0).type(torch.float)
+        else:
+            query_mask = None
+        mask = pos.eq(0).unsqueeze(1).repeat(1, src.size(1), 1)
+
+        x, masks = self.conformer_block(src, mask)
+        output = self.output_fc(x)
+
+        return output 
 
 class GLU_TransformerSVS(nn.Module):
     """
@@ -811,8 +845,6 @@ class ConformerSVS(nn.Module):
     def forward(self, characters, phone, pitch, beat, pos_text=True, pos_char=None,
                 pos_spec=None):
 
-        
-
         encoder_out, text_phone = self.encoder(characters.squeeze(2), pos=pos_char, length=pos_spec)
         post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat)
         mel_output, att_weight = self.decoder(post_out, pos=pos_spec)
@@ -825,89 +857,296 @@ class ConformerSVS(nn.Module):
 
         return output, att_weight, mel_output, mel_output2
 
+class ConformerSVS_FULL(nn.Module):
+    """
+    Conformer Transformer Network
+    """
+    def __init__(self, phone_size, embed_size, output_dim, n_mels=-1, \
+                 enc_attention_dim=256, enc_attention_heads=4, enc_linear_units=2048, enc_num_blocks=6, \
+                 enc_dropout_rate=0.1, enc_positional_dropout_rate=0.1, enc_attention_dropout_rate=0.0, \
+                 enc_input_layer="conv2d", enc_normalize_before=True, enc_concat_after=False, \
+                 enc_positionwise_layer_type="linear", enc_positionwise_conv_kernel_size=1, \
+                 enc_macaron_style=False, enc_pos_enc_layer_type="abs_pos", enc_selfattention_layer_type="selfattn", \
+                 enc_activation_type="swish", enc_use_cnn_module=False, enc_cnn_module_kernel=31, enc_padding_idx=-1, \
+                 dec_attention_dim=256, dec_attention_heads=4, dec_linear_units=2048, dec_num_blocks=6, \
+                 dec_dropout_rate=0.1, dec_positional_dropout_rate=0.1, dec_attention_dropout_rate=0.0, \
+                 dec_input_layer="conv2d", dec_normalize_before=True, dec_concat_after=False, \
+                 dec_positionwise_layer_type="linear", dec_positionwise_conv_kernel_size=1, \
+                 dec_macaron_style=False, dec_pos_enc_layer_type="abs_pos", dec_selfattention_layer_type="selfattn", \
+                 dec_activation_type="swish", dec_use_cnn_module=False, dec_cnn_module_kernel=31, dec_padding_idx=-1, \
+                 device="cuda"):
+        super(ConformerSVS_FULL, self).__init__()
+        self.encoder = Conformer_Encoder(phone_size, embed_size,
+                                         attention_dim=enc_attention_dim, 
+                                         attention_heads=enc_attention_heads, 
+                                         linear_units=enc_linear_units, 
+                                         num_blocks=enc_num_blocks,
+                                         dropout_rate=enc_dropout_rate, 
+                                         positional_dropout_rate=enc_positional_dropout_rate, 
+                                         attention_dropout_rate=enc_attention_dropout_rate,
+                                         input_layer=enc_input_layer, 
+                                         normalize_before=enc_normalize_before, 
+                                         concat_after=enc_concat_after,
+                                         positionwise_layer_type=enc_positionwise_layer_type, 
+                                         positionwise_conv_kernel_size=enc_positionwise_conv_kernel_size,
+                                         macaron_style=enc_macaron_style, 
+                                         pos_enc_layer_type=enc_pos_enc_layer_type, 
+                                         selfattention_layer_type=enc_selfattention_layer_type,
+                                         activation_type=enc_activation_type, 
+                                         use_cnn_module=enc_use_cnn_module,
+                                         cnn_module_kernel=enc_cnn_module_kernel, 
+                                         padding_idx=enc_padding_idx)
+        self.enc_postnet = Encoder_Postnet(embed_size)
+
+        self.decoder = Conformer_Decoder(embed_size,
+                                         n_mels=n_mels,
+                                         attention_dim=dec_attention_dim, 
+                                         attention_heads=dec_attention_heads, 
+                                         linear_units=dec_linear_units, 
+                                         num_blocks=dec_num_blocks,
+                                         dropout_rate=dec_dropout_rate, 
+                                         positional_dropout_rate=dec_positional_dropout_rate, 
+                                         attention_dropout_rate=dec_attention_dropout_rate,
+                                         input_layer=dec_input_layer, 
+                                         normalize_before=dec_normalize_before, 
+                                         concat_after=dec_concat_after,
+                                         positionwise_layer_type=dec_positionwise_layer_type, 
+                                         positionwise_conv_kernel_size=dec_positionwise_conv_kernel_size,
+                                         macaron_style=dec_macaron_style, 
+                                         pos_enc_layer_type=dec_pos_enc_layer_type, 
+                                         selfattention_layer_type=dec_selfattention_layer_type,
+                                         activation_type=dec_activation_type, 
+                                         use_cnn_module=dec_use_cnn_module,
+                                         cnn_module_kernel=dec_cnn_module_kernel, 
+                                         padding_idx=dec_padding_idx)
+
+        self.postnet = module.PostNet(n_mels, output_dim, (output_dim // 2 * 2))
+        
+
+    def forward(self, characters, phone, pitch, beat, pos_text=True, pos_char=None,
+                pos_spec=None):
+
+        encoder_out, text_phone = self.encoder(characters.squeeze(2), pos=pos_char, length=pos_spec)
+        post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat)
+        mel_output = self.decoder(post_out, pos=pos_spec)
+        output = self.postnet(mel_output)
+
+        return output, None, mel_output, None
+
+
 ### Reproduce the DAR model from USTC
 
-# def prenet(input_batch, multi_history_num=1, middle_dim=64, prenet_drop_rate=0.1):
-#     '''Create a prenet layer to avoid overfitting
-#     '''
-#     nn.Linear(d_model * 2, multi_history_num*hp.dnn_layers[-1])
-#     outputs = tf.layers.dense(input_batch,units=,activation=tf.nn.relu,name="dense1")
-#     outputs = tf.layers.dropout(outputs,rate=hp.prenet_drop_rate,training=is_training,name="dropout1")
-#     outputs = tf.layers.dense(outputs,units=multi_history_num*hp.dnn_layers[-1],activation=tf.nn.relu,name="dense2")
-#     outputs = tf.layers.dropout(outputs,rate=hp.prenet_drop_rate,training=is_training,name="dropout2")
-#     nn.Dropout(dropout)
-#     return outputs
-
-# class USTC_DAR(nn.Module):
-#     """
-#     Singing Voice Synthesis Using Deep Autoregressive Neural Networks for Acoustic Modeling from USTC, adapted by GS
+class USTC_Prenet(nn.Module):
+    """
+    Singing Voice Synthesis Using Deep Autoregressive Neural Networks for Acoustic Modeling from USTC, adapted by GS
     
-#     - herf: https://arxiv.org/pdf/1906.08977.pdf
-#     """
+    - herf: https://arxiv.org/pdf/1906.08977.pdf
+    """
+    def __init__(self, dim_input, multi_history_num=2, middle_dim=64, fc_drop_rate=0.75, prenet_drop_rate=0.1, kernel_size=2,
+                n_blocks=3, n_heads=2, device="cuda"):
+        super(USTC_Prenet, self).__init__()
 
-#     def __init__(self, embed_size=512, d_model=512, d_output=1324,
-#                  num_layers=2, phone_size=87, n_mels=-1,
-#                  dropout=0.1, device="cuda"):
-#         super(USTC_DAR, self).__init__()
+        self.multi_history_num = multi_history_num
+
+        # FC & Dropout (ReLu in forward function)
+        self.fc1 = nn.Linear(dim_input, middle_dim)
+        self.dropout1 = nn.Dropout(fc_drop_rate)
+
+        self.fc2 = nn.Linear(middle_dim, middle_dim)
+        self.dropout2 = nn.Dropout(fc_drop_rate)
+
+        # Conv1d & Barch Norm
+        n_in = middle_dim
+        n_out = middle_dim
+        self.conv1d_and_BN = nn.Sequential(
+                                            nn.Conv1d(n_in, n_out, kernel_size, stride=1, bias=True),
+                                            nn.BatchNorm1d(n_out),
+                                            nn.ReLU(),
+                                            )
         
-#         # Input
-#         self.embedding_phone = nn.Embedding(phone_size, embed_size)
+        # Postional Encoding Layer
+        self.pos_code = module.PositionalEncoding(n_out)   # the same output dim as Layer Conv1d & Barch Norm
+        self.fc_pos = nn.Linear(n_out, n_out)
+
+        # Multi-head Self-Attention Layer
+        self.self_attention_layers = nn.ModuleList()
+        for i in range(n_blocks):
+            self.self_attention_layers.append( 
+                                              module.MultiHeadAttentionLayer(hid_dim=middle_dim, n_heads=n_heads, 
+                                                                                dropout=prenet_drop_rate, device=device)
+                                              )
+
+        # Final FC & Residual Connection
+        self.fc3 = nn.Linear(middle_dim, middle_dim)
+
+        self.multi_history_num = multi_history_num
+        self.dim_input = dim_input
+        self.kernel_size = kernel_size
+        self.device = device
+
+    def forward(self, x):
+        # x: [batch size, multi_history_num, n_dim] - n_mel=40 in USTC model & with 1 energy
+
+        # padding - same
+        batch_size = np.shape(x)[0]
+
+        pad_length = self.kernel_size - 1
+        
+        if pad_length == 1:
+            x = torch.cat((x, torch.zeros(batch_size, 1, self.dim_input).to(self.device)), dim=1)
+        else:
+            pad_before_length = pad_length // 2
+            pad_after_length = pad_length - pad_before_length
+
+            vector_pad_before = torch.zeros(batch_size, pad_before_length, self.dim_input).to(self.device)
+            vector_pad_after = torch.zeros(batch_size, pad_after_length, self.dim_input).to(self.device)
+
+            x = torch.cat((vector_pad_before, x, vector_pad_after), dim=1)
+
+        # FC & Dropout (ReLu in forward function)
+        output = self.dropout1(torch.relu(self.fc1(x)))
+        output_fc = self.dropout2(torch.relu(self.fc2(output))) # [batch, length, embed_size]
+
+        # Conv1d & Barch Norm
+        output_fc = output_fc.permute(0, 2, 1)  # [batch, embed_size, length]
+        output = self.conv1d_and_BN(output_fc)  # output: [batch size, new_length, middle_dim] !!!
+        output = output.permute(0, 2, 1)
+        assert np.shape(output)[1] == self.multi_history_num     # assert conved length the same as before
+
+        # Postional Encoding Layer
+        pos = self.pos_code(torch.transpose(output,0,1))
+        pos_encode = self.fc_pos(torch.transpose(pos,0,1))
+
+        output = output + pos_encode            # output: [batch size, new_length, middle_dim]
+
+        for layer in self.self_attention_layers:
+            output, att = layer(query=output, key=output, value=output)    
+
+        output_fc = self.fc3(output)
+
+        # Residual Connection
+        output = output + output_fc             # output: [batch size, new_length, middle_dim]
+        
+        output = output.view(batch_size,-1)     # output: [batch size, new_length * middle_dim]
+
+        return output
         
 
-#         self.fcEncoder = nn.Linear(d_model * 2, d_model)
-#         self.dropoutEncoder = nn.Dropout(dropout)
+class USTC_SVS(nn.Module):
+    """
+    Singing Voice Synthesis Using Deep Autoregressive Neural Networks for Acoustic Modeling from USTC, adapted by GS
+    
+    - herf: https://arxiv.org/pdf/1906.08977.pdf
+    """
 
-#         self.rnnEncoder = nn.GRU(embed_size + 2, d_model, bidirectional = True)
-#         # Attention
-#         self.attn = nn.Linear((d_model * 2) + d_model, d_model)
-#         self.v = nn.Linear(d_model, 1, bias = False)
+    def __init__(self, phone_size=87, embed_size=512,middle_dim_fc=512, output_dim=80, 
+                 multi_history_num=2, middle_dim_prenet=64, n_blocks_prenet=3, n_heads_prenet=2, kernel_size_prenet=2,
+                 bi_d_model=256, bi_num_layers=1, uni_d_model=128, uni_num_layers=1, 
+                 feedbackLink_drop_rate=0.75, dropout=0.1, device="cuda"):
+        super(USTC_SVS, self).__init__()
 
-#         # Decoder
-#         self.rnnDecoder = nn.GRU((d_model * 2) + d_model * 2, d_model)
-#         self.fc_hid1 = nn.Linear((d_model * 2) + d_model * 2 + d_model, d_model * 2)
-#         # self.fc_hid2 = nn.Linear(2048, 1600)
+        self.emb_phone = nn.Embedding(phone_size, embed_size)
+
+        self.fc_pitch = nn.Linear(1, embed_size)   # because pitch is not int | stair-like
+
+        self.emb_beats = nn.Embedding(2, embed_size)   # only 0 and 1 two possibilities
+
+        # FC (Tanh in forward function)
+        self.fc1 = nn.Linear(embed_size * 3, middle_dim_fc)
+        self.fc2 = nn.Linear(middle_dim_fc, middle_dim_fc)
+
+        # Prenet Module
+        self.prenet_module = USTC_Prenet(dim_input=output_dim, multi_history_num=multi_history_num, middle_dim=middle_dim_prenet, 
+                                        fc_drop_rate=feedbackLink_drop_rate, prenet_drop_rate=dropout, n_blocks=n_blocks_prenet, 
+                                        n_heads=n_heads_prenet,kernel_size=kernel_size_prenet, device=device)
+
+        # DAR model
+        self.bi_GRU = nn.GRU(input_size=embed_size, hidden_size=bi_d_model, num_layers=bi_num_layers, batch_first=True,
+            bidirectional=True, dropout=dropout)
         
-#         self.dropoutDecoder = nn.Dropout(dropout)
+        uni_input_size = 2 * bi_d_model + multi_history_num * middle_dim_prenet
+        self.uni_GRU = nn.GRU(input_size=uni_input_size, hidden_size=uni_d_model, num_layers=uni_num_layers, batch_first=True,
+            bidirectional=False, dropout=dropout)
+
+        self.fc_linear = nn.Linear(uni_d_model, output_dim)
         
-#         self.use_mel = (n_mels > 0)
-#         self.n_mels = n_mels
-#         if self.use_mel:
-#             self.output_mel = nn.Linear(d_model * 2, n_mels)
-#             self.postnet = module.PostNet(n_mels, d_output, (d_output // 2 * 2))
-#         else:
-#             self.fc_out = nn.Linear(d_model * 2, d_output)
+        self.output_dim = output_dim
+        self.uni_d_model = uni_d_model
+        self.device = device
+        self.multi_history_num = multi_history_num
 
-#         self._reset_parameters()
-#         self.d_model = d_model
-#         self.d_output = d_output
 
-#     def forward(self, target, phone, pitch, beats, length, args):
+    def forward(self, phone, pitch, beats, length, args):
         
-#         # phone, pitch, beats = [batch size, len, 1]
-#         # target = [batch size, max_len, feat_dim]
+        # phone, pitch, beats = [batch size, len, 1]
+        # target = [batch size, max_len, feat_dim]
 
-#         batch_size = np.shape(phone)[0]
-#         length = torch.max(length,dim=1)[0]    # length = [batch size]
-#         max_length = args.num_frames
+        batch_size = np.shape(phone)[0]
+        length_list = torch.max(length,dim=1)[0].detach().cpu()    # length = [batch size]
+        max_length = args.num_frames    
 
-#         sorted_length, sorted_index = torch.sort(length, descending=True)
-#         phone = phone.index_select(0, sorted_index).permute(1,0,2)
-#         pitch = pitch.index_select(0, sorted_index).permute(1,0,2)
-#         beats = beats.index_select(0, sorted_index).permute(1,0,2)
-#         target = target.index_select(0, sorted_index).permute(1,0,2)
+        phone_embedding = self.emb_phone(phone.squeeze(-1))
+        pitch_embedding = torch.relu(self.fc_pitch(pitch))
+        beats_embedding = self.emb_beats(beats.squeeze(-1))
 
-#         # print("target", np.shape(target))
+        # print(np.shape(phone_embedding), np.shape(phone))
+        # print(np.shape(pitch_embedding))
+        # print(np.shape(beats_embedding))
 
-#         # Encoder 
-#         embedded_phone = self.dropoutEncoder(self.embedding_phone(phone[:,:,0])) # # [src len, batch size, emb dim]
-#         embedded = torch.cat((embedded_phone.float(), beats.float(), pitch.float()), dim = 2)   # [src len, batch size, emb_dim+2]
-#         packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, sorted_length)
-#         packed_outputs, hidden = self.rnnEncoder(packed_embedded)
-#         encoder_outputs, _ = nn.utils.rnn.pad_packed_sequence(packed_outputs)
-#         encoder_outputs = encoder_outputs.permute(1, 0, 2) #outputs = [batch size, src len, enc hid dim * 2]
-#         hidden = torch.tanh(self.fcEncoder(torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = 1)))  #hidden = [batch size, dec hid dim]
-        
-        
+        input_embedding = torch.cat((phone_embedding, pitch_embedding, beats_embedding),dim = 2)
+        # input_embedding: [ batch size, len, embed_size * 3 ]
+
+        # FC (Tanh in forward function)
+        output_fc1 = torch.tanh(self.fc1(input_embedding))
+        output_fc2 = torch.tanh(self.fc2(output_fc1))       # output_fc2: [batch size, max_len, middle_dim_fc]
+
+        packed_embed = nn.utils.rnn.pack_padded_sequence(output_fc2, length_list, batch_first=True, enforce_sorted=False)
+        packed_out, hidden_bi_GRU = self.bi_GRU(packed_embed)
+        output_bi_GRU, _ = nn.utils.rnn.pad_packed_sequence(packed_out, batch_first=True)   # [batch, seq_len, 2 * bi_d_model]
+        hidden_bi_GRU = hidden_bi_GRU.view(batch_size, -1)  # [batch size, bi_num_layers * 2 * bi_d_model]
+
+        # output_uni_GRU = torch.zeros(batch_size, max_length, self.uni_d_model).to(self.device)
+        output = torch.zeros(batch_size, max_length, self.output_dim).to(self.device)
+        for i in range(torch.max(length_list)):
+            step_output_bi_GRU = output_bi_GRU[:,i,:].unsqueeze(1)   # [batch size, 1, 2*bi_d_model]
+
+            if i < self.multi_history_num : 
+                index_begin = 0
+                index_end = index_begin + self.multi_history_num - 1
+
+                for shifted in range(self.multi_history_num):
+                    if shifted == 0:
+                        history_output = output[:,index_begin+shifted,:].unsqueeze(1)
+                    else:
+                        history_output = torch.cat((history_output, output[:,index_begin+shifted,:].unsqueeze(1)), dim=1)
+                assert np.shape(history_output)[1] == self.multi_history_num
+            else:
+                index_begin = i
+                for shifted in range(self.multi_history_num):
+                    if shifted == 0:
+                        history_output = output[:,index_begin+shifted,:].unsqueeze(1)
+                    else:
+                        history_output = torch.cat((history_output, output[:,index_begin+shifted,:].unsqueeze(1)), dim=1)
+                assert np.shape(history_output)[1] == self.multi_history_num
+            
+            # history_output: [batch size, 2, feat_dim]
+
+            step_output_prenet = self.prenet_module(history_output) # [batch size, multi_history_num * middle_dim]
+            step_output_prenet = step_output_prenet.unsqueeze(1)    # [batch size, 1, multi_history_num * middle_dim]
+
+            step_input_uni_GRU = torch.cat((step_output_bi_GRU, step_output_prenet), dim=2)
+            # step_input_uni_GRU: [batch size, 1, 2*bi_d_model + multi_history_num * middle_dim]
+
+            if i == 0:
+                step_output_uni_GRU, hidden_uni_GRU = self.uni_GRU(step_input_uni_GRU)
+            else:
+                step_output_uni_GRU, hidden_uni_GRU = self.uni_GRU(step_input_uni_GRU, hidden_uni_GRU)
+            # step_output_uni_GRU: [batch size, 1, uni_d_model]
+
+            # Store Result of time i
+            output[:,i,:] = self.fc_linear(step_output_uni_GRU.squeeze(1)) # [batch size, output_dim]
+
+        return output
 
 def _test():
     # debug test
