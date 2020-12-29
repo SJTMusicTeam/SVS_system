@@ -3,8 +3,8 @@ test_align: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/align
 test_pitch: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/pitch_beat_extraction/dev
 test_wav: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info/dev
 
-model_file: exp/rnn_perp/epoch_6.pth.tar
-prediction_path: exp/rnn_perp/result_cbhg
+model_file: exp/10_6_rnn_perp/epoch_88.pth.tar
+prediction_path: exp/10_6_rnn_perp/result_cbhg
 
 # gpu related
 auto_select_gpu: False

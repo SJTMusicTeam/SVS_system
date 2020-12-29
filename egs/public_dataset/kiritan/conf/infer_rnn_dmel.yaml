@@ -3,16 +3,18 @@ test_align: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/align
 test_pitch: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/pitch_beat_extraction/dev
 test_wav: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info/dev
 
-model_file: exp/10_6_rnn/epoch_139.pth.tar
-prediction_path: exp/10_6_rnn/result_cbhg
+model_file: exp/10_6_rnn_dmel/epoch_127.pth.tar
+prediction_path: exp/10_6_rnn_dmel/result_cbhg
 
 # gpu related
 auto_select_gpu: False
-gpu_id: 5
+gpu_id: 0
 
 # model related
 model_type: LSTM
 normalize: False
+# perceptual_loss: 0.01
+double_mel_loss: True
 
 hidden_size: 512
 embedding_size: 512

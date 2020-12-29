@@ -10,7 +10,7 @@ import copy
 import time
 import librosa
 import matplotlib.pyplot as plt
-from librosa.output import write_wav
+import soundfile as sf
 from librosa.display import specshow
 from scipy import signal
 
@@ -120,8 +120,15 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
             # print(f"chars: {np.shape(chars)}, phone: {np.shape(phone)}, length: {np.shape(length)}")
             output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
                         pos_spec=length)
+        elif args.model_type == "Comformer_full":
+            output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                        pos_spec=length)
+        elif args.model_type == "USTC_DAR":
+            output_mel = model(phone, pitch, beat, length, args)       # mel loss written in spec loss
+            att = None
 
         spec_origin = spec.clone()
+        mel_origin = mel.clone()
         if args.normalize:   
             sepc_normalizer = GlobalMVN(args.stats_file)
             mel_normalizer = GlobalMVN(args.stats_mel_file)
@@ -130,8 +137,15 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
 
         # print(np.shape(output), np.shape(spec), np.shape(spec_origin))
         # quit()
-        spec_loss = criterion(output, spec, length_mask)
-        
+
+        if args.model_type == "USTC_DAR":
+            # print(np.shape(output_mel))
+            # print(np.shape(mel))
+            # quit()
+            spec_loss = 0
+        else:
+            spec_loss = criterion(output, spec, length_mask)
+
         if args.n_mels > 0:
             mel_loss = criterion(output_mel, mel, length_mel_mask)
             if args.double_mel_loss:
@@ -165,9 +179,9 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
             # 梯度清零
             optimizer.zero_grad()               
 
-
         losses.update(final_loss.item(), phone.size(0))
-        spec_losses.update(spec_loss.item(), phone.size(0))
+        if args.model_type != "USTC_DAR":
+            spec_losses.update(spec_loss.item(), phone.size(0))
         
         if args.perceptual_loss > 0:
             pe_losses.update(pe_loss.item(), phone.size(0))
@@ -179,12 +193,19 @@ def train_one_epoch(train_loader, model, device, optimizer, criterion, perceptua
         if step % args.train_step_log == 0:
             end = time.time()
 
-            ### normalize inverse 只在infer的时候用，因为log过程需要转换成wav,和计算mcd等指标
-            if args.normalize and args.stats_file:
-                output,_ = sepc_normalizer.inverse(output,length)
-            log_figure(step, output, spec_origin, att, length, log_save_dir, args)
-            out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(step,losses.avg, spec_losses.avg)
-        
+            if args.model_type == "USTC_DAR":
+                ### normalize inverse 只在infer的时候用，因为log过程需要转换成wav,和计算mcd等指标
+                if args.normalize and args.stats_file:
+                    output_mel,_ = mel_normalizer.inverse(output_mel,length)
+                log_figure_mel(step, output_mel, mel_origin, att, length, log_save_dir, args)
+                out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(step,losses.avg, spec_losses.avg)
+            else:
+                ### normalize inverse 只在infer的时候用，因为log过程需要转换成wav,和计算mcd等指标
+                if args.normalize and args.stats_file:
+                    output,_ = sepc_normalizer.inverse(output,length)
+                log_figure(step, output, spec_origin, att, length, log_save_dir, args)
+                out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(step,losses.avg, spec_losses.avg)
+            
             if args.perceptual_loss > 0:
                 out_log += "pe_loss {:.4f}; ".format(pe_losses.avg)
             if args.n_mels > 0:
@@ -258,15 +279,26 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
             elif args.model_type == "Conformer":
                 output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
                            pos_spec=length)
+            elif args.model_type == "Comformer_full":
+                output, att, output_mel, output_mel2 = model(chars, phone, pitch, beat, pos_char=char_len_list,
+                            pos_spec=length)
+            elif args.model_type == "USTC_DAR":
+                output_mel = model(phone, pitch, beat, length, args)
+                att = None
+
 
             spec_origin = spec.clone()
+            mel_origin = mel.clone()
             if args.normalize:   
                 sepc_normalizer = GlobalMVN(args.stats_file)
                 mel_normalizer = GlobalMVN(args.stats_mel_file)
                 spec,_ = sepc_normalizer(spec,length)
                 mel,_ = mel_normalizer(mel,length)
 
-            spec_loss = criterion(output, spec, length_mask)
+            if args.model_type == "USTC_DAR":
+                spec_loss = 0
+            else:
+                spec_loss = criterion(output, spec, length_mask)
             
             if args.n_mels > 0:
                 mel_loss = criterion(output_mel, mel, length_mel_mask)
@@ -288,7 +320,8 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                 final_loss = dev_loss
 
             losses.update(final_loss.item(), phone.size(0))
-            spec_losses.update(spec_loss.item(), phone.size(0))
+            if args.model_type != "USTC_DAR":
+                spec_losses.update(spec_loss.item(), phone.size(0))
             
             if args.perceptual_loss > 0:
                 # pe_loss = perceptual_entropy(output, real, imag)
@@ -298,14 +331,23 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                 if args.double_mel_loss:
                     double_mel_losses.update(double_mel_loss.item(), phone.size(0))
 
-            ### normalize inverse stage
-            if args.normalize and args.stats_file:
-                output,_ = sepc_normalizer.inverse(output,length)
-            mcd_value, length_sum = Metrics.Calculate_melcd_fromLinearSpectrum(output, spec_origin, length, args)
+            if args.model_type == "USTC_DAR":
+                ### normalize inverse stage
+                if args.normalize and args.stats_file:
+                    output_mel,_ = mel_normalizer.inverse(output_mel,length)
+                mcd_value, length_sum = 0, 1       # FIX ME! Calculate_melcd_fromMelSpectrum
+            else:
+                ### normalize inverse stage
+                if args.normalize and args.stats_file:
+                    output,_ = sepc_normalizer.inverse(output,length)
+                mcd_value, length_sum = Metrics.Calculate_melcd_fromLinearSpectrum(output, spec_origin, length, args)
             mcd_metric.update(mcd_value, length_sum)
 
             if step % args.dev_step_log == 0:
-                log_figure(step, output, spec_origin, att, length, log_save_dir, args)
+                if args.model_type == "USTC_DAR":
+                    log_figure_mel(step, output_mel, mel_origin, att, length, log_save_dir, args)
+                else:
+                    log_figure(step, output, spec_origin, att, length, log_save_dir, args)
                 out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f}; mcd_value {:.4f};".format(step,
                                                                       losses.avg, spec_losses.avg, mcd_metric.avg)
                 if args.perceptual_loss > 0:
@@ -426,6 +468,49 @@ def spectrogram2wav(mag, max_db, ref_db, preemphasis, power, sr, hop_length, win
 
     return wav.astype(np.float32)
 
+def log_figure_mel(step, output, spec, att, length, save_dir, args):
+    # only get one sample from a batch
+    # save wav and plot spectrogram
+    output = output.cpu().detach().numpy()[0]
+    out_spec = spec.cpu().detach().numpy()[0]
+    length = np.max(length.cpu().detach().numpy()[0])
+    output = output[:length]
+    out_spec = out_spec[:length]
+
+    # FIX ME! Need WaveRNN to produce wav from mel-spec
+
+    # wav = spectrogram2wav(output, args.max_db, args.ref_db, args.preemphasis, args.power, args.sampling_rate, args.frame_shift, args.frame_length, args.nfft)
+    # wav_true = spectrogram2wav(out_spec, args.max_db, args.ref_db, args.preemphasis, args.power, args.sampling_rate, args.frame_shift, args.frame_length, args.nfft)
+    
+    # if librosa.__version__ < '0.8.0':
+    #     librosa.output.write_wav(os.path.join(save_dir, '{}.wav'.format(step)), wav, args.sampling_rate)
+    #     librosa.output.write_wav(os.path.join(save_dir, '{}_true.wav'.format(step)), wav_true, args.sampling_rate)
+    # else:
+    #     # librosa > 0.8 remove librosa.output.write_wav module
+    #     sf.write(os.path.join(save_dir, '{}.wav'.format(step)), wav, args.sampling_rate, 
+    #                                                             format='wav', subtype='PCM_24')
+    #     sf.write(os.path.join(save_dir, '{}_true.wav'.format(step)), wav, args.sampling_rate, 
+    #                                                             format='wav', subtype='PCM_24')
+
+    plt.subplot(1, 2, 1)
+    specshow(output.T)
+    plt.title("prediction")
+    plt.subplot(1, 2, 2)
+    specshow(out_spec.T)
+    plt.title("ground_truth")
+    plt.savefig(os.path.join(save_dir, '{}.png'.format(step)))
+    if att is not None:
+        att = att.cpu().detach().numpy()[0]
+        att = att[:, :length, :length]
+        plt.subplot(1, 4, 1)
+        specshow(att[0])
+        plt.subplot(1, 4, 2)
+        specshow(att[1])
+        plt.subplot(1, 4, 3)
+        specshow(att[2])
+        plt.subplot(1, 4, 4)
+        specshow(att[3])
+        plt.savefig(os.path.join(save_dir, '{}_att.png'.format(step)))
 
 def log_figure(step, output, spec, att, length, save_dir, args):
     # only get one sample from a batch
@@ -437,8 +522,17 @@ def log_figure(step, output, spec, att, length, save_dir, args):
     out_spec = out_spec[:length]
     wav = spectrogram2wav(output, args.max_db, args.ref_db, args.preemphasis, args.power, args.sampling_rate, args.frame_shift, args.frame_length, args.nfft)
     wav_true = spectrogram2wav(out_spec, args.max_db, args.ref_db, args.preemphasis, args.power, args.sampling_rate, args.frame_shift, args.frame_length, args.nfft)
-    write_wav(os.path.join(save_dir, '{}.wav'.format(step)), wav, args.sampling_rate)
-    write_wav(os.path.join(save_dir, '{}_true.wav'.format(step)), wav_true, args.sampling_rate)
+    
+    if librosa.__version__ < '0.8.0':
+        librosa.output.write_wav(os.path.join(save_dir, '{}.wav'.format(step)), wav, args.sampling_rate)
+        librosa.output.write_wav(os.path.join(save_dir, '{}_true.wav'.format(step)), wav_true, args.sampling_rate)
+    else:
+        # librosa > 0.8 remove librosa.output.write_wav module
+        sf.write(os.path.join(save_dir, '{}.wav'.format(step)), wav, args.sampling_rate, 
+                                                                format='wav', subtype='PCM_24')
+        sf.write(os.path.join(save_dir, '{}_true.wav'.format(step)), wav, args.sampling_rate, 
+                                                                format='wav', subtype='PCM_24')
+
     plt.subplot(1, 2, 1)
     specshow(output.T)
     plt.title("prediction")
