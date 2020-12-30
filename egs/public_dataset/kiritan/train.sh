@@ -1,12 +1,12 @@
 # /usr/bin/bash
 
-# Copyright 2020 RUC (author: Shuai Guo)
+# Copyright 2020 RUC & Johns Hopkins University (author: Shuai Guo, Jiatong Shi)
 
 # . ./path.sh
 
 set -e
 
-stage=4
+stage=0
  
 
 if [ $stage -le 1 ]; then
@@ -20,9 +20,8 @@ if [ $stage -le 2 ]; then
   echo "       data preprocessing & format into different set(trn/val/tst)        "
   echo ============================================================================
 
-  cmd="python ../../../SVS/tools/prepare_data.py kiritan_singing/wav kiritan_singing/mono_label kiritan_data"
-  echo $cmd | sh
-  
+  python local/prepare_data.py kiritan_singing/wav kiritan_singing/mono_label kiritan_data
+
 fi
 
 if [ $stage -le 3 ]; then
