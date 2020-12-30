@@ -20,9 +20,8 @@ if [ $stage -le 2 ]; then
   echo "       data preprocessing & format into different set(trn/val/tst)        "
   echo ============================================================================
 
-  cmd="python prepare_data.py HTS-demo_NIT-SONG070-F001/data/raw HTS-demo_NIT-SONG070-F001/data/labels/mono hts_data 
-    --label_type "r" --wav_extention "raw""
-  echo $cmd | sh
+  python prepare_data.py HTS-demo_NIT-SONG070-F001/data/raw HTS-demo_NIT-SONG070-F001/data/labels/mono hts_data \
+    --label_type r --wav_extention raw
   
 fi
 

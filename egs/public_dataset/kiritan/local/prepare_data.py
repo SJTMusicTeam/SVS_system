@@ -163,24 +163,24 @@ def process(args):
             seg_signal = signal[int(start * hop_length): int(start * hop_length + len(alignment) * hop_length)] 
             print(len(seg_signal), start, len(alignment), hop_length, flush=True)
             '''extract beats'''
-            # tempo, beats = librosa.beat.beat_track(y=seg_signal, sr=args.sr, hop_length=hop_length)
-            # times = librosa.frames_to_time(beats, sr=args.sr)
-            # frames = librosa.time_to_frames(times,sr = args.sr, hop_length=hop_length, n_fft = n_fft)
-            # np.save((os.path.join(song_pitch_beat, name))+'_beats',np.array(beats))
+            tempo, beats = librosa.beat.beat_track(y=seg_signal, sr=args.sr, hop_length=hop_length)
+            times = librosa.frames_to_time(beats, sr=args.sr)
+            frames = librosa.time_to_frames(times,sr = args.sr, hop_length=hop_length, n_fft = n_fft)
+            np.save((os.path.join(song_pitch_beat, name))+'_beats',np.array(beats))
 
             '''extract pitch'''
-            # seg_signal = seg_signal.astype("double")
-            # _f0, t = pw.harvest(seg_signal, args.sr, f0_floor=f0_min, f0_ceil=f0_max, frame_period=frame_shift * 1000)
-            # _f0 = pw.stonemask(seg_signal, _f0, t, args.sr)
+            seg_signal = seg_signal.astype("double")
+            _f0, t = pw.harvest(seg_signal, args.sr, f0_floor=f0_min, f0_ceil=f0_max, frame_period=frame_shift * 1000)
+            _f0 = pw.stonemask(seg_signal, _f0, t, args.sr)
 
-            # np.save(os.path.join(song_pitch_beat, name) + "_pitch", np.array(_f0))
+            np.save(os.path.join(song_pitch_beat, name) + "_pitch", np.array(_f0))
 
             alignment_id = np.zeros((len(alignment)))
             for i in range(len(alignment)):
                 alignment_id[i] = phone_set.index(alignment[i])
             np.save(os.path.join(song_align, pack_zero(index) + name), np.array(alignment_id))
 
-            # sf.write(os.path.join(song_wav, name) + ".wav", seg_signal, samplerate=args.sr)
+            sf.write(os.path.join(song_wav, name) + ".wav", seg_signal, samplerate=args.sr)
             print("saved {}".format(os.path.join(song_wav, name) + ".wav"))
         index += 1
 
