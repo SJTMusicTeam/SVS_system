@@ -46,7 +46,9 @@ def Get_align_beat_pitch_spectrogram(
                 pitch_list.append(f.read().strip().split(" "))
 
             wav_path = os.path.join(
-                wav_root_path, filename_list[i][1:4], filename_list[i][4:] + ".wav"
+                wav_root_path,
+                filename_list[i][1:4],
+                filename_list[i][4:] + ".wav",
             )
             frame_length = 60 / 1000
             frame_shift = 30 / 1000
@@ -123,7 +125,9 @@ if __name__ == "__main__":
     # print(dataset[0])
     #
     ##创建DataLoader迭代器
-    dataloader = DataLoader(dataset, batch_size=2, shuffle=False, num_workers=0)
+    dataloader = DataLoader(
+        dataset, batch_size=2, shuffle=False, num_workers=0
+    )
     for i, item in enumerate(dataloader):
         print("i:", i)
         data, label = item

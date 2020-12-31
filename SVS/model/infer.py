@@ -18,7 +18,12 @@ from SVS.model.network import (
     ConformerSVS_FULL,
 )
 from SVS.model.utils.loss import MaskedLoss
-from SVS.model.utils.utils import AverageMeter, record_info, log_figure, spectrogram2wav
+from SVS.model.utils.utils import (
+    AverageMeter,
+    record_info,
+    log_figure,
+    spectrogram2wav,
+)
 from SVS.model.utils.utils import (
     train_one_epoch,
     save_checkpoint,
@@ -213,7 +218,11 @@ def infer(args):
     )
 
     if len(para_list) > 0:
-        print("Not loading {} because of different sizes".format(", ".join(para_list)))
+        print(
+            "Not loading {} because of different sizes".format(
+                ", ".join(para_list)
+            )
+        )
     # model_dict.update(state_dict_new)
     # model.load_state_dict(model_dict)
     model.load_state_dict(state_dict_new)
@@ -316,25 +325,49 @@ def infer(args):
 
             if args.model_type == "GLU_Transformer":
                 output, att, output_mel, output_mel2 = model(
-                    chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
+                    chars,
+                    phone,
+                    pitch,
+                    beat,
+                    pos_char=char_len_list,
+                    pos_spec=length,
                 )
             elif args.model_type == "LSTM":
-                output, hidden, output_mel, output_mel2 = model(phone, pitch, beat)
+                output, hidden, output_mel, output_mel2 = model(
+                    phone, pitch, beat
+                )
                 att = None
             elif args.model_type == "GRU_gs":
-                output, att, output_mel = model(spec, phone, pitch, beat, length, args)
+                output, att, output_mel = model(
+                    spec, phone, pitch, beat, length, args
+                )
                 att = None
             elif args.model_type == "PureTransformer":
                 output, att, output_mel, output_mel2 = model(
-                    chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
+                    chars,
+                    phone,
+                    pitch,
+                    beat,
+                    pos_char=char_len_list,
+                    pos_spec=length,
                 )
             elif args.model_type == "Conformer":
                 output, att, output_mel, output_mel2 = model(
-                    chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
+                    chars,
+                    phone,
+                    pitch,
+                    beat,
+                    pos_char=char_len_list,
+                    pos_spec=length,
                 )
             elif args.model_type == "Comformer_full":
                 output, att, output_mel, output_mel2 = model(
-                    chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
+                    chars,
+                    phone,
+                    pitch,
+                    beat,
+                    pos_char=char_len_list,
+                    pos_spec=length,
                 )
 
             spec_origin = spec.clone()
@@ -384,12 +417,20 @@ def infer(args):
             )
 
             mcd_metric.update(mcd_value, length_sum)
-            f0_distortion_metric.update(f0_distortion_value, voiced_frame_number_step)
+            f0_distortion_metric.update(
+                f0_distortion_value, voiced_frame_number_step
+            )
             vuv_error_metric.update(vuv_error_value, frame_number_step)
 
             if step % 1 == 0:
                 log_figure(
-                    step, output, spec_origin, att, length, args.prediction_path, args
+                    step,
+                    output,
+                    spec_origin,
+                    att,
+                    length,
+                    args.prediction_path,
+                    args,
                 )
                 out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f}; mcd_value {:.4f}; ".format(
                     step, losses.avg, spec_losses.avg, mcd_metric.avg
@@ -399,9 +440,13 @@ def infer(args):
                 if args.n_mels > 0:
                     out_log += " mel_loss {:.4f}; ".format(mel_losses.avg)
                     if args.double_mel_loss:
-                        out_log += " dmel_loss {:.4f}; ".format(double_mel_losses.avg)
+                        out_log += " dmel_loss {:.4f}; ".format(
+                            double_mel_losses.avg
+                        )
                 end = time.time()
-                print("{} -- sum_time: {}s".format(out_log, (end - start_t_test)))
+                print(
+                    "{} -- sum_time: {}s".format(out_log, (end - start_t_test))
+                )
 
     end_t_test = time.time()
 
@@ -415,9 +460,7 @@ def infer(args):
     f0_corr = Metrics.compute_f0_corr(f0_ground_truth_all, f0_synthesis_all)
 
     out_log += "\n\t mcd_value {:.4f} dB ".format(mcd_metric.avg)
-    out_log += (
-        " f0_rmse_value {:.4f} Hz, vuv_error_value {:.4f} %, F0_CORR {:.4f}; ".format(
-            np.sqrt(f0_distortion_metric.avg), vuv_error_metric.avg * 100, f0_corr
-        )
+    out_log += " f0_rmse_value {:.4f} Hz, vuv_error_value {:.4f} %, F0_CORR {:.4f}; ".format(
+        np.sqrt(f0_distortion_metric.avg), vuv_error_metric.avg * 100, f0_corr
     )
     print("{} time: {:.2f}s".format(out_log, end_t_test - start_t_test))

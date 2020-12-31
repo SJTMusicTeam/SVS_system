@@ -124,7 +124,8 @@ def make_pad_mask(lengths, xs=None, length_dim=-1):
             length_dim = xs.dim() + length_dim
         # ind = (:, None, ..., None, :, , None, ..., None)
         ind = tuple(
-            slice(None) if i in (0, length_dim) else None for i in range(xs.dim())
+            slice(None) if i in (0, length_dim) else None
+            for i in range(xs.dim())
         )
         mask = mask[ind].expand_as(xs).to(xs.device)
     return mask
@@ -237,7 +238,9 @@ class Encoder(nn.Module):
         self.GLU_list = nn.ModuleList()
         for i in range(int(GLU_num)):
             self.GLU_list.append(
-                module.GLU(num_layers, hidden_size, glu_kernel, dropout, hidden_size)
+                module.GLU(
+                    num_layers, hidden_size, glu_kernel, dropout, hidden_size
+                )
             )
         # self.GLU = module.GLU(num_layers, hidden_size, glu_kernel, dropout, hidden_size)
 
@@ -258,7 +261,9 @@ class Encoder(nn.Module):
 
         for glu in self.GLU_list:
             glu_out = glu(glu_in)
-            glu_in = glu_out.reshape(batch_size, text_phone_length, embedded_dim)
+            glu_in = glu_out.reshape(
+                batch_size, text_phone_length, embedded_dim
+            )
 
         glu_out = self.fc_2(glu_in)
 
@@ -270,7 +275,13 @@ class Encoder(nn.Module):
 
 class SA_Encoder(nn.Module):
     def __init__(
-        self, phone_size, embed_size, hidden_size, dropout, num_blocks=3, nheads=4
+        self,
+        phone_size,
+        embed_size,
+        hidden_size,
+        dropout,
+        num_blocks=3,
+        nheads=4,
     ):
         super(SA_Encoder, self).__init__()
         self.layers = clones(Attention(hidden_size), int(num_blocks))
@@ -488,7 +499,9 @@ class Decoder_noGLU(nn.Module):
         mask = pos.eq(0).unsqueeze(1).repeat(1, src.size(1), 1)
 
         src = self.input_norm(src)
-        memory, att_weight = self.decoder(src, mask=mask, query_mask=query_mask)
+        memory, att_weight = self.decoder(
+            src, mask=mask, query_mask=query_mask
+        )
         output = self.output_fc(memory)
         return output, att_weight
 
@@ -535,7 +548,9 @@ class Decoder(nn.Module):
         mask = pos.eq(0).unsqueeze(1).repeat(1, src.size(1), 1)
 
         src = self.input_norm(src)
-        memory, att_weight = self.decoder(src, mask=mask, query_mask=query_mask)
+        memory, att_weight = self.decoder(
+            src, mask=mask, query_mask=query_mask
+        )
         output = self.output_fc(memory)
         return output, att_weight
 
@@ -659,7 +674,9 @@ class GLU_TransformerSVS(nn.Module):
             )
             if self.double_mel_loss:
                 self.double_mel = module.PostNet(n_mels, n_mels, n_mels)
-            self.postnet = module.PostNet(n_mels, output_dim, (output_dim // 2 * 2))
+            self.postnet = module.PostNet(
+                n_mels, output_dim, (output_dim // 2 * 2)
+            )
         else:
             self.decoder = Decoder(
                 dec_num_block,
@@ -670,7 +687,9 @@ class GLU_TransformerSVS(nn.Module):
                 local_gaussian=local_gaussian,
                 device=device,
             )
-            self.postnet = module.PostNet(output_dim, output_dim, (output_dim // 2 * 2))
+            self.postnet = module.PostNet(
+                output_dim, output_dim, (output_dim // 2 * 2)
+            )
 
     def forward(
         self,
@@ -683,8 +702,12 @@ class GLU_TransformerSVS(nn.Module):
         pos_spec=None,
     ):
 
-        encoder_out, text_phone = self.encoder(characters.squeeze(2), pos=pos_char)
-        post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat)
+        encoder_out, text_phone = self.encoder(
+            characters.squeeze(2), pos=pos_char
+        )
+        post_out = self.enc_postnet(
+            encoder_out, phone, text_phone, pitch, beat
+        )
         mel_output, att_weight = self.decoder(post_out, pos=pos_spec)
 
         if self.double_mel_loss:
@@ -777,7 +800,9 @@ class LSTMSVS(nn.Module):
         self.n_mels = n_mels
         if self.use_mel:
             self.output_mel = nn.Linear(d_model * 2, n_mels)
-            self.postnet = module.PostNet(n_mels, d_output, (d_output // 2 * 2))
+            self.postnet = module.PostNet(
+                n_mels, d_output, (d_output // 2 * 2)
+            )
 
             self.double_mel_loss = double_mel_loss
             if self.double_mel_loss:
@@ -866,7 +891,9 @@ class GRUSVS_gs(nn.Module):
 
         # Decoder
         self.rnnDecoder = nn.GRU((d_model * 2) + d_model * 2, d_model)
-        self.fc_hid1 = nn.Linear((d_model * 2) + d_model * 2 + d_model, d_model * 2)
+        self.fc_hid1 = nn.Linear(
+            (d_model * 2) + d_model * 2 + d_model, d_model * 2
+        )
         # self.fc_hid2 = nn.Linear(2048, 1600)
 
         self.dropoutDecoder = nn.Dropout(dropout)
@@ -875,7 +902,9 @@ class GRUSVS_gs(nn.Module):
         self.n_mels = n_mels
         if self.use_mel:
             self.output_mel = nn.Linear(d_model * 2, n_mels)
-            self.postnet = module.PostNet(n_mels, d_output, (d_output // 2 * 2))
+            self.postnet = module.PostNet(
+                n_mels, d_output, (d_output // 2 * 2)
+            )
         else:
             self.fc_out = nn.Linear(d_model * 2, d_output)
 
@@ -907,22 +936,30 @@ class GRUSVS_gs(nn.Module):
         embedded = torch.cat(
             (embedded_phone.float(), beats.float(), pitch.float()), dim=2
         )  # [src len, batch size, emb_dim+2]
-        packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, sorted_length)
+        packed_embedded = nn.utils.rnn.pack_padded_sequence(
+            embedded, sorted_length
+        )
         packed_outputs, hidden = self.rnnEncoder(packed_embedded)
         encoder_outputs, _ = nn.utils.rnn.pad_packed_sequence(packed_outputs)
         encoder_outputs = encoder_outputs.permute(
             1, 0, 2
         )  # outputs = [batch size, src len, enc hid dim * 2]
         hidden = torch.tanh(
-            self.fcEncoder(torch.cat((hidden[-2, :, :], hidden[-1, :, :]), dim=1))
+            self.fcEncoder(
+                torch.cat((hidden[-2, :, :], hidden[-1, :, :]), dim=1)
+            )
         )  # hidden = [batch size, dec hid dim]
 
         # Decoder
         hidden = hidden.unsqueeze(0)
-        outputs = torch.zeros(max_length, batch_size, self.d_model * 2).to(device)
+        outputs = torch.zeros(max_length, batch_size, self.d_model * 2).to(
+            device
+        )
         input_ = outputs[0]
         for t in range(0, max_length):
-            input_ = input_.unsqueeze(0)  # input = [1, batch size, d_model * 2]
+            input_ = input_.unsqueeze(
+                0
+            )  # input = [1, batch size, d_model * 2]
 
             # Attention
             src_len = encoder_outputs.shape[1]
@@ -932,7 +969,9 @@ class GRUSVS_gs(nn.Module):
             energy = torch.tanh(
                 self.attn(torch.cat((hiddenAttention, encoder_outputs), dim=2))
             )  # energy = [batch size, src len, dec hid dim]
-            attention = self.v(energy).squeeze(2)  # attention = [batch size, src len]
+            attention = self.v(energy).squeeze(
+                2
+            )  # attention = [batch size, src len]
             attention_weights = F.softmax(attention, dim=1).unsqueeze(
                 1
             )  # a = [batch size, 1, src len]
@@ -953,10 +992,14 @@ class GRUSVS_gs(nn.Module):
 
             input_ = input_.squeeze(0)  # input = [batch size, d_model * 2]
             output = output.squeeze(0)  # output = [batch size, d_model]
-            weighted = weighted.squeeze(0)  # weighted = [batch size, d_model * 2]
+            weighted = weighted.squeeze(
+                0
+            )  # weighted = [batch size, d_model * 2]
 
             prediction = self.dropoutDecoder(
-                F.relu(self.fc_hid1(torch.cat((output, weighted, input_), dim=1)))
+                F.relu(
+                    self.fc_hid1(torch.cat((output, weighted, input_), dim=1))
+                )
             )  # prediction = [batch size, output dim * 2]
             input_ = prediction
 
@@ -1021,7 +1064,9 @@ class TransformerSVS(nn.Module):
             )
             if self.double_mel_loss:
                 self.double_mel = module.PostNet(n_mels, n_mels, n_mels)
-            self.postnet = module.PostNet(n_mels, output_dim, (output_dim // 2 * 2))
+            self.postnet = module.PostNet(
+                n_mels, output_dim, (output_dim // 2 * 2)
+            )
         else:
             self.decoder = Decoder_noGLU(
                 dec_num_block,
@@ -1032,7 +1077,9 @@ class TransformerSVS(nn.Module):
                 local_gaussian=local_gaussian,
                 device=device,
             )
-            self.postnet = module.PostNet(output_dim, output_dim, (output_dim // 2 * 2))
+            self.postnet = module.PostNet(
+                output_dim, output_dim, (output_dim // 2 * 2)
+            )
 
     def forward(
         self,
@@ -1046,8 +1093,12 @@ class TransformerSVS(nn.Module):
         pos_char=None,
         pos_spec=None,
     ):
-        encoder_out, text_phone = self.encoder(characters.squeeze(2), pos=pos_char)
-        post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat)
+        encoder_out, text_phone = self.encoder(
+            characters.squeeze(2), pos=pos_char
+        )
+        post_out = self.enc_postnet(
+            encoder_out, phone, text_phone, pitch, beat
+        )
         mel_output, att_weight = self.decoder(post_out, pos=pos_spec)
 
         if self.double_mel_loss:
@@ -1140,7 +1191,9 @@ class ConformerSVS(nn.Module):
             )
             if self.double_mel_loss:
                 self.double_mel = module.PostNet(n_mels, n_mels, n_mels)
-            self.postnet = module.PostNet(n_mels, output_dim, (output_dim // 2 * 2))
+            self.postnet = module.PostNet(
+                n_mels, output_dim, (output_dim // 2 * 2)
+            )
         else:
             self.decoder = Decoder(
                 dec_num_block,
@@ -1151,7 +1204,9 @@ class ConformerSVS(nn.Module):
                 local_gaussian=local_gaussian,
                 device=device,
             )
-            self.postnet = module.PostNet(output_dim, output_dim, (output_dim // 2 * 2))
+            self.postnet = module.PostNet(
+                output_dim, output_dim, (output_dim // 2 * 2)
+            )
 
     def forward(
         self,
@@ -1167,7 +1222,9 @@ class ConformerSVS(nn.Module):
         encoder_out, text_phone = self.encoder(
             characters.squeeze(2), pos=pos_char, length=pos_spec
         )
-        post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat)
+        post_out = self.enc_postnet(
+            encoder_out, phone, text_phone, pitch, beat
+        )
         mel_output, att_weight = self.decoder(post_out, pos=pos_spec)
 
         if self.double_mel_loss:
@@ -1280,7 +1337,9 @@ class ConformerSVS_FULL(nn.Module):
             padding_idx=dec_padding_idx,
         )
 
-        self.postnet = module.PostNet(n_mels, output_dim, (output_dim // 2 * 2))
+        self.postnet = module.PostNet(
+            n_mels, output_dim, (output_dim // 2 * 2)
+        )
 
     def forward(
         self,
@@ -1296,7 +1355,9 @@ class ConformerSVS_FULL(nn.Module):
         encoder_out, text_phone = self.encoder(
             characters.squeeze(2), pos=pos_char, length=pos_spec
         )
-        post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat)
+        post_out = self.enc_postnet(
+            encoder_out, phone, text_phone, pitch, beat
+        )
         mel_output = self.decoder(post_out, pos=pos_spec)
         output = self.postnet(mel_output)
 
@@ -1381,7 +1442,11 @@ class USTC_Prenet(nn.Module):
 
         if pad_length == 1:
             x = torch.cat(
-                (x, torch.zeros(batch_size, 1, self.dim_input).to(self.device)), dim=1
+                (
+                    x,
+                    torch.zeros(batch_size, 1, self.dim_input).to(self.device),
+                ),
+                dim=1,
             )
         else:
             pad_before_length = pad_length // 2
@@ -1416,7 +1481,9 @@ class USTC_Prenet(nn.Module):
         pos = self.pos_code(torch.transpose(output, 0, 1))
         pos_encode = self.fc_pos(torch.transpose(pos, 0, 1))
 
-        output = output + pos_encode  # output: [batch size, new_length, middle_dim]
+        output = (
+            output + pos_encode
+        )  # output: [batch size, new_length, middle_dim]
 
         for layer in self.self_attention_layers:
             output, att = layer(query=output, key=output, value=output)
@@ -1424,7 +1491,9 @@ class USTC_Prenet(nn.Module):
         output_fc = self.fc3(output)
 
         # Residual Connection
-        output = output + output_fc  # output: [batch size, new_length, middle_dim]
+        output = (
+            output + output_fc
+        )  # output: [batch size, new_length, middle_dim]
 
         output = output.view(
             batch_size, -1
@@ -1467,7 +1536,9 @@ class USTC_SVS(nn.Module):
             1, embed_size
         )  # because pitch is not int | stair-like
 
-        self.emb_beats = nn.Embedding(2, embed_size)  # only 0 and 1 two possibilities
+        self.emb_beats = nn.Embedding(
+            2, embed_size
+        )  # only 0 and 1 two possibilities
 
         # FC (Tanh in forward function)
         self.fc1 = nn.Linear(embed_size * 3, middle_dim_fc)
@@ -1555,7 +1626,9 @@ class USTC_SVS(nn.Module):
         )  # [batch size, bi_num_layers * 2 * bi_d_model]
 
         # output_uni_GRU = torch.zeros(batch_size, max_length, self.uni_d_model).to(self.device)
-        output = torch.zeros(batch_size, max_length, self.output_dim).to(self.device)
+        output = torch.zeros(batch_size, max_length, self.output_dim).to(
+            self.device
+        )
         for i in range(torch.max(length_list)):
             step_output_bi_GRU = output_bi_GRU[:, i, :].unsqueeze(
                 1
@@ -1567,14 +1640,16 @@ class USTC_SVS(nn.Module):
 
                 for shifted in range(self.multi_history_num):
                     if shifted == 0:
-                        history_output = output[:, index_begin + shifted, :].unsqueeze(
-                            1
-                        )
+                        history_output = output[
+                            :, index_begin + shifted, :
+                        ].unsqueeze(1)
                     else:
                         history_output = torch.cat(
                             (
                                 history_output,
-                                output[:, index_begin + shifted, :].unsqueeze(1),
+                                output[:, index_begin + shifted, :].unsqueeze(
+                                    1
+                                ),
                             ),
                             dim=1,
                         )
@@ -1583,14 +1658,16 @@ class USTC_SVS(nn.Module):
                 index_begin = i
                 for shifted in range(self.multi_history_num):
                     if shifted == 0:
-                        history_output = output[:, index_begin + shifted, :].unsqueeze(
-                            1
-                        )
+                        history_output = output[
+                            :, index_begin + shifted, :
+                        ].unsqueeze(1)
                     else:
                         history_output = torch.cat(
                             (
                                 history_output,
-                                output[:, index_begin + shifted, :].unsqueeze(1),
+                                output[:, index_begin + shifted, :].unsqueeze(
+                                    1
+                                ),
                             ),
                             dim=1,
                         )
@@ -1611,7 +1688,9 @@ class USTC_SVS(nn.Module):
             # step_input_uni_GRU: [batch size, 1, 2*bi_d_model + multi_history_num * middle_dim]
 
             if i == 0:
-                step_output_uni_GRU, hidden_uni_GRU = self.uni_GRU(step_input_uni_GRU)
+                step_output_uni_GRU, hidden_uni_GRU = self.uni_GRU(
+                    step_input_uni_GRU
+                )
             else:
                 step_output_uni_GRU, hidden_uni_GRU = self.uni_GRU(
                     step_input_uni_GRU, hidden_uni_GRU
@@ -1660,7 +1739,9 @@ def _test():
         phone[i, :length, :] = torch.randint(0, phone_size, (length, 1)).long()
         pitch[i, :length, :] = torch.randint(0, 200, (length, 1)).long()
         beat[i, :length, :] = torch.randint(0, 2, (length, 1)).long()
-        char[i, :char_length, :] = torch.randint(0, phone_size, (char_length, 1)).long()
+        char[i, :char_length, :] = torch.randint(
+            0, phone_size, (char_length, 1)
+        ).long()
 
     seq_len = torch.from_numpy(np.array(seq_len_list)).to(device)
     char_seq_len = torch.from_numpy(np.array(char_seq_len_list)).to(device)

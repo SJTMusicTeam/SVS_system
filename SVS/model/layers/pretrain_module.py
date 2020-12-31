@@ -73,7 +73,9 @@ class Conv(nn.Module):
             bias=bias,
         )
 
-        nn.init.xavier_uniform_(self.conv.weight, gain=nn.init.calculate_gain(w_init))
+        nn.init.xavier_uniform_(
+            self.conv.weight, gain=nn.init.calculate_gain(w_init)
+        )
 
     def forward(self, x):
         x = self.conv(x)
@@ -144,7 +146,9 @@ class FFN(nn.Module):
         :param num_hidden: dimension of hidden
         """
         super(FFN, self).__init__()
-        self.w_1 = Conv(num_hidden, num_hidden * 4, kernel_size=1, w_init="relu")
+        self.w_1 = Conv(
+            num_hidden, num_hidden * 4, kernel_size=1, w_init="relu"
+        )
         self.w_2 = Conv(num_hidden * 4, num_hidden, kernel_size=1)
         self.dropout = nn.Dropout(p=0.1)
         self.layer_norm = nn.LayerNorm(num_hidden)
@@ -206,7 +210,9 @@ class PostConvNet(nn.Module):
         self.pre_batchnorm = nn.BatchNorm1d(num_hidden)
 
         self.dropout1 = nn.Dropout(p=0.1)
-        self.dropout_list = nn.ModuleList([nn.Dropout(p=0.1) for _ in range(3)])
+        self.dropout_list = nn.ModuleList(
+            [nn.Dropout(p=0.1) for _ in range(3)]
+        )
 
     def forward(self, input_, mask=None):
         # Causal Convolution (for auto-regressive)
@@ -236,7 +242,13 @@ class MultiheadAttention(nn.Module):
         self.attn_dropout = nn.Dropout(p=0.1)
 
     def forward(
-        self, key, value, query, mask=None, query_mask=None, gaussian_factor=None
+        self,
+        key,
+        value,
+        query,
+        mask=None,
+        query_mask=None,
+        gaussian_factor=None,
     ):
         # Get attention score
         attn = t.bmm(query, key.transpose(1, 2))
@@ -314,7 +326,9 @@ class Attention(nn.Module):
             mask = mask.repeat(self.h, 1, 1)
 
         # Make multihead
-        key = self.key(memory).view(batch_size, seq_k, self.h, self.num_hidden_per_attn)
+        key = self.key(memory).view(
+            batch_size, seq_k, self.h, self.num_hidden_per_attn
+        )
         value = self.value(memory).view(
             batch_size, seq_k, self.h, self.num_hidden_per_attn
         )
@@ -353,7 +367,9 @@ class Attention(nn.Module):
                 .repeat(batch_size * self.h, seq_k, 1)
             )
             local_gaussian = t.pow(row - col, 2).float().to(key.device.type)
-            self.local_gaussian_factor = self.local_gaussian_factor.to(key.device.type)
+            self.local_gaussian_factor = self.local_gaussian_factor.to(
+                key.device.type
+            )
             local_gaussian = local_gaussian / self.local_gaussian_factor
         else:
             local_gaussian = None
@@ -372,8 +388,12 @@ class Attention(nn.Module):
         attns = attns.permute(1, 0, 2, 3)
 
         # Concatenate all multihead context vector
-        result = result.view(self.h, batch_size, seq_q, self.num_hidden_per_attn)
-        result = result.permute(1, 2, 0, 3).contiguous().view(batch_size, seq_q, -1)
+        result = result.view(
+            self.h, batch_size, seq_q, self.num_hidden_per_attn
+        )
+        result = (
+            result.permute(1, 2, 0, 3).contiguous().view(batch_size, seq_q, -1)
+        )
 
         # Concatenate context vector with input (most important)
         result = t.cat([decoder_input, result], dim=-1)
@@ -524,7 +544,11 @@ class CBHG(nn.Module):
             zip(self.convbank_list, self.batchnorm_list)
         ):
             convbank_input = t.relu(
-                batchnorm(self._conv_fit_dim(conv(convbank_input), k + 1).contiguous())
+                batchnorm(
+                    self._conv_fit_dim(
+                        conv(convbank_input), k + 1
+                    ).contiguous()
+                )
             )
             convbank_list.append(convbank_input)
 
@@ -536,7 +560,9 @@ class CBHG(nn.Module):
 
         # Projection
         conv_projection = t.relu(
-            self.batchnorm_proj_1(self._conv_fit_dim(self.conv_projection_1(conv_cat)))
+            self.batchnorm_proj_1(
+                self._conv_fit_dim(self.conv_projection_1(conv_cat))
+            )
         )
         conv_projection = (
             self.batchnorm_proj_2(
