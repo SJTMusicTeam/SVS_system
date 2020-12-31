@@ -4,6 +4,7 @@ from torch import nn
 import math
 import numpy
 
+
 class ConvolutionModule(nn.Module):
     """ConvolutionModule in Conformer model.
     Args:
@@ -66,6 +67,7 @@ class ConvolutionModule(nn.Module):
         x = self.pointwise_conv2(x)
 
         return x.transpose(1, 2)
+
 
 class EncoderLayer(nn.Module):
     """Encoder layer module.
@@ -207,12 +209,14 @@ class EncoderLayer(nn.Module):
 
         return x, mask
 
+
 class Swish(torch.nn.Module):
     """Construct an Swish object."""
 
     def forward(self, x):
         """Return Swich activation function."""
         return x * torch.sigmoid(x)
+
 
 def get_activation(act):
     """Return activation function."""
@@ -227,6 +231,7 @@ def get_activation(act):
     }
 
     return activation_funcs[act]()
+
 
 class VGG2L(torch.nn.Module):
     """VGG2L module for transformer encoder.
@@ -290,6 +295,7 @@ class VGG2L(torch.nn.Module):
         x_mask = x_mask[:, :, :x_t2][:, :, ::2]
 
         return x_mask
+
 
 class MultiHeadedAttention(nn.Module):
     """Multi-Head Attention layer.
@@ -389,6 +395,7 @@ class MultiHeadedAttention(nn.Module):
         scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
         return self.forward_attention(v, scores, mask)
 
+
 class RelPositionMultiHeadedAttention(MultiHeadedAttention):
     """Multi-Head Attention layer with relative position encoding.
     Paper: https://arxiv.org/abs/1901.02860
@@ -470,6 +477,7 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         )  # (batch, head, time1, time2)
 
         return self.forward_attention(v, scores, mask)
+
 
 def _pre_hook(
     state_dict,
@@ -625,6 +633,7 @@ class LayerNorm(torch.nn.LayerNorm):
             return super(LayerNorm, self).forward(x)
         return super(LayerNorm, self).forward(x.transpose(1, -1)).transpose(1, -1)
 
+
 class MultiLayeredConv1d(torch.nn.Module):
     """Multi-layered conv1d for Transformer block.
     This is a module of multi-leyered conv1d designed
@@ -705,6 +714,7 @@ class Conv1dLinear(torch.nn.Module):
         x = torch.relu(self.w_1(x.transpose(-1, 1))).transpose(-1, 1)
         return self.w_2(self.dropout(x))
 
+
 class PositionwiseFeedForward(torch.nn.Module):
     """Positionwise feed forward layer.
     Args:
@@ -725,6 +735,7 @@ class PositionwiseFeedForward(torch.nn.Module):
         """Forward funciton."""
         return self.w_2(self.dropout(self.activation(self.w_1(x))))
 
+
 class MultiSequential(torch.nn.Sequential):
     """Multi-input multi-output torch.nn.Sequential."""
 
@@ -744,6 +755,7 @@ def repeat(N, fn):
         MultiSequential: Repeated model instance.
     """
     return MultiSequential(*[fn(n) for n in range(N)])
+
 
 class Conv2dSubsampling(torch.nn.Module):
     """Convolutional 2D subsampling (to 1/4 length).
@@ -975,15 +987,15 @@ class Conformer_block(torch.nn.Module):
         """
 
         # print(f"xs shape : {numpy.shape(xs)}, masks shape: {numpy.shape(masks)}")
-        
+
         if isinstance(self.embed, (Conv2dSubsampling, VGG2L)):
             xs, masks = self.embed(xs, masks)
         else:
-            
+
             xs = self.embed(xs)
-        
+
         # print(f"line 984 xs shape after embed: {numpy.shape(xs)}")
-        
+
         xs, masks = self.encoders(xs, masks)
         if isinstance(xs, tuple):
             xs = xs[0]
