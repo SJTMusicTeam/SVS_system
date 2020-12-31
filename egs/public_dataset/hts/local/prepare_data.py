@@ -91,12 +91,12 @@ def make_segment(alignment, sil="pau"):
     if silence_end[-1] != len(alignment) - 1:
         if silence_end[-1] - silence_start[-1] > 5:
             segment_info[pack_zero(start_id)] = {
-                "alignment": alignment[silence_end[-1] - 5:],
+                "alignment": alignment[silence_end[-1] - 5 :],
                 "start": silence_end[-1] - 5,
             }
         else:
             segment_info[pack_zero(start_id)] = {
-                "alignment": alignment[silence_start[-1]:],
+                "alignment": alignment[silence_start[-1] :],
                 "start": silence_start[-1],
             }
     return segment_info
@@ -175,8 +175,7 @@ def process(args):
 
         song_align = os.path.join(args.outdir, "alignment")
         song_wav = os.path.join(args.outdir, "wav_info", str(index))
-        song_pitch_beat = os.path.join(args.outdir, 
-                              "pitch_beat_extraction", str(index))
+        song_pitch_beat = os.path.join(args.outdir, "pitch_beat_extraction", str(index))
 
         if not os.path.exists(song_align):
             os.makedirs(song_align)
@@ -190,30 +189,33 @@ def process(args):
             start = segments[seg]["start"]
             name = seg
             seg_signal = signal[
-                int(start * hop_length): int(
+                int(start * hop_length) : int(
                     start * hop_length + len(alignment) * hop_length
                 )
             ]
-            print(len(seg_signal), start, 
-                      len(alignment), hop_length, flush=True)
+            print(len(seg_signal), start, len(alignment), hop_length, flush=True)
             """extract beats"""
-            tempo, beats = librosa.beat.beat_track(y=seg_signal, 
-                               sr=args.sr, hop_length=hop_length)
+            tempo, beats = librosa.beat.beat_track(
+                y=seg_signal, sr=args.sr, hop_length=hop_length
+            )
             times = librosa.frames_to_time(beats, sr=args.sr)
-            frames = librosa.time_to_frames(times,
-                         sr = args.sr, hop_length=hop_length, n_fft = n_fft)
-            np.save((os.path.join(song_pitch_beat, name))+'_beats',
-                         np.array(beats))
+            frames = librosa.time_to_frames(
+                times, sr=args.sr, hop_length=hop_length, n_fft=n_fft
+            )
+            np.save((os.path.join(song_pitch_beat, name)) + "_beats", np.array(beats))
 
             """extract pitch"""
             seg_signal = seg_signal.astype("double")
-            _f0, t = pw.harvest(seg_signal, args.sr, 
-                                f0_floor=f0_min, f0_ceil=f0_max, 
-                                frame_period=frame_shift * 1000)
+            _f0, t = pw.harvest(
+                seg_signal,
+                args.sr,
+                f0_floor=f0_min,
+                f0_ceil=f0_max,
+                frame_period=frame_shift * 1000,
+            )
             _f0 = pw.stonemask(seg_signal, _f0, t, args.sr)
 
-            np.save(os.path.join(song_pitch_beat, name) + "_pitch", 
-                    np.array(_f0))
+            np.save(os.path.join(song_pitch_beat, name) + "_pitch", np.array(_f0))
 
             alignment_id = np.zeros((len(alignment)))
             for i in range(len(alignment)):
@@ -223,8 +225,9 @@ def process(args):
                 np.array(alignment_id),
             )
 
-            sf.write(os.path.join(song_wav, name) + ".wav", 
-                     seg_signal, samplerate=args.sr)
+            sf.write(
+                os.path.join(song_wav, name) + ".wav", seg_signal, samplerate=args.sr
+            )
             print("saved {}".format(os.path.join(song_wav, name) + ".wav"))
         index += 1
 

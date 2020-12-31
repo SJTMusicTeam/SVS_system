@@ -24,8 +24,7 @@ def same_split(alignment):
     start = 0
     for i in range(size - 1):
         index = round(len(alignment) / size) * (i + 1)
-        while index < len(alignment) and \
-                  alignment[index] != alignment[index + 1]:
+        while index < len(alignment) and alignment[index] != alignment[index + 1]:
             index += 1
         segments.append(alignment[start:index])
         start = index + 1
@@ -176,8 +175,7 @@ def process(args):
 
         song_align = os.path.join(args.outdir, "alignment")
         song_wav = os.path.join(args.outdir, "wav_info", str(index))
-        song_pitch_beat = os.path.join(args.outdir, 
-                              "pitch_beat_extraction", str(index))
+        song_pitch_beat = os.path.join(args.outdir, "pitch_beat_extraction", str(index))
 
         if not os.path.exists(song_align):
             os.makedirs(song_align)
@@ -195,8 +193,7 @@ def process(args):
                     start * hop_length + len(alignment) * hop_length
                 )
             ]
-            print(len(seg_signal), start, 
-                      len(alignment), hop_length, flush=True)
+            print(len(seg_signal), start, len(alignment), hop_length, flush=True)
             """extract beats"""
             tempo, beats = librosa.beat.beat_track(
                 y=seg_signal, sr=args.sr, hop_length=hop_length
@@ -205,8 +202,7 @@ def process(args):
             frames = librosa.time_to_frames(
                 times, sr=args.sr, hop_length=hop_length, n_fft=n_fft
             )
-            np.save((os.path.join(song_pitch_beat, name)) + "_beats", 
-                     np.array(beats))
+            np.save((os.path.join(song_pitch_beat, name)) + "_beats", np.array(beats))
 
             """extract pitch"""
             seg_signal = seg_signal.astype("double")
@@ -219,8 +215,7 @@ def process(args):
             )
             _f0 = pw.stonemask(seg_signal, _f0, t, args.sr)
 
-            np.save(os.path.join(song_pitch_beat, name) + "_pitch", 
-                    np.array(_f0))
+            np.save(os.path.join(song_pitch_beat, name) + "_pitch", np.array(_f0))
 
             alignment_id = np.zeros((len(alignment)))
             for i in range(len(alignment)):
@@ -231,8 +226,7 @@ def process(args):
             )
 
             sf.write(
-                os.path.join(song_wav, name) + ".wav", 
-                seg_signal, samplerate=args.sr
+                os.path.join(song_wav, name) + ".wav", seg_signal, samplerate=args.sr
             )
             print("saved {}".format(os.path.join(song_wav, name) + ".wav"))
         index += 1
