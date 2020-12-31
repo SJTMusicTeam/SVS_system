@@ -2,13 +2,12 @@
 
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
-
 import argparse
 import librosa
-import os
-import soundfile as sf
 import numpy as np
+import os
 import pyworld as pw
+import soundfile as sf
 
 
 def pack_zero(number, length=4):
@@ -121,7 +120,6 @@ def load_label(label_file, s_type="s", sr=48000, frame_shift=0.03, sil="pau"):
 
 def process(args):
 
-    f0_bin = 256
     f0_max = 1100.0
     f0_min = 50.0
 
@@ -136,7 +134,6 @@ def process(args):
     win_length = int(args.sr * frame_length)
     n_fft = win_length
 
-    wav_list = os.listdir(args.wavdir)
     lab_list = os.listdir(args.labdir)
     phone_set = []
     idscp = {}
@@ -144,7 +141,6 @@ def process(args):
     for lab in lab_list:
         lab_id = lab[:-4]
         idscp[lab_id] = index
-        song_index = pack_zero(index)
 
         segments, phone = load_label(
             os.path.join(args.labdir, lab),
@@ -193,7 +189,6 @@ def process(args):
                     start * hop_length + len(alignment) * hop_length
                 )
             ]
-            print(len(seg_signal), start, len(alignment), hop_length, flush=True)
             """extract beats"""
             tempo, beats = librosa.beat.beat_track(
                 y=seg_signal, sr=args.sr, hop_length=hop_length
@@ -202,7 +197,7 @@ def process(args):
             frames = librosa.time_to_frames(
                 times, sr=args.sr, hop_length=hop_length, n_fft=n_fft
             )
-            np.save((os.path.join(song_pitch_beat, name)) + "_beats", np.array(beats))
+            np.save(os.path.join(song_pitch_beat, name) + "_beats", np.array(beats))
 
             """extract pitch"""
             seg_signal = seg_signal.astype("double")

@@ -24,7 +24,8 @@ def same_split(alignment):
     start = 0
     for i in range(size - 1):
         index = round(len(alignment) / size) * (i + 1)
-        while index < len(alignment) and alignment[index] != alignment[index + 1]:
+        while index < len(alignment) and \
+                  alignment[index] != alignment[index + 1]:
             index += 1
         segments.append(alignment[start:index])
         start = index + 1
@@ -91,12 +92,12 @@ def make_segment(alignment, sil="pau"):
     if silence_end[-1] != len(alignment) - 1:
         if silence_end[-1] - silence_start[-1] > 5:
             segment_info[pack_zero(start_id)] = {
-                "alignment": alignment[silence_end[-1] - 5 :],
+                "alignment": alignment[silence_end[-1] - 5:],
                 "start": silence_end[-1] - 5,
             }
         else:
             segment_info[pack_zero(start_id)] = {
-                "alignment": alignment[silence_start[-1] :],
+                "alignment": alignment[silence_start[-1]:],
                 "start": silence_start[-1],
             }
     return segment_info
@@ -121,7 +122,6 @@ def load_label(label_file, s_type="s", sr=48000, frame_shift=0.03, sil="pau"):
 
 def process(args):
 
-    f0_bin = 256
     f0_max = 1100.0
     f0_min = 50.0
 
@@ -136,7 +136,6 @@ def process(args):
     win_length = int(args.sr * frame_length)
     n_fft = win_length
 
-    wav_list = os.listdir(args.wavdir)
     lab_list = os.listdir(args.labdir)
     phone_set = []
     idscp = {}
@@ -144,7 +143,6 @@ def process(args):
     for lab in lab_list:
         lab_id = lab[:-4]
         idscp[lab_id] = index
-        song_index = pack_zero(index)
 
         segments, phone = load_label(
             os.path.join(args.labdir, lab),
@@ -175,7 +173,11 @@ def process(args):
 
         song_align = os.path.join(args.outdir, "alignment")
         song_wav = os.path.join(args.outdir, "wav_info", str(index))
-        song_pitch_beat = os.path.join(args.outdir, "pitch_beat_extraction", str(index))
+        song_pitch_beat = os.path.join(
+                              args.outdir, 
+                              "pitch_beat_extraction", 
+                              str(index)
+                          )
 
         if not os.path.exists(song_align):
             os.makedirs(song_align)
@@ -189,20 +191,23 @@ def process(args):
             start = segments[seg]["start"]
             name = seg
             seg_signal = signal[
-                int(start * hop_length) : int(
+                int(start * hop_length): int(
                     start * hop_length + len(alignment) * hop_length
                 )
             ]
-            print(len(seg_signal), start, len(alignment), hop_length, flush=True)
+
             """extract beats"""
             tempo, beats = librosa.beat.beat_track(
                 y=seg_signal, sr=args.sr, hop_length=hop_length
             )
-            times = librosa.frames_to_time(beats, sr=args.sr)
-            frames = librosa.time_to_frames(
-                times, sr=args.sr, hop_length=hop_length, n_fft=n_fft
+            # times = librosa.frames_to_time(beats, sr=args.sr)
+            # frames = librosa.time_to_frames(
+            #     times, sr=args.sr, hop_length=hop_length, n_fft=n_fft
+            # )
+            np.save(
+                os.path.join(song_pitch_beat, name) + "_beats", 
+                np.array(beats)
             )
-            np.save((os.path.join(song_pitch_beat, name)) + "_beats", np.array(beats))
 
             """extract pitch"""
             seg_signal = seg_signal.astype("double")
@@ -215,7 +220,10 @@ def process(args):
             )
             _f0 = pw.stonemask(seg_signal, _f0, t, args.sr)
 
-            np.save(os.path.join(song_pitch_beat, name) + "_pitch", np.array(_f0))
+            np.save(
+                os.path.join(song_pitch_beat, name) + "_pitch",
+                np.array(_f0)
+            )
 
             alignment_id = np.zeros((len(alignment)))
             for i in range(len(alignment)):
@@ -226,7 +234,9 @@ def process(args):
             )
 
             sf.write(
-                os.path.join(song_wav, name) + ".wav", seg_signal, samplerate=args.sr
+                os.path.join(song_wav, name) + ".wav",
+                seg_signal,
+                samplerate=args.sr
             )
             print("saved {}".format(os.path.join(song_wav, name) + ".wav"))
         index += 1
