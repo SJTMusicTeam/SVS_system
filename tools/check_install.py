@@ -17,7 +17,6 @@ from distutils.version import LooseVersion
 # NOTE: add the libraries which are not included in setup.py
 MANUALLY_INSTALLED_LIBRARIES = [
     ("SVS", None),
-    ("matplotlib", None),
 ]
 
 # NOTE: list all torch versions which are compatible with svs
@@ -78,10 +77,6 @@ def main(args):
         logging.warning("please try to setup again and then re-run this script.")
         sys.exit(1)
 
-    # warpctc can be installed only for pytorch < 1.7
-    # if LooseVersion(torch.__version__) < LooseVersion("1.7.0"):
-    #     library_list.append(("warpctc_pytorch", ("0.1.1", "0.1.2", "0.1.3", "0.2.1")))
-
     library_list.extend(MANUALLY_INSTALLED_LIBRARIES)
 
     # check library availableness
@@ -97,16 +92,6 @@ def main(args):
             logging.warning("--> %s is not installed.\n###### Raw Error ######\n%s#######################" % (name, traceback.format_exc()))
             is_correct_installed_list.append(False)
 
-    # warp-rnnt was only tested and successfull with CUDA_VERSION=10.0
-    # however the library installation is optional ("warp-transducer" is used by default)
-    try:
-        importlib.import_module("warp_rnnt")
-        is_correct_installed_list.append(True)
-        library_list.append(("warp_rnnt", ("0.4.0")))
-        logging.info("--> warp_rnnt is installed")
-    except ImportError:
-        logging.info("--> warp_rnnt is not installed (optional). Setup again with "
-                     "CUDA_VERSION=10.0 if you want to use it.")
 
     logging.info("library availableness check done.")
     logging.info(
@@ -127,14 +112,7 @@ def main(args):
     is_correct_version_list = []
     for idx, (name, version) in enumerate(library_list):
         if version is not None:
-            # Note: temp. fix for warprnnt_pytorch
-            # not found version with importlib
-            if name == "warprnnt_pytorch" or name == "warp_rnnt":
-                import pkg_resources
-
-                vers = pkg_resources.get_distribution(name).version
-            else:
-                vers = importlib.import_module(name).__version__
+            vers = importlib.import_module(name).__version__
             if vers is not None:
                 is_correct = vers in version
                 if is_correct:
