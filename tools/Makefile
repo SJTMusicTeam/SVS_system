@@ -1,40 +1,144 @@
-# Makefile
-# install tools
+# If a Python interpreter is specified, then creates a virtualenv from it
+# Refactored from ESPNet (author: Jiatong Shi)
 
-# If you want to use prebuild kaldi, make KALDI=<path/to/kaldi_root>
-KALDI :=
-# Specify cuda root path installed in your environment
-CUDA_PATH := /usr/local/cuda
-CUDA_VERSION := $(shell $(CUDA_PATH)/bin/nvcc --version | tail -n1 | awk '{print substr($$5,0,length($$5)-1)}')
+# Disable cupy installation
+NO_CUPY :=
+# PyTorch version: 0.4.1, 1.0.0, 1.0.1, 1.1.0, 1.2.0, 1.3.0, 1.3.1, 1.4.0, 1.5.0, 1.5.1, 1.6.0, 1.7.0, 1.7.1
+TH_VERSION := 1.7.0
+WGET := wget --tries=3
 
-all: kaldi miniconda3/envs/svs/bin env.sh
-
-ifneq ($(strip $(KALDI)),)
-kaldi:
-	ln -s $(abspath $(KALDI)) kaldi
+# Use pip for pytorch installation even if you have anaconda
+ifneq ($(shell test -f ./activate_python.sh && grep 'conda activate' ./activate_python.sh),)
+IS_CONDA := 0
+USE_PIP :=
 else
-kaldi:
-	git clone https://github.com/kaldi-asr/kaldi.git
-	cd kaldi/tools; $(MAKE)
-	cd kaldi/src; ./configure --shared --use-cuda=no; $(MAKE) depend; $(MAKE) all
+IS_CONDA :=
+USE_PIP := 0
 endif
 
-miniconda3.sh:
-	wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $@
 
-miniconda3: miniconda3.sh
-	# -b: non-interactive install
-	# -p: installed directory
-	bash miniconda3.sh -b -p miniconda3
+# Set if install binaries on CPU mode e.g. make CPU_ONLY=1
+# If you don't have any GPUs, this value will be set automatically
+ifeq ($(shell which nvcc),) # 'nvcc' not found
+CPU_ONLY := 0
+else
+CPU_ONLY :=
+endif
 
-# virtual environment of python
-miniconda3/envs/svs/bin: miniconda3
-	miniconda3/bin/conda update -y conda
-	miniconda3/bin/conda env create -f environment.yml
-	miniconda3/envs/svs/bin/pip install cupy-cuda$(subst .,,$(CUDA_VERSION))==6.2.0
-update:
-	miniconda3/bin/conda env update -f environment.yml
+ifeq ($(strip $(CPU_ONLY)),)
+# Derive CUDA version from nvcc
+CUDA_VERSION = $(shell nvcc --version | grep "Cuda compilation tools" | cut -d" " -f5 | sed s/,//)
+CUDA_VERSION_WITHOUT_DOT = $(strip $(subst .,,$(CUDA_VERSION)))
+PIP_PYTORCH := torch==$(TH_VERSION) -f https://download.pytorch.org/whl/cu$(CUDA_VERSION_WITHOUT_DOT)/torch_stable.html
+ifeq ($(strip $(CUDA_VERSION_WITHOUT_DOT)),80)
+CONDA_PYTORCH := pytorch=$(TH_VERSION) cuda$(CUDA_VERSION_WITHOUT_DOT)
+else
+CONDA_PYTORCH := pytorch=$(TH_VERSION) cudatoolkit=$(CUDA_VERSION)
+endif
 
-env.sh: miniconda3/envs/svs/bin
-	cp env.sh.in env.sh
-	echo "export LD_LIBRARY_PATH=$(CUDA_PATH)/lib64:$$LD_LIBRARY_PATH" >> env.sh
+else
+CONDA_PYTORCH := pytorch=$(TH_VERSION) cpuonly
+PIP_PYTORCH := torch==$(TH_VERSION) -f https://download.pytorch.org/whl/cpu/torch_stable.html
+NO_CUPY := 0
+endif
+
+
+.PHONY: all clean
+
+all: kaldi showenv python conda_packages.done check_install
+
+python: activate_python.sh svs.done pytorch.done
+
+
+kaldi:
+	test -f kaldi/egs/wsj/s5/utils/parse_options.sh || git clone --depth 1 https://github.com/kaldi-asr/kaldi
+
+activate_python.sh:
+	test -f activate_python.sh || { echo "Error: Run ./setup_python.sh or ./setup_anaconda.sh"; exit 1; }
+
+################ Logging ################
+showenv: activate_python.sh
+ifeq ($(strip $(CPU_ONLY)),)
+	@echo CUDA_VERSION=$(CUDA_VERSION)
+	. ./activate_python.sh && python3 check_pytorch_cuda_compatibility.py $(TH_VERSION) ${CUDA_VERSION} || { echo "Change TH_VERSION or CUDA_VERSION"; exit 1; }
+else
+	@echo Perform on CPU mode: CPU_ONLY=$(CPU_ONLY)
+endif
+	@echo PYTHON=$(shell . ./activate_python.sh && command -v python3)
+	@echo PYTHON_VERSION=$(shell . ./activate_python.sh && python3 --version)
+	@echo IS_CONDA=$(IS_CONDA)
+	@echo USE_PIP=$(USE_PIP)
+	@echo TH_VERSION=$(TH_VERSION)
+	@echo CONDA_PYTORCH=$(CONDA_PYTORCH)
+	@echo PIP_PYTORCH=$(PIP_PYTORCH)
+	@echo NO_CUPY=$(NO_CUPY)
+
+#########################################
+
+cmake.done: activate_python.sh
+	. ./activate_python.sh && { command -v cmake || conda install -y cmake; }
+	touch cmake.done
+flac.done: activate_python.sh
+	. ./activate_python.sh && { command -v flac || conda install -y libflac -c conda-forge; }
+	touch flac.done
+ffmpeg.done: activate_python.sh
+	. ./activate_python.sh && { command -v ffmpeg || conda install -y ffmpeg -c conda-forge; }
+	touch ffmpeg.done
+sox.done: activate_python.sh
+	. ./activate_python.sh && { command -v sox || conda install -y sox -c conda-forge; }
+	touch sox.done
+sndfile.done: activate_python.sh
+	. ./activate_python.sh && { python3 -c "from ctypes.util import find_library as F; assert F('sndfile') is not None" || conda install -y libsndfile=1.0.28 -c conda-forge; }
+	touch sndfile.done
+ifneq ($(strip $(IS_CONDA)),)
+conda_packages.done: cmake.done flac.done ffmpeg.done sox.done sndfile.done
+else
+conda_packages.done:
+endif
+	touch conda_packages.done
+
+
+ifneq ($(strip $(USE_PIP)),)
+pytorch.done: activate_python.sh
+	. ./activate_python.sh && python3 -m pip install numpy --upgrade  # Workaround for "ImportError: numpy.core.multiarray failed to import"
+	. ./activate_python.sh && python3 -m pip install $(PIP_PYTORCH)
+	touch pytorch.done
+else
+pytorch.done: activate_python.sh
+	. ./activate_python.sh && conda install -y $(CONDA_PYTORCH) -c pytorch
+	touch pytorch.done
+endif
+
+# NOTE(kamo): conda_packages is not necessary for installation of svs, but add it the dependencies just in case.
+svs.done: pytorch.done conda_packages.done
+	. ./activate_python.sh && python3 -m pip install -e "..[recipe]"  # Install editable mode by default
+	touch svs.done
+
+check_install: python
+ifeq ($(strip $(CPU_ONLY)),)
+
+ifneq ($(strip $(NO_CUPY)),)
+	. ./activate_python.sh; python3 check_install.py --no-cupy
+else
+	. ./activate_python.sh; python3 check_install.py
+endif
+
+else
+
+ifneq ($(strip $(NO_CUPY)),)
+	. ./activate_python.sh; python3 check_install.py --no-cuda --no-cupy
+else
+	. ./activate_python.sh; python3 check_install.py --no-cuda
+endif
+
+endif
+
+
+clean: clean_extra
+	rm -rf *.done
+	find . -iname "*.pyc" -delete
+
+clean_python:
+	rm -f svs.done chainer.done pytorch.done
+	find . -iname "*.pyc" -delete
+
