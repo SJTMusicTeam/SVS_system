@@ -37,17 +37,33 @@ def _sum(x):
         return np.sum(x)
     return float(x.sum())
 
+
 def _linearSpec_2_mfcc(output, args):
     magnitude_spectrum = np.abs(output)
     power_spectrum = np.square(magnitude_spectrum)
-    mel_basis = librosa.filters.mel(sr=args.sampling_rate, n_fft=args.nfft, n_mels=128, fmin=0.0, fmax=None, htk=False, norm=1) 
-    mel_spectrogram = np.dot(power_spectrum, mel_basis.transpose(1,0))        # # dim = [batch_size, n_frames, 125]
-    log_mel_spectrogram = librosa.core.spectrum.power_to_db(mel_spectrogram, ref=1.0, amin=1e-10, top_db=80.0)    
-    mfcc = scipy.fftpack.dct(log_mel_spectrogram, type=2, norm='ortho')[:,:25]    # # dim = [batch_size, n_frames, 25]
+    mel_basis = librosa.filters.mel(
+        sr=args.sampling_rate,
+        n_fft=args.nfft,
+        n_mels=128,
+        fmin=0.0,
+        fmax=None,
+        htk=False,
+        norm=1,
+    )
+    mel_spectrogram = np.dot(
+        power_spectrum, mel_basis.transpose(1, 0)
+    )  # # dim = [batch_size, n_frames, 125]
+    log_mel_spectrogram = librosa.core.spectrum.power_to_db(
+        mel_spectrogram, ref=1.0, amin=1e-10, top_db=80.0
+    )
+    mfcc = scipy.fftpack.dct(log_mel_spectrogram, type=2, norm="ortho")[
+        :, :25
+    ]  # # dim = [batch_size, n_frames, 25]
     return mfcc
 
+
 def Calculate_melcd_fromLinearSpectrum(output, spec, length, args):
-    # output = [batch size, num frames, feat_dim] 
+    # output = [batch size, num frames, feat_dim]
     batch_size, num_frames, feat_dim = np.shape(output)
     output = output.cpu().detach().numpy()
     spec = spec.cpu().detach().numpy()
@@ -57,8 +73,8 @@ def Calculate_melcd_fromLinearSpectrum(output, spec, length, args):
     mfcc_ground_truth = np.zeros([batch_size, num_frames, 25])
     mcd_total = 0
     for i in range(batch_size):
-        output_nopadding = output[i][:length[i]]
-        spec_nopadding = spec[i][:length[i]]
+        output_nopadding = output[i][: length[i]]
+        spec_nopadding = spec[i][: length[i]]
 
         # log_mel_spectrogram_predict = librosa.core.amplitude_to_db(output_nopadding, ref=1.0, amin=1e-5, top_db=80.0)   # dim = [n_frames, n_mels]
         # log_mel_spectrogram_ground_truth = librosa.core.amplitude_to_db(spec_nopadding, ref=1.0, amin=1e-5, top_db=80.0)   # dim = [n_frames, n_mels]
@@ -66,18 +82,25 @@ def Calculate_melcd_fromLinearSpectrum(output, spec, length, args):
         # melCepstrum_predict = scipy.fftpack.dct(log_mel_spectrogram_predict)                            # # dim = [n_frames, n_mels]
         # melCepstrum_ground_truth = scipy.fftpack.dct(log_mel_spectrogram_ground_truth)
 
-        mfcc_predict[i][:length[i]] = _linearSpec_2_mfcc(output_nopadding, args)                                # # dim = [n_frames, 25]
-        mfcc_ground_truth[i][:length[i]] = _linearSpec_2_mfcc(spec_nopadding, args)
-        
+        mfcc_predict[i][: length[i]] = _linearSpec_2_mfcc(
+            output_nopadding, args
+        )  # # dim = [n_frames, 25]
+        mfcc_ground_truth[i][: length[i]] = _linearSpec_2_mfcc(spec_nopadding, args)
+
         # print(length[i], melcd(_linearSpec_2_mfcc(output_nopadding,args), _linearSpec_2_mfcc(spec_nopadding,args), [length[i]]) )
-        mcd_average = melcd(_linearSpec_2_mfcc(output_nopadding,args), _linearSpec_2_mfcc(spec_nopadding,args), [length[i]])
+        mcd_average = melcd(
+            _linearSpec_2_mfcc(output_nopadding, args),
+            _linearSpec_2_mfcc(spec_nopadding, args),
+            [length[i]],
+        )
         mcd_total += mcd_average * length[i]
-    mcd_value = mcd_total/np.sum(length)
+    mcd_value = mcd_total / np.sum(length)
     # mcd_value = melcd(mfcc_predict, mfcc_ground_truth, length)
     # 最后一起算的结果和每个sample单独算不一样
     # print(mcd_value, )
 
     return mcd_value, np.sum(length)
+
 
 def melcd(X, Y, lengths=None):
     """Mel-cepstrum distortion (MCD).
@@ -129,7 +152,6 @@ def melcd(X, Y, lengths=None):
     return _logdb_const * float(s) / float(T)
 
 
-
 def mean_squared_error(X, Y, lengths=None):
     """Mean squared error (MSE).
 
@@ -165,8 +187,9 @@ def mean_squared_error(X, Y, lengths=None):
     return math.sqrt(float(s) / float(T))
 
 
-
-def lf0_mean_squared_error(src_f0, src_vuv, tgt_f0, tgt_vuv, lengths=None, linear_domain=False):
+def lf0_mean_squared_error(
+    src_f0, src_vuv, tgt_f0, tgt_vuv, lengths=None, linear_domain=False
+):
     """Mean squared error (MSE) for log-F0 sequences.
 
     MSE is computed for voiced segments.
@@ -201,8 +224,7 @@ def lf0_mean_squared_error(src_f0, src_vuv, tgt_f0, tgt_vuv, lengths=None, linea
 
     T = 0
     s = 0.0
-    for x, x_vuv, y, y_vuv, length in zip(
-            src_f0, src_vuv, tgt_f0, tgt_vuv, lengths):
+    for x, x_vuv, y, y_vuv, length in zip(src_f0, src_vuv, tgt_f0, tgt_vuv, lengths):
         x, x_vuv = x[:length], x_vuv[:length]
         y, y_vuv = y[:length], y_vuv[:length]
         voiced_indices = (x_vuv + y_vuv) >= 2
@@ -214,7 +236,6 @@ def lf0_mean_squared_error(src_f0, src_vuv, tgt_f0, tgt_vuv, lengths=None, linea
         s += (z * z).sum()
 
     return math.sqrt(float(s) / float(T))
-
 
 
 def vuv_error(src_vuv, tgt_vuv, lengths=None):
@@ -242,10 +263,11 @@ def vuv_error(src_vuv, tgt_vuv, lengths=None):
         s += (x != y).sum()
     return float(s) / float(T)
 
+
 def compute_f0_mse(ref_data, gen_data):
     ref_vuv_vector = np.zeros((ref_data.size, 1))
     gen_vuv_vector = np.zeros((ref_data.size, 1))
-    
+
     ref_vuv_vector[ref_data > 0.0] = 1.0
     gen_vuv_vector[gen_data > 0.0] = 1.0
 
@@ -260,17 +282,19 @@ def compute_f0_mse(ref_data, gen_data):
     vuv_error_vector = sum_ref_gen_vector[sum_ref_gen_vector == 0.0]
     vuv_error = np.sum(sum_ref_gen_vector[sum_ref_gen_vector == 1.0])
 
-    return  f0_mse, vuv_error, voiced_frame_number
+    return f0_mse, vuv_error, voiced_frame_number
+
 
 def compute_corr(ref_data, gen_data):
     corr_coef = pearsonr(ref_data, gen_data)
 
     return corr_coef[0]
 
+
 def compute_f0_corr(ref_data, gen_data):
     ref_vuv_vector = np.zeros((ref_data.size, 1))
     gen_vuv_vector = np.zeros((ref_data.size, 1))
-    
+
     ref_vuv_vector[ref_data > 0.0] = 1.0
     gen_vuv_vector[gen_data > 0.0] = 1.0
 
@@ -281,28 +305,31 @@ def compute_f0_corr(ref_data, gen_data):
 
     return f0_corr
 
+
 def F0_VUV_distortion(reference_list, generation_list):
-    '''
-        reference_list: ground_truth_list
-        generation_list: synthesis_list
-    '''
-    number=len(reference_list)
+    """
+    reference_list: ground_truth_list
+    generation_list: synthesis_list
+    """
+    number = len(reference_list)
     total_voiced_frame_number = 0
     vuv_error = 0
     distortion = 0.0
     total_frame_number = 0
 
-    ref_all_files_data = np.reshape(np.array([]), (-1,1))
-    gen_all_files_data = np.reshape(np.array([]), (-1,1))
+    ref_all_files_data = np.reshape(np.array([]), (-1, 1))
+    gen_all_files_data = np.reshape(np.array([]), (-1, 1))
 
     for i in range(number):
-        length1=len(reference_list[i])
-        length2=len(generation_list[i])
-        length=min(length1,length2)
-        f0_ref=reference_list[i][:length].reshape(length,1)
-        f0_gen=generation_list[i][:length].reshape(length,1)	
-        
-        temp_distortion, temp_vuv_error, voiced_frame_number = compute_f0_mse(f0_ref, f0_gen)
+        length1 = len(reference_list[i])
+        length2 = len(generation_list[i])
+        length = min(length1, length2)
+        f0_ref = reference_list[i][:length].reshape(length, 1)
+        f0_gen = generation_list[i][:length].reshape(length, 1)
+
+        temp_distortion, temp_vuv_error, voiced_frame_number = compute_f0_mse(
+            f0_ref, f0_gen
+        )
         vuv_error += temp_vuv_error
         total_voiced_frame_number += voiced_frame_number
         distortion += temp_distortion
@@ -313,37 +340,53 @@ def F0_VUV_distortion(reference_list, generation_list):
 
     distortion /= float(total_voiced_frame_number)
     f0_rmse = np.sqrt(distortion)
-    vuv_error  /= float(total_frame_number)
+    vuv_error /= float(total_frame_number)
     # f0_corr = compute_f0_corr(ref_all_files_data, gen_all_files_data)
-    return  distortion, total_voiced_frame_number, vuv_error, total_frame_number, ref_all_files_data, gen_all_files_data
+    return (
+        distortion,
+        total_voiced_frame_number,
+        vuv_error,
+        total_frame_number,
+        ref_all_files_data,
+        gen_all_files_data,
+    )
+
 
 def F0_detection_wav(wav_path, signal, args):
 
     f0_bin = 256
     f0_max = 1100.0
     f0_min = 50.0
-    frame_length = 60/1000
-    frame_shift = 30/1000
+    frame_length = 60 / 1000
+    frame_shift = 30 / 1000
 
     if wav_path != None:
-        signal, osr = librosa.load(wav_path,sr = None)
+        signal, osr = librosa.load(wav_path, sr=None)
     else:
         osr = args.sampling_rate
     seg_signal = signal.astype("double")
-    _f0, t = pw.harvest(seg_signal, osr, f0_floor=f0_min, f0_ceil=f0_max, frame_period=frame_shift * 1000)
+    _f0, t = pw.harvest(
+        seg_signal,
+        osr,
+        f0_floor=f0_min,
+        f0_ceil=f0_max,
+        frame_period=frame_shift * 1000,
+    )
     _f0 = pw.stonemask(seg_signal, _f0, t, osr)
 
     return _f0
 
+
 def invert_spectrogram(spectrogram, win_length, hop_length):
-    '''Applies inverse fft.
+    """Applies inverse fft.
     Args:
       spectrogram: [1+n_fft//2, t]
-    '''
+    """
     return librosa.istft(spectrogram, hop_length, win_length=win_length, window="hann")
 
+
 def griffin_lim(spectrogram, iter_vocoder, n_fft, hop_length, win_length):
-    '''Applies Griffin-Lim's raw.'''
+    """Applies Griffin-Lim's raw."""
     X_best = copy.deepcopy(spectrogram)
     for i in range(iter_vocoder):
         X_t = invert_spectrogram(X_best, win_length, hop_length)
@@ -354,13 +397,16 @@ def griffin_lim(spectrogram, iter_vocoder, n_fft, hop_length, win_length):
     y = np.real(X_t)
     return y
 
-def spectrogram2wav(mag, max_db, ref_db, preemphasis, power, sr, hop_length, win_length, n_fft):
-    '''# Generate wave file from linear magnitude spectrogram
+
+def spectrogram2wav(
+    mag, max_db, ref_db, preemphasis, power, sr, hop_length, win_length, n_fft
+):
+    """# Generate wave file from linear magnitude spectrogram
     Args:
       mag: A numpy array of (T, 1+n_fft//2)
     Returns:
       wav: A 1-D numpy array.
-    '''
+    """
     hop_length = int(hop_length * sr)
     win_length = int(win_length * sr)
     n_fft = n_fft
@@ -375,7 +421,7 @@ def spectrogram2wav(mag, max_db, ref_db, preemphasis, power, sr, hop_length, win
     mag = np.power(10.0, mag * 0.05)
 
     # wav reconstruction
-    wav = griffin_lim(mag** power, 100, n_fft, hop_length, win_length)
+    wav = griffin_lim(mag ** power, 100, n_fft, hop_length, win_length)
 
     # de-preemphasis
     wav = signal.lfilter([1], [1, -preemphasis], wav)
@@ -385,34 +431,74 @@ def spectrogram2wav(mag, max_db, ref_db, preemphasis, power, sr, hop_length, win
 
     return wav.astype(np.float32)
 
+
 def Calculate_f0RMSE_VUV_CORR_fromWav(output, spec, length, args, flag):
-    # output = [batch size, num frames, feat_dim] 
+    # output = [batch size, num frames, feat_dim]
     batch_size, num_frames, feat_dim = np.shape(output)
     output = output.cpu().detach().numpy()
     spec = spec.cpu().detach().numpy()
     length = np.max(length.cpu().detach().numpy(), axis=1)
 
-    f0_synthesis_list, f0_ground_truth_list = [],[]
+    f0_synthesis_list, f0_ground_truth_list = [], []
     for i in range(batch_size):
-        output_nopadding = output[i][:length[i]]
-        spec_nopadding = spec[i][:length[i]]
+        output_nopadding = output[i][: length[i]]
+        spec_nopadding = spec[i][: length[i]]
 
-        wav_predict = spectrogram2wav(output_nopadding, args.max_db, args.ref_db, args.preemphasis, args.power, 
-                            args.sampling_rate, args.frame_shift, args.frame_length, args.nfft)
-        wav_ground_truth = spectrogram2wav(spec_nopadding, args.max_db, args.ref_db, args.preemphasis, args.power, 
-                            args.sampling_rate, args.frame_shift, args.frame_length, args.nfft)
-        
+        wav_predict = spectrogram2wav(
+            output_nopadding,
+            args.max_db,
+            args.ref_db,
+            args.preemphasis,
+            args.power,
+            args.sampling_rate,
+            args.frame_shift,
+            args.frame_length,
+            args.nfft,
+        )
+        wav_ground_truth = spectrogram2wav(
+            spec_nopadding,
+            args.max_db,
+            args.ref_db,
+            args.preemphasis,
+            args.power,
+            args.sampling_rate,
+            args.frame_shift,
+            args.frame_length,
+            args.nfft,
+        )
+
         f0_synthesis = F0_detection_wav(None, wav_predict, args)
         f0_ground_truth = F0_detection_wav(None, wav_ground_truth, args)
 
         f0_synthesis_list.append(f0_synthesis)
         f0_ground_truth_list.append(f0_ground_truth)
-    distortion, total_voiced_frame_number, vuv_error, total_frame_number, ref_all_files_data, gen_all_files_data = F0_VUV_distortion(f0_ground_truth_list, f0_synthesis_list)
+    (
+        distortion,
+        total_voiced_frame_number,
+        vuv_error,
+        total_frame_number,
+        ref_all_files_data,
+        gen_all_files_data,
+    ) = F0_VUV_distortion(f0_ground_truth_list, f0_synthesis_list)
 
     if flag == "train":
-        return distortion, total_voiced_frame_number, vuv_error, total_frame_number, None, None
+        return (
+            distortion,
+            total_voiced_frame_number,
+            vuv_error,
+            total_frame_number,
+            None,
+            None,
+        )
     else:
-        return distortion, total_voiced_frame_number, vuv_error, total_frame_number, ref_all_files_data, gen_all_files_data
+        return (
+            distortion,
+            total_voiced_frame_number,
+            vuv_error,
+            total_frame_number,
+            ref_all_files_data,
+            gen_all_files_data,
+        )
 
 
 if __name__ == "__main__":
@@ -429,7 +515,7 @@ if __name__ == "__main__":
     log_mel_spectrogram = librosa.core.power_to_db(mel_spectrogram)
     # print(log_mel_spectrogram, np.shape(log_mel_spectrogram))             # dim = 128
 
-    melCepstrum1 = scipy.fftpack.dct(log_mel_spectrogram, axis=0, type=2, norm='ortho')
+    melCepstrum1 = scipy.fftpack.dct(log_mel_spectrogram, axis=0, type=2, norm="ortho")
     # print(melCepstrum1, np.shape(melCepstrum1))                               # dim = 128
 
     y = np.random.random((30,))
@@ -439,36 +525,30 @@ if __name__ == "__main__":
     # print(y_mfcc, np.shape(y_mfcc))
 
     mel_spectrogram = librosa.feature.melspectrogram(y=y)
-    print(mel_spectrogram, np.shape(mel_spectrogram))                     # dim = [n_mels, n_frames]
+    print(mel_spectrogram, np.shape(mel_spectrogram))  # dim = [n_mels, n_frames]
 
     log_mel_spectrogram = librosa.core.power_to_db(mel_spectrogram)
-    print(log_mel_spectrogram, np.shape(log_mel_spectrogram))             # dim = [n_mels, n_frames]
+    print(
+        log_mel_spectrogram, np.shape(log_mel_spectrogram)
+    )  # dim = [n_mels, n_frames]
 
-    melCepstrum2 = scipy.fftpack.dct(log_mel_spectrogram, axis=0, type=2, norm='ortho')
-    print(melCepstrum2, np.shape(melCepstrum2))                               # dim = [n_mels, n_frames]
+    melCepstrum2 = scipy.fftpack.dct(log_mel_spectrogram, axis=0, type=2, norm="ortho")
+    print(melCepstrum2, np.shape(melCepstrum2))  # dim = [n_mels, n_frames]
 
-    res = melcd(melCepstrum1.transpose(1,0), melCepstrum2.transpose(1,0))
+    res = melcd(melCepstrum1.transpose(1, 0), melCepstrum2.transpose(1, 0))
     print(res)
 
     path_synthesis = "40.wav"
     path_ground_truth = "40_true.wav"
-    
+
     f0_ground_truth = F0_detection_wav(path_ground_truth)
 
     f0_synthesis = F0_detection_wav(path_synthesis)
 
-
     f0_rmse, vuv_error, f0_corr = F0_VUV_distortion([f0_ground_truth], [f0_synthesis])
-    print('with raw_f0:')
-    print('F0:- RMSE: {:.4f} Hz; CORR:{:.4f}; VUV: {:.4f}%'.format(f0_rmse, f0_corr, vuv_error*100.))
-
-
-
-
-
-
-
-
-
-
-
+    print("with raw_f0:")
+    print(
+        "F0:- RMSE: {:.4f} Hz; CORR:{:.4f}; VUV: {:.4f}%".format(
+            f0_rmse, f0_corr, vuv_error * 100.0
+        )
+    )
