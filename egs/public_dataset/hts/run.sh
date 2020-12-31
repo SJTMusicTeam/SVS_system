@@ -23,7 +23,8 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
   echo " Stage0: download data "
   echo =======================
 
-  echo ""
+  wget http://hts.sp.nitech.ac.jp/archives/2.3/HTS-demo_NIT-SONG070-F001.tar.bz2
+  tar -xf HTS-demo_NIT-SONG070-F001.tar.bz2
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then 
@@ -32,7 +33,8 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   echo " Stage1: data preprocessing "
   echo ============================
 
-  python local/prepare_data.py kiritan_singing/wav kiritan_singing/mono_label kiritan_data
+  python prepare_data.py HTS-demo_NIT-SONG070-F001/data/raw HTS-demo_NIT-SONG070-F001/data/labels/mono hts_data \
+    --label_type r --wav_extention raw
 
 fi
 
@@ -65,3 +67,4 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   python infer.py -c conf/infer.yaml
 
 fi
+
