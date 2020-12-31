@@ -9,9 +9,7 @@ import re
 path_audio = "annotation/clean/"
 path_npy = "alignment/clean_set/"
 dest_path = "annotation/alignment_correction/clean_alignment_correction/"
-phone_path = (
-    "alignment/clean_set/new_phone"
-)
+phone_path = "alignment/clean_set/new_phone"
 phone_file = open(phone_path, "r", encoding="utf-8")
 phone_reader = csv.reader(phone_file, delimiter=" ")
 phone_dict = {}
