@@ -1,16 +1,16 @@
-import numpy as np
-import re
-import os
 import csv
 import librosa
+import numpy as np
+import os
+import re
 
 # Resample to 48k
 
-path_audio = "/data1/gs/annotation/clean/"
-path_npy = "/data1/gs/SVS_system/preprocessing/ch_asr/exp/alignment/clean_set/"
-dest_path = "/data1/gs/annotation/alignment_correction/clean_alignment_correction/"
+path_audio = "annotation/clean/"
+path_npy = "alignment/clean_set/"
+dest_path = "annotation/alignment_correction/clean_alignment_correction/"
 phone_path = (
-    "/data1/gs/SVS_system/preprocessing/ch_asr/exp/alignment/clean_set/new_phone"
+    "alignment/clean_set/new_phone"
 )
 phone_file = open(phone_path, "r", encoding="utf-8")
 phone_reader = csv.reader(phone_file, delimiter=" ")
@@ -24,11 +24,6 @@ def PackZero(integer):
     return "0" * pack + str(integer)
 
 
-def PackZero_str(folder_name):
-    pack = 4 - len(folder_name)
-    return "0" * pack + folder_name
-
-
 sil_add = list(np.ones(72000))
 folder_all = os.listdir(path_audio)
 
@@ -37,14 +32,13 @@ for folder_name in folder_all:
     if not true_idx:
         continue
 
-    ### txt
-    num = PackZero_str(folder_name)
+    # txt
+    num = PackZero(folder_name)
     align_name = dest_path + num + "_align_all.txt"
     f = open(align_name, "w")
     f.close()
     start = 0
     offset = 72000
-    ###
 
     audio_all = []
     audio_dir = path_audio + folder_name + "/"
@@ -56,13 +50,13 @@ for folder_name in folder_all:
             break
 
         try:
-            ### load data
+            # load data
             file_audio = PackZero(idx_song) + ".wav"
             file_npy = PackZero(idx_song) + ".npy"
             alignment_origin = np.load(path_npy + num + file_npy)
             audio, sr = librosa.load(audio_dir + file_audio)
 
-            # ----------Alignment audio----------------------------------------------------------------------------
+            # ----------Alignment audio-----------
             audio_48k = librosa.resample(audio, sr, 48000)
             audio_48k = list(audio_48k)
             audio_48k_sil = []
@@ -72,7 +66,7 @@ for folder_name in folder_all:
             audio_48k_sil.extend(sil_add)
             audio_all.extend(audio_48k_sil)
 
-            # ----------Alignment TXT----------------------------------------------------------------------------
+            # ----------Alignment TXT-------------
             counter = 1  # count num of frames
             start = offset / 48000  # sr = 48000
 
@@ -120,4 +114,4 @@ for folder_name in folder_all:
 
     audio_all = np.array(audio_all)
     librosa.output.write_wav(dest_path + folder_name + "_all.wav", audio_all, 48000)
-    print("-------------------Finish" + folder_name + "---------------------")
+    print("Finish" + folder_name)
