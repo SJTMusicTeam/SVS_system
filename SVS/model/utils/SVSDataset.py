@@ -96,7 +96,12 @@ def _phone2char(phones, char_max_len):
 
 class SVSCollator(object):
     def __init__(
-        self, max_len, char_max_len=80, use_asr_post=False, phone_size=68, n_mels=80
+        self,
+        max_len,
+        char_max_len=80,
+        use_asr_post=False,
+        phone_size=68,
+        n_mels=80,
     ):
         self.max_len = max_len
         # plus 1 for aligner to consider padding char
@@ -176,7 +181,18 @@ class SVSCollator(object):
                 mel,
             )
         else:
-            return phone, beat, pitch, spec, real, imag, length_mask, None, None, mel
+            return (
+                phone,
+                beat,
+                pitch,
+                spec,
+                real,
+                imag,
+                length_mask,
+                None,
+                None,
+                mel,
+            )
 
 
 class SVSDataset(Dataset):
@@ -284,7 +300,9 @@ class SVSDataset(Dataset):
         if len(phone.shape) > 1:
             char, trimed_length = None, len(phone)
         else:
-            char, trimed_length = _phone2char(phone[: self.max_len], self.char_max_len)
+            char, trimed_length = _phone2char(
+                phone[: self.max_len], self.char_max_len
+            )
         min_length = min(len(phone), np.shape(spectrogram)[0], trimed_length)
         phone = phone[:min_length]
         beat = beat[:min_length]

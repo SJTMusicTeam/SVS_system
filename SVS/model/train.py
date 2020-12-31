@@ -86,7 +86,9 @@ def Auto_save_model(
 
             if os.path.exists(
                 "{}/epoch_{}_{}.pth.tar".format(
-                    args.model_save_dir, save_loss_select, epoch_to_save[select_loss]
+                    args.model_save_dir,
+                    save_loss_select,
+                    epoch_to_save[select_loss],
                 )
             ):
                 os.remove(
@@ -96,7 +98,11 @@ def Auto_save_model(
                         epoch_to_save[select_loss],
                     )
                 )
-                print("model of epoch:{} deleted".format(epoch_to_save[select_loss]))
+                print(
+                    "model of epoch:{} deleted".format(
+                        epoch_to_save[select_loss]
+                    )
+                )
 
             print(
                 "delete epoch: {:04d}, {}={:.4f}".format(
@@ -140,7 +146,9 @@ def train(args):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     elif (
-        args.gpu_id >= 0 and torch.cuda.is_available() and args.auto_select_gpu == False
+        args.gpu_id >= 0
+        and torch.cuda.is_available()
+        and args.auto_select_gpu == False
     ):
         torch.cuda.set_device(args.gpu_id)
         print(f"GPU {args.gpu_id} is used")
@@ -393,7 +401,12 @@ def train(args):
     if args.resume and os.path.exists(args.model_save_dir):
         checks = os.listdir(args.model_save_dir)
         start_epoch = max(
-            list(map(lambda x: int(x[6:-8]) if x.endswith("pth.tar") else -1, checks))
+            list(
+                map(
+                    lambda x: int(x[6:-8]) if x.endswith("pth.tar") else -1,
+                    checks,
+                )
+            )
         )
         if start_epoch < 0:
             model_load_dir = ""
@@ -450,7 +463,9 @@ def train(args):
         )
         if len(para_list) > 0:
             print(
-                "Not loading {} because of different sizes".format(", ".join(para_list))
+                "Not loading {} because of different sizes".format(
+                    ", ".join(para_list)
+                )
             )
         model_dict.update(state_dict_new)
         model.load_state_dict(model_dict)
@@ -544,7 +559,9 @@ def train(args):
 
         out_log = "Train epoch: {:04d}, ".format(epoch)
         if args.optimizer == "noam":
-            out_log += "lr: {:.6f}, ".format(optimizer._optimizer.param_groups[0]["lr"])
+            out_log += "lr: {:.6f}, ".format(
+                optimizer._optimizer.param_groups[0]["lr"]
+            )
         elif args.optimizer == "adam":
             out_log += "lr: {:.6f}, ".format(optimizer.param_groups[0]["lr"])
         out_log += "loss: {:.4f}, spec_loss: {:.4f} ".format(
@@ -564,12 +581,20 @@ def train(args):
 
         start_t_dev = time.time()
         dev_info = validate(
-            dev_loader, model, device, loss, loss_perceptual_entropy, epoch, args
+            dev_loader,
+            model,
+            device,
+            loss,
+            loss_perceptual_entropy,
+            epoch,
+            args,
         )
         end_t_dev = time.time()
 
-        dev_log = "Dev epoch: {:04d}, loss: {:.4f}, spec_loss: {:.4f}, ".format(
-            epoch, dev_info["loss"], dev_info["spec_loss"]
+        dev_log = (
+            "Dev epoch: {:04d}, loss: {:.4f}, spec_loss: {:.4f}, ".format(
+                epoch, dev_info["loss"], dev_info["spec_loss"]
+            )
         )
         dev_log += "mcd_value: {:.4f}, ".format(dev_info["mcd_value"])
         if args.n_mels > 0:

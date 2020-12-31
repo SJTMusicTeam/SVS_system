@@ -95,7 +95,9 @@ def griffin_lim(spectrogram):
     X_best = copy.deepcopy(spectrogram)
     for i in range(hp.n_iter):
         X_t = invert_spectrogram(X_best)
-        est = librosa.stft(X_t, hp.n_fft, hp.hop_length, win_length=hp.win_length)
+        est = librosa.stft(
+            X_t, hp.n_fft, hp.hop_length, win_length=hp.win_length
+        )
         phase = est / np.maximum(1e-8, np.abs(est))
         X_best = spectrogram * phase
     X_t = invert_spectrogram(X_best)
@@ -147,7 +149,9 @@ def Get_align_beat_pitch_spectrogram(
                 pitch = f.read().strip().split(" ")
                 f.close()
             wav_path = os.path.join(
-                wav_root_path, filename_list[i][1:4], filename_list[i][4:] + ".wav"
+                wav_root_path,
+                filename_list[i][1:4],
+                filename_list[i][4:] + ".wav",
             )
             spectrogram = get_spectrograms(wav_path).T
 
@@ -180,7 +184,9 @@ def Get_align_beat_pitch_spectrogram(
 
 
 class Encoder(nn.Module):
-    def __init__(self, input_dim, emb_dim, enc_hid_dim, dec_hid_dim, dropout, device):
+    def __init__(
+        self, input_dim, emb_dim, enc_hid_dim, dec_hid_dim, dropout, device
+    ):
         super().__init__()
 
         self.embedding_phone = nn.Embedding(input_dim, emb_dim)
@@ -200,7 +206,9 @@ class Encoder(nn.Module):
         src_pitch = src[:, :, 2]  # [src len, batch size]
 
         embedded_phone = self.dropout(
-            self.embedding_phone(src_phone.type(torch.LongTensor).to(self.device))
+            self.embedding_phone(
+                src_phone.type(torch.LongTensor).to(self.device)
+            )
         )  # [src len, batch size, emb dim]
         # embedded_pitch = self.dropout(self.embedding_pitch(src_pitch))    # [src len, batch size, emb dim]
 
@@ -269,7 +277,9 @@ class Attention(nn.Module):
         # hidden = [batch size, src len, dec hid dim]
         # encoder_outputs = [batch size, src len, enc hid dim * 2]
 
-        energy = torch.tanh(self.attn(torch.cat((hidden, encoder_outputs), dim=2)))
+        energy = torch.tanh(
+            self.attn(torch.cat((hidden, encoder_outputs), dim=2))
+        )
 
         # energy = [batch size, src len, dec hid dim]
 
@@ -290,7 +300,9 @@ class Decoder(nn.Module):
         self.emb_dim = emb_dim
         self.attention = attention
         self.rnn = nn.GRU((enc_hid_dim * 2) + emb_dim, dec_hid_dim)
-        self.fc_hid1 = nn.Linear((enc_hid_dim * 2) + dec_hid_dim + emb_dim, 2048)
+        self.fc_hid1 = nn.Linear(
+            (enc_hid_dim * 2) + dec_hid_dim + emb_dim, 2048
+        )
         # self.fc_hid2 = nn.Linear(2048, 1600)
         self.fc_out = nn.Linear(2048, output_dim)
         self.dropout = nn.Dropout(dropout)
@@ -350,7 +362,9 @@ class Decoder(nn.Module):
         weighted = weighted.squeeze(0)
 
         prediction = self.dropout(
-            F.relu(self.fc_hid1(torch.cat((output, weighted, embedded), dim=1)))
+            F.relu(
+                self.fc_hid1(torch.cat((output, weighted, embedded), dim=1))
+            )
         )
         # prediction = self.dropout(F.relu(self.fc_hid2(prediction)))
         prediction = F.relu(self.fc_out(prediction))
@@ -381,7 +395,9 @@ class Seq2Seq(nn.Module):
         trg_vocab_size = self.decoder.output_dim
 
         # tensor to store decoder outputs
-        outputs = torch.zeros(trg_len, batch_size, trg_vocab_size).to(self.device)
+        outputs = torch.zeros(trg_len, batch_size, trg_vocab_size).to(
+            self.device
+        )
 
         # encoder_outputs is all hidden states of the input sequence, back and forwards
         # hidden is the final forward and backward hidden states, passed through a linear layer
@@ -542,12 +558,8 @@ if __name__ == "__main__":
     # device = torch.device('cpu')
     print(device)
 
-    align_root_path = (
-        "/data1/gs/SVS_system/preprocessing/ch_asr/exp/alignment/clean_set/"  # 文件夹目录
-    )
-    pitch_beat_root_path = (
-        "/data1/gs/SVS_system/preprocessing/ch_asr/exp/pitch_beat_extraction/clean/"
-    )
+    align_root_path = "/data1/gs/SVS_system/preprocessing/ch_asr/exp/alignment/clean_set/"  # 文件夹目录
+    pitch_beat_root_path = "/data1/gs/SVS_system/preprocessing/ch_asr/exp/pitch_beat_extraction/clean/"
     wav_root_path = "/data1/gs/annotation/clean/"
     (
         phone_list,
@@ -586,7 +598,11 @@ if __name__ == "__main__":
 
     dataset = MyDataset(Data, Label, seq_lengths, device)
     dataloader = DataLoader(
-        dataset, batch_size=32, shuffle=False, collate_fn=collate_fn_padd, num_workers=0
+        dataset,
+        batch_size=32,
+        shuffle=False,
+        collate_fn=collate_fn_padd,
+        num_workers=0,
     )
 
     print("DataSet Prepare Succeed!")
@@ -608,8 +624,12 @@ if __name__ == "__main__":
     DEC_DROPOUT = 0.2
 
     attn = Attention(ENC_HID_DIM, DEC_HID_DIM)
-    enc = Encoder(INPUT_DIM, ENC_EMB_DIM, ENC_HID_DIM, DEC_HID_DIM, ENC_DROPOUT, device)
-    dec = Decoder(OUTPUT_DIM, DEC_EMB_DIM, ENC_HID_DIM, DEC_HID_DIM, DEC_DROPOUT, attn)
+    enc = Encoder(
+        INPUT_DIM, ENC_EMB_DIM, ENC_HID_DIM, DEC_HID_DIM, ENC_DROPOUT, device
+    )
+    dec = Decoder(
+        OUTPUT_DIM, DEC_EMB_DIM, ENC_HID_DIM, DEC_HID_DIM, DEC_DROPOUT, attn
+    )
 
     model = Seq2Seq(enc, dec, device).to(device)
     model.apply(init_weights)
@@ -630,7 +650,9 @@ if __name__ == "__main__":
 
         start_time = time.time()
 
-        train_loss, output, trg = train(model, dataloader, optimizer, criterion, CLIP)
+        train_loss, output, trg = train(
+            model, dataloader, optimizer, criterion, CLIP
+        )
         # valid_loss = evaluate(model, valid_iterator, criterion)
 
         scheduler.step(train_loss)
