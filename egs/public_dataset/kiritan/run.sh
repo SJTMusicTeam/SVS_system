@@ -8,7 +8,7 @@
 
 stage=0
 stop_stage=100
-
+ngpu=1
 
 # Set bash to 'debug' mode, it will exit on :
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
@@ -16,6 +16,7 @@ set -e
 set -u
 set -o pipefail
 
+./utils/parse_options.sh || exit 1;
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then 
   # Stage0: download data
@@ -42,7 +43,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   echo " Stage2: collect_stats "
   echo =======================
 
-  python train.py --collect_stats=True -c conf/train_rnn.yaml
+  ${train_cmd} train.py --collect_stats=True -c conf/train_rnn.yaml
   
 fi
 
@@ -52,7 +53,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   echo " Stage3: train "
   echo ===============
 
-  python train.py -c conf/train_rnn.yaml
+  ${cuda_cmd} -gpu ${ngpu} train.py -c conf/train_rnn.yaml
 
 fi
 
@@ -62,6 +63,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   echo " Stage3: infer "
   echo ===============
 
-  python infer.py -c conf/infer.yaml
+  ${cuda_cmd} -gpu ${ngpu} infer.py -c conf/infer.yaml
 
 fi
