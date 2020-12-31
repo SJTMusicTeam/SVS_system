@@ -6,8 +6,6 @@ import yamlargparse
 
 import sys
 
-# sys.path.append("/data1/gs/SVS_system_workplace/SVS_system")
-
 if __name__ == "__main__":
     parser = yamlargparse.ArgumentParser(description="SVS training")
     parser.add_argument(
