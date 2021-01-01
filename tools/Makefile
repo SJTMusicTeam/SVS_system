@@ -43,6 +43,12 @@ NO_CUPY := 0
 endif
 
 
+ifeq ($(shell expr $(CUDA_VERSION_WITHOUT_DOT) \>= 102), 1)
+# cupy==6.0.0 doesn't support CUDA=10.2 or later
+NO_CUPY := 0
+endif
+
+
 .PHONY: all clean
 
 all: kaldi showenv python conda_packages.done check_install
