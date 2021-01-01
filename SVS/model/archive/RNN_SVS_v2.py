@@ -51,7 +51,9 @@ def Get_align_beat_pitch_spectrogram(
                 pitch_list.append(f.read().strip().split(" "))
 
             wav_path = os.path.join(
-                wav_root_path, filename_list[i][1:4], filename_list[i][4:] + ".wav"
+                wav_root_path,
+                filename_list[i][1:4],
+                filename_list[i][4:] + ".wav",
             )
             frame_length = 60 / 1000
             frame_shift = 30 / 1000
@@ -88,7 +90,9 @@ class MyDataset(Dataset):
 
 
 class Encoder(nn.Module):
-    def __init__(self, input_dim, emb_dim, enc_hid_dim, dec_hid_dim, dropout, device):
+    def __init__(
+        self, input_dim, emb_dim, enc_hid_dim, dec_hid_dim, dropout, device
+    ):
         super().__init__()
 
         self.embedding_phone = nn.Embedding(input_dim, emb_dim)
@@ -177,7 +181,9 @@ class Attention(nn.Module):
         # hidden = [batch size, src len, dec hid dim]
         # encoder_outputs = [batch size, src len, enc hid dim * 2]
 
-        energy = torch.tanh(self.attn(torch.cat((hidden, encoder_outputs), dim=2)))
+        energy = torch.tanh(
+            self.attn(torch.cat((hidden, encoder_outputs), dim=2))
+        )
 
         # energy = [batch size, src len, dec hid dim]
 
@@ -199,7 +205,9 @@ class Decoder(nn.Module):
         self.output_dim = output_dim
         self.attention = attention
         self.rnn = nn.GRU((enc_hid_dim * 2) + emb_dim, dec_hid_dim)
-        self.fc_out = nn.Linear((enc_hid_dim * 2) + dec_hid_dim + emb_dim, output_dim)
+        self.fc_out = nn.Linear(
+            (enc_hid_dim * 2) + dec_hid_dim + emb_dim, output_dim
+        )
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, input, hidden, encoder_outputs):
@@ -256,7 +264,9 @@ class Decoder(nn.Module):
         output = output.squeeze(0)
         weighted = weighted.squeeze(0)
 
-        prediction = self.fc_out(torch.cat((output, weighted, embedded), dim=1))
+        prediction = self.fc_out(
+            torch.cat((output, weighted, embedded), dim=1)
+        )
 
         # prediction = [batch size, output dim]
 
@@ -399,12 +409,8 @@ if __name__ == "__main__":
     # device = torch.device('cpu')
     print(device)
 
-    align_root_path = (
-        "/data1/gs/SVS_system/preprocessing/ch_asr/exp/alignment/clean_set/"  # 文件夹目录
-    )
-    pitch_beat_root_path = (
-        "/data1/gs/SVS_system/preprocessing/ch_asr/exp/pitch_beat_extraction/clean/"
-    )
+    align_root_path = "/data1/gs/SVS_system/preprocessing/ch_asr/exp/alignment/clean_set/"  # 文件夹目录
+    pitch_beat_root_path = "/data1/gs/SVS_system/preprocessing/ch_asr/exp/pitch_beat_extraction/clean/"
     wav_root_path = "/data1/gs/annotation/clean/"
     (
         phone_list,
@@ -453,7 +459,9 @@ if __name__ == "__main__":
                 Label[i][j] = spectrogram_list[i][:, j]
 
     dataset = MyDataset(Data, Label, seq_lengths, device)
-    dataloader = DataLoader(dataset, batch_size=2, shuffle=False, num_workers=0)
+    dataloader = DataLoader(
+        dataset, batch_size=2, shuffle=False, num_workers=0
+    )
 
     print("DataSet Prepare Succeed!")
     # for i, batch in enumerate(dataloader):
@@ -474,8 +482,12 @@ if __name__ == "__main__":
     SRC_PAD_IDX = 0
 
     attn = Attention(ENC_HID_DIM, DEC_HID_DIM)
-    enc = Encoder(INPUT_DIM, ENC_EMB_DIM, ENC_HID_DIM, DEC_HID_DIM, ENC_DROPOUT, device)
-    dec = Decoder(OUTPUT_DIM, DEC_EMB_DIM, ENC_HID_DIM, DEC_HID_DIM, DEC_DROPOUT, attn)
+    enc = Encoder(
+        INPUT_DIM, ENC_EMB_DIM, ENC_HID_DIM, DEC_HID_DIM, ENC_DROPOUT, device
+    )
+    dec = Decoder(
+        OUTPUT_DIM, DEC_EMB_DIM, ENC_HID_DIM, DEC_HID_DIM, DEC_DROPOUT, attn
+    )
 
     model = Seq2Seq(enc, dec, SRC_PAD_IDX, device).cuda()
 

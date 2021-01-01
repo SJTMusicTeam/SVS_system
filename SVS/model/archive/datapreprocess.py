@@ -7,7 +7,14 @@ import numpy as np
 
 
 def _get_spectrograms(
-    fpath, require_sr, preemphasis, n_fft, hop_length, win_length, max_db, ref_db
+    fpath,
+    require_sr,
+    preemphasis,
+    n_fft,
+    hop_length,
+    win_length,
+    max_db,
+    ref_db,
 ):
     """Parse the wave file in `fpath` and
     Returns normalized melspectrogram and linear spectrogram.
@@ -49,7 +56,14 @@ def _get_spectrograms(
 
 
 def save_spectrograms(
-    wav_path, save_path, sr, preemphasis, frame_shift, frame_length, max_db, ref_db
+    wav_path,
+    save_path,
+    sr,
+    preemphasis,
+    frame_shift,
+    frame_length,
+    max_db,
+    ref_db,
 ):
     os.mkdir(save_path)
     for root, dirs, files in os.walk(wav_root_path):
@@ -69,7 +83,9 @@ def save_spectrograms(
                     max_db,
                     ref_db,
                 )
-                save_file_path = os.path.join(save_path, os.path.split(root)[1])
+                save_file_path = os.path.join(
+                    save_path, os.path.split(root)[1]
+                )
                 save_file_path = os.path.join(save_file_path, f[:-4] + ".npy")
                 print(save_file_path)
                 np.save(save_file_path, spectrogram)

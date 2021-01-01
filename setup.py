@@ -53,19 +53,8 @@ requirements = {
         "flake8-docstrings>=1.3.1",
         "black",
     ],
-    "doc": [
-        "Sphinx==2.1.2",
-        "sphinx-rtd-theme>=0.2.4",
-        "sphinx-argparse>=0.2.5",
-        "commonmark==0.8.1",
-        "recommonmark>=0.4.0",
-        "travis-sphinx>=2.0.1",
-        "nbsphinx>=0.4.2",
-        "sphinx-markdown-tables>=0.0.12",
-    ],
 }
 try:
-    # NOTE(kamo): These packages are not listed if installing from the PyPI server
     import torch
 
     if LooseVersion(torch.__version__) >= LooseVersion("1.1.0"):
@@ -105,13 +94,15 @@ extras_require = {
 
 dirname = os.path.dirname(__file__)
 setup(
-    name="espnet",
+    name="SVS",
     version="1.0.1",
-    url="http://github.com/espnet/espnet",
+    url="https://github.com/SJTMusicTeam/SVS_system",
     author="Jiatong Shi",
     author_email="ftshijt@gmail.com",
     description="Singing Voice Synthesis System (SVS_system)",
-    long_description=open(os.path.join(dirname, "README.md"), encoding="utf-8").read(),
+    long_description=open(
+        os.path.join(dirname, "README.md"), encoding="utf-8"
+    ).read(),
     long_description_content_type="text/markdown",
     license="Apache Software License",
     packages=find_packages(include=["SVS*"]),
