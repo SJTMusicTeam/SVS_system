@@ -24,8 +24,9 @@ def same_split(alignment):
     start = 0
     for i in range(size - 1):
         index = round(len(alignment) / size) * (i + 1)
-        while index < len(alignment) and \
-                  alignment[index] != alignment[index + 1]:
+        while (
+            index < len(alignment) and alignment[index] != alignment[index + 1]
+        ):
             index += 1
         segments.append(alignment[start:index])
         start = index + 1
@@ -92,12 +93,12 @@ def make_segment(alignment, sil="pau"):
     if silence_end[-1] != len(alignment) - 1:
         if silence_end[-1] - silence_start[-1] > 5:
             segment_info[pack_zero(start_id)] = {
-                "alignment": alignment[silence_end[-1] - 5:],
+                "alignment": alignment[silence_end[-1] - 5 :],
                 "start": silence_end[-1] - 5,
             }
         else:
             segment_info[pack_zero(start_id)] = {
-                "alignment": alignment[silence_start[-1]:],
+                "alignment": alignment[silence_start[-1] :],
                 "start": silence_start[-1],
             }
     return segment_info
@@ -174,10 +175,8 @@ def process(args):
         song_align = os.path.join(args.outdir, "alignment")
         song_wav = os.path.join(args.outdir, "wav_info", str(index))
         song_pitch_beat = os.path.join(
-                              args.outdir, 
-                              "pitch_beat_extraction", 
-                              str(index)
-                          )
+            args.outdir, "pitch_beat_extraction", str(index)
+        )
 
         if not os.path.exists(song_align):
             os.makedirs(song_align)
@@ -191,7 +190,7 @@ def process(args):
             start = segments[seg]["start"]
             name = seg
             seg_signal = signal[
-                int(start * hop_length): int(
+                int(start * hop_length) : int(
                     start * hop_length + len(alignment) * hop_length
                 )
             ]
@@ -205,8 +204,7 @@ def process(args):
             #     times, sr=args.sr, hop_length=hop_length, n_fft=n_fft
             # )
             np.save(
-                os.path.join(song_pitch_beat, name) + "_beats", 
-                np.array(beats)
+                os.path.join(song_pitch_beat, name) + "_beats", np.array(beats)
             )
 
             """extract pitch"""
@@ -221,8 +219,7 @@ def process(args):
             _f0 = pw.stonemask(seg_signal, _f0, t, args.sr)
 
             np.save(
-                os.path.join(song_pitch_beat, name) + "_pitch",
-                np.array(_f0)
+                os.path.join(song_pitch_beat, name) + "_pitch", np.array(_f0)
             )
 
             alignment_id = np.zeros((len(alignment)))
@@ -236,7 +233,7 @@ def process(args):
             sf.write(
                 os.path.join(song_wav, name) + ".wav",
                 seg_signal,
-                samplerate=args.sr
+                samplerate=args.sr,
             )
             print("saved {}".format(os.path.join(song_wav, name) + ".wav"))
         index += 1

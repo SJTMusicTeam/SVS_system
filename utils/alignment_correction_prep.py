@@ -9,9 +9,7 @@ import re
 path_audio = "annotation/clean/"
 path_npy = "alignment/clean_set/"
 dest_path = "annotation/alignment_correction/clean_alignment_correction/"
-phone_path = (
-    "alignment/clean_set/new_phone"
-)
+phone_path = "alignment/clean_set/new_phone"
 phone_file = open(phone_path, "r", encoding="utf-8")
 phone_reader = csv.reader(phone_file, delimiter=" ")
 phone_dict = {}
@@ -113,5 +111,7 @@ for folder_name in folder_all:
             continue
 
     audio_all = np.array(audio_all)
-    librosa.output.write_wav(dest_path + folder_name + "_all.wav", audio_all, 48000)
+    librosa.output.write_wav(
+        dest_path + folder_name + "_all.wav", audio_all, 48000
+    )
     print("Finish" + folder_name)

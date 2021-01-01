@@ -75,7 +75,8 @@ def clean_divide(input_path, output_path):
             for f in files:
                 r, dirname = os.path.split(root)
                 shutil.copyfile(
-                    os.path.join(root, f), develop_path + "/" + dirname + "_" + f
+                    os.path.join(root, f),
+                    develop_path + "/" + dirname + "_" + f,
                 )
 
     for d in test:
@@ -122,8 +123,12 @@ def mixture_divide(clean_path, other_path, output_path):
 def dataset_split(wav_path, split_output):
     if not os.path.exists(split_output):
         os.mkdir(split_output)
-    clean_divide(os.path.join(wav_path, "clean"), os.path.join(split_output, "clean"))
-    other_divide(os.path.join(wav_path, "other"), os.path.join(split_output, "other"))
+    clean_divide(
+        os.path.join(wav_path, "clean"), os.path.join(split_output, "clean")
+    )
+    other_divide(
+        os.path.join(wav_path, "other"), os.path.join(split_output, "other")
+    )
     mixture_divide(
         os.path.join(split_output, "clean"),
         os.path.join(split_output, "other"),
