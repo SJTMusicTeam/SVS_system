@@ -91,6 +91,7 @@ def Calculate_melcd_fromLinearSpectrum(output, spec, length, args):
 
 
 def melcd(X, Y, lengths=None):
+
     """Mel-cepstrum distortion (MCD).
 
     The function computes MCD for time-aligned mel-cepstrum sequences.
@@ -141,6 +142,7 @@ def melcd(X, Y, lengths=None):
 
 
 def mean_squared_error(X, Y, lengths=None):
+
     """Mean squared error (MSE).
 
     Args:
@@ -178,6 +180,7 @@ def mean_squared_error(X, Y, lengths=None):
 def lf0_mean_squared_error(
     src_f0, src_vuv, tgt_f0, tgt_vuv, lengths=None, linear_domain=False
 ):
+
     """Mean squared error (MSE) for log-F0 sequences.
 
     MSE is computed for voiced segments.
@@ -229,6 +232,7 @@ def lf0_mean_squared_error(
 
 
 def compute_vuv_error(src_vuv, tgt_vuv, lengths=None):
+
     """Voice/unvoiced error rate computation
 
     Args:
@@ -298,6 +302,7 @@ def compute_f0_corr(ref_data, gen_data):
 
 
 def F0_VUV_distortion(reference_list, generation_list):
+
     """
     reference_list: ground_truth_list
     generation_list: synthesis_list
@@ -356,7 +361,7 @@ def F0_detection_wav(wav_path, signal, args):
     frame_length = 60 / 1000
     frame_shift = 30 / 1000
 
-    if wav_path != None:
+    if wav_path is not None:
         signal, osr = librosa.load(wav_path, sr=None)
     else:
         osr = args.sampling_rate
@@ -374,6 +379,7 @@ def F0_detection_wav(wav_path, signal, args):
 
 
 def invert_spectrogram(spectrogram, win_length, hop_length):
+
     """Applies inverse fft.
     Args:
       spectrogram: [1+n_fft//2, t]
@@ -385,7 +391,9 @@ def invert_spectrogram(spectrogram, win_length, hop_length):
 
 
 def griffin_lim(spectrogram, iter_vocoder, n_fft, hop_length, win_length):
+
     """Applies Griffin-Lim's raw."""
+
     X_best = copy.deepcopy(spectrogram)
     for i in range(iter_vocoder):
         X_t = invert_spectrogram(X_best, win_length, hop_length)
@@ -400,6 +408,7 @@ def griffin_lim(spectrogram, iter_vocoder, n_fft, hop_length, win_length):
 def spectrogram2wav(
     mag, max_db, ref_db, preemphasis, power, sr, hop_length, win_length, n_fft
 ):
+
     """# Generate wave file from linear magnitude spectrogram
     Args:
       mag: A numpy array of (T, 1+n_fft//2)

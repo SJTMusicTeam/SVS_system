@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-
-# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 # Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
+# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
 import argparse
 import librosa
@@ -134,7 +133,7 @@ def process(args):
         frame_shift = 30 / 1000
 
     hop_length = int(args.sr * frame_shift)
-    win_length = int(args.sr * frame_length)
+    # win_length = int(args.sr * frame_length)
 
     lab_list = os.listdir(args.labdir)
     phone_set = []
