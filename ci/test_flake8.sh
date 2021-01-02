@@ -14,7 +14,7 @@ cov=$(echo "scale = 4; 100 * ${n_ok} / ${n_all}" | bc)
 echo "flake8-docstrings ready files coverage: ${n_ok} / ${n_all} = ${cov}%"
 
 # --extend-ignore for wip files for flake8-docstrings
-flake8 --ignore=E203 --show-source --extend-ignore=D utils ${flake8_black_list} SVS egs/*/*/local/*.py
+flake8 --ignore=E203,H102,W503 --show-source --extend-ignore=D utils ${flake8_black_list} SVS egs/*/*/local/*.py
 
 # white list of files that should support flake8-docstrings
 flake8 --ignore=E203,H102,W503 --show-source SVS --exclude=${flake8_black_list//$'\n'/,}
