@@ -194,7 +194,7 @@ def lf0_mean_squared_error(
       tgt_f0 (ndarray): Target log-F0 sequences, shape can be either of
         (``T``,), (``B x T``) or (``B x T x 1``). Both Numpy and torch arrays
         are supported.
-      tgt_vuv (ndarray): Target voiced/unvoiced flag array, shape can be 
+      tgt_vuv (ndarray): Target voiced/unvoiced flag array, shape can be
         either of (``T``, ), (``B x T``) or (``B x T x 1``).
       lengths (list): Lengths of padded inputs. This should only be specified
         if you give mini-batch inputs.
