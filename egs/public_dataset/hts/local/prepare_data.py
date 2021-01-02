@@ -114,7 +114,7 @@ def load_label(label_file, s_type="s", sr=48000, frame_shift=0.03, sil="pau"):
         if s_type == "s":
             length = (float(label[1]) - float(label[0])) / frame_shift
         else:
-            length = (float(label[1]) - float(label[0])) / (frame_shift * 10e7)
+            length = (float(label[1]) - float(label[0])) / (frame_shift * 1e7)
         quantized_align.extend([label[-1]] * round(length))
     segment = make_segment(quantized_align, sil=sil)
     return segment, list(set(quantized_align))
