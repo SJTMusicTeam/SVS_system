@@ -7,7 +7,10 @@ from SVS.model.utils.nets_utils import make_pad_mask
 
 class UtteranceMVN(nn.Module):
     def __init__(
-        self, norm_means: bool = True, norm_vars: bool = True, eps: float = 1.0e-20,
+        self,
+        norm_means: bool = True,
+        norm_vars: bool = True,
+        eps: float = 1.0e-20,
     ):
         super().__init__()
         self.norm_means = norm_means
@@ -56,8 +59,10 @@ def utterance_mvn(
     if ilens is None:
         ilens = x.new_full([x.size(0)], x.size(1))
     else:
-        ilens,_=ilens.max(1)
-    ilens_ = ilens.to(x.device, x.dtype).view(-1, *[1 for _ in range(x.dim() - 1)])
+        ilens, _ = ilens.max(1)
+    ilens_ = ilens.to(x.device, x.dtype).view(
+        -1, *[1 for _ in range(x.dim() - 1)]
+    )
     # Zero padding
     if x.is_leaf and x.requires_grad:
         x = x.masked_fill(make_pad_mask(ilens, x, 1), 0.0)

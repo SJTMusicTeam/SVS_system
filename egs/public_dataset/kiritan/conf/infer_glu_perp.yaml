@@ -3,15 +3,15 @@ test_align: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/align
 test_pitch: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/pitch_beat_extraction/dev
 test_wav: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info/dev
 
-model_file: exp/normal_perp_kiritan_gaussian_mask_glu/model/epoch_75.pth.tar
-prediction_path: exp/normal_perp_kiritan_gaussian_mask_glu/result_cbhg
+model_file: exp/10_7_GLU_Transformer_perp_256_3/model/epoch_153.pth.tar
+prediction_path: exp/10_7_GLU_Transformer_perp_256_3/result_cbhg
 
-stats_file: exp/normal_perp_kiritan_gaussian_mask_glu/model/feats_stats.npz
-stats_mel_file: exp/normal_perp_kiritan_gaussian_mask_glu/model/feats_mel_stats.npz
+stats_file: exp/10_7_GLU_Transformer_perp_256_3/model/feats_stats.npz
+stats_mel_file: exp/10_7_GLU_Transformer_perp_256_3/model/feats_mel_stats.npz
 
 # gpu related
 auto_select_gpu: False
-gpu_id: 1
+gpu_id: 0
 
 decode_sample: 10
 

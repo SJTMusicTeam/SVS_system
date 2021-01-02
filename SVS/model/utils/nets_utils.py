@@ -86,7 +86,7 @@ def make_pad_mask(lengths, xs=None, length_dim=-1):
 
     """
     if length_dim == 0:
-        raise ValueError('length_dim cannot be 0: {}'.format(length_dim))
+        raise ValueError("length_dim cannot be 0: {}".format(length_dim))
 
     if not isinstance(lengths, list):
         lengths = lengths.tolist()
@@ -107,8 +107,10 @@ def make_pad_mask(lengths, xs=None, length_dim=-1):
         if length_dim < 0:
             length_dim = xs.dim() + length_dim
         # ind = (:, None, ..., None, :, , None, ..., None)
-        ind = tuple(slice(None) if i in (0, length_dim) else None
-                    for i in range(xs.dim()))
+        ind = tuple(
+            slice(None) if i in (0, length_dim) else None
+            for i in range(xs.dim())
+        )
         mask = mask[ind].expand_as(xs).to(xs.device)
     return mask
 
@@ -198,5 +200,3 @@ def make_non_pad_mask(lengths, xs=None, length_dim=-1):
 
     """
     return ~make_pad_mask(lengths, xs, length_dim)
-
-

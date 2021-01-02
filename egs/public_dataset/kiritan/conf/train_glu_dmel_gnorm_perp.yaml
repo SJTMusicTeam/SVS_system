@@ -19,16 +19,16 @@ frame_length: 0.06
 frame_shift: 0.03
 
 # model related
-model_save_dir: exp/GLU_512_Transformer_dmel_gnorm_perp/model                       # change
+model_save_dir: exp/10_6_GLU_Transformer_dmel_gnorm_perp_256_3/model                       # change
 model_type: GLU_Transformer
 normalize: True
 double_mel_loss: True
 perceptual_loss: 0.01
-stats_file: exp/GLU_512_Transformer_dmel_gnorm_perp/model/feats_stats.npz           # change
-stats_mel_file: exp/GLU_512_Transformer_dmel_gnorm_perp/model/feats_mel_stats.npz   # change
+stats_file: exp/10_6_GLU_Transformer_dmel_gnorm_perp_256_3/model/feats_stats.npz           # change
+stats_mel_file: exp/10_6_GLU_Transformer_dmel_gnorm_perp_256_3/model/feats_mel_stats.npz   # change
 
-hidden_size: 512                                                                    # change
-embedding_size: 512                                                                 # change
+hidden_size: 256                                                                    # change
+embedding_size: 256                                                                 # change
 glu_num_layers: 3
 dec_nhead: 4
 dec_num_block: 6
@@ -43,11 +43,11 @@ max_epochs: 300
 gradclip: 5
 
 batchsize: 10 # was 4
-num_workers: 0 # was 10
+num_workers: 18 # was 10
 
-accumulation_steps: 4
+accumulation_steps: 1
 auto_select_gpu: False
-gpu_id: 2
+gpu_id: 7
 
 optimizer: noam
 noam_scale: 1.0

@@ -19,10 +19,13 @@ frame_length: 0.06
 frame_shift: 0.03
 
 # model related
-model_save_dir: exp/normal_perp_kiritan_gaussian_mask_glu/model
+model_save_dir: exp/10_9_GLU_Transformer_perp_256_3/model
+stats_file: exp/10_9_GLU_Transformer_perp_256_3/model/feats_stats.npz
+stats_mel_file: exp/10_9_GLU_Transformer_perp_256_3/model/feats_mel_stats.npz
+
 model_type: GLU_Transformer
 normalize: False
-perceptual_loss: 0.1
+perceptual_loss: 0.01
 
 hidden_size: 256
 embedding_size: 256
@@ -39,12 +42,12 @@ resume: True
 max_epochs: 300
 gradclip: 5
 
-batchsize: 8 # was 4
-num_workers: 0 # was 10
+batchsize: 10 # was 4
+num_workers: 18 # was 10
 
 accumulation_steps: 1
 auto_select_gpu: False
-gpu_id: 5
+gpu_id: 7
 
 optimizer: noam
 noam_scale: 1.0
@@ -56,5 +59,4 @@ seed: 777
 gpu: 1
 
 # collect_stats: True
-stats_file: exp/normal_perp_kiritan_gaussian_mask_glu/model/feats_stats.npz
-stats_mel_file: exp/normal_perp_kiritan_gaussian_mask_glu/model/feats_mel_stats.npz
+
