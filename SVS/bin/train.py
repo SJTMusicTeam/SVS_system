@@ -3,8 +3,7 @@
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
 import yamlargparse
-
-import sys
+from SVS.model.train import train
 
 if __name__ == "__main__":
     parser = yamlargparse.ArgumentParser(description="SVS training")
@@ -240,11 +239,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    from SVS.tools.system_info import print_system_info
-
-    print_system_info()
-
     print(args)
-    from SVS.model.train import train
 
     train(args)

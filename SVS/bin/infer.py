@@ -3,10 +3,8 @@
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
 import yamlargparse
+from SVS.model.infer import infer
 
-import sys
-
-sys.path.append("/export/c04/jiatong/project/svs/SVS_system")
 
 parser = yamlargparse.ArgumentParser(description="SVS training")
 parser.add_argument(
@@ -121,11 +119,6 @@ parser.add_argument("--double_mel_loss", default=False, type=float)
 
 args = parser.parse_args()
 
-from SVS.tools.system_info import print_system_info
-
-print_system_info()
-
 print(args)
-from SVS.model.infer import infer
 
 infer(args)
