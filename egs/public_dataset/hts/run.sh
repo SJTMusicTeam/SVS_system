@@ -1,4 +1,4 @@
-#! /usr/bin/bash
+#!/bin/bash
 
 # Copyright 2020 RUC & Johns Hopkins University (author: Shuai Guo, Jiatong Shi)
 
@@ -7,8 +7,10 @@
 
 
 stage=0
-stop_stage=100
+stop_stage=1
 ngpu=1
+raw_data_dir=downloads
+
 
 # Set bash to 'debug' mode, it will exit on :
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
@@ -25,9 +27,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
   echo =======================
   echo " Stage0: download data "
   echo =======================
-
-  wget http://hts.sp.nitech.ac.jp/archives/2.3/HTS-demo_NIT-SONG070-F001.tar.bz2
-  tar -xf HTS-demo_NIT-SONG070-F001.tar.bz2
+  ./local/download_and_untar.sh ${raw_data_dir}  http://hts.sp.nitech.ac.jp/archives/2.3/HTS-demo_NIT-SONG070-F001.tar.bz2 HTS-demo_NIT-SONG070-F001.tar.bz2
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then 
@@ -36,7 +36,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   echo " Stage1: data preprocessing "
   echo ============================
 
-  python prepare_data.py HTS-demo_NIT-SONG070-F001/data/raw HTS-demo_NIT-SONG070-F001/data/labels/mono hts_data \
+  python local/prepare_data.py ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/raw ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/labels/mono hts_data \
     --label_type r --wav_extention raw
 
 fi
