@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
+# Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
 import argparse
 import librosa
@@ -197,10 +198,10 @@ def process(args):
             tempo, beats = librosa.beat.beat_track(
                 y=seg_signal, sr=args.sr, hop_length=hop_length
             )
-            times = librosa.frames_to_time(beats, sr=args.sr)
-            frames = librosa.time_to_frames(
-                times, sr=args.sr, hop_length=hop_length, n_fft=n_fft
-            )
+            # times = librosa.frames_to_time(beats, sr=args.sr)
+            # frames = librosa.time_to_frames(
+            #     times, sr=args.sr, hop_length=hop_length, n_fft=n_fft
+            # )
             np.save(
                 os.path.join(song_pitch_beat, name) + "_beats", np.array(beats)
             )
