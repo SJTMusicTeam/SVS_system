@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
+# Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
 import yamlargparse
 from SVS.model.infer import infer

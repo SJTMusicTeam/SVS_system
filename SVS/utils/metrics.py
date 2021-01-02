@@ -1,20 +1,16 @@
 # Copyright @Source code for nnmnkwii.metrics
 # https://r9y9.github.io/nnmnkwii/v0.0.16/_modules/nnmnkwii/metrics.html
+# Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-import os
 import copy
+import librosa
 import math
 import numpy as np
+import pyworld as pw
 import scipy.fftpack
 from scipy import signal
-import librosa
-import librosa.core.spectrum
-
-import soundfile as sf
-import pyworld as pw
 from scipy.stats.stats import pearsonr
 
-# from SVS.model.utils.utils import spectrogram2wav
 
 _logdb_const = 10.0 / np.log(10.0) * np.sqrt(2.0)
 
@@ -76,20 +72,11 @@ def Calculate_melcd_fromLinearSpectrum(output, spec, length, args):
         output_nopadding = output[i][: length[i]]
         spec_nopadding = spec[i][: length[i]]
 
-        # log_mel_spectrogram_predict = librosa.core.amplitude_to_db(output_nopadding, ref=1.0, amin=1e-5, top_db=80.0)   # dim = [n_frames, n_mels]
-        # log_mel_spectrogram_ground_truth = librosa.core.amplitude_to_db(spec_nopadding, ref=1.0, amin=1e-5, top_db=80.0)   # dim = [n_frames, n_mels]
-
-        # melCepstrum_predict = scipy.fftpack.dct(log_mel_spectrogram_predict)                            # # dim = [n_frames, n_mels]
-        # melCepstrum_ground_truth = scipy.fftpack.dct(log_mel_spectrogram_ground_truth)
-
         mfcc_predict[i][: length[i]] = _linearSpec_2_mfcc(
             output_nopadding, args
         )  # # dim = [n_frames, 25]
-        mfcc_ground_truth[i][: length[i]] = _linearSpec_2_mfcc(
-            spec_nopadding, args
-        )
+        mfcc_ground_truth[i][: length[i]] = _linearSpec_2_mfcc(spec_nopadding, args)
 
-        # print(length[i], melcd(_linearSpec_2_mfcc(output_nopadding,args), _linearSpec_2_mfcc(spec_nopadding,args), [length[i]]) )
         mcd_average = melcd(
             _linearSpec_2_mfcc(output_nopadding, args),
             _linearSpec_2_mfcc(spec_nopadding, args),
@@ -97,9 +84,6 @@ def Calculate_melcd_fromLinearSpectrum(output, spec, length, args):
         )
         mcd_total += mcd_average * length[i]
     mcd_value = mcd_total / np.sum(length)
-    # mcd_value = melcd(mfcc_predict, mfcc_ground_truth, length)
-    # 最后一起算的结果和每个sample单独算不一样
-    # print(mcd_value, )
 
     return mcd_value, np.sum(length)
 
@@ -197,20 +181,20 @@ def lf0_mean_squared_error(
     MSE is computed for voiced segments.
 
     Args:
-        src_f0 (ndarray): Input log-F0 sequences, shape can be either of
-          (``T``,), (``B x T``) or (``B x T x 1``). Both Numpy and torch arrays
-          are supported.
-        src_vuv (ndarray): Input voiced/unvoiced flag array, shape can be either
-          of (``T``, ), (``B x T``) or (``B x T x 1``).
-        tgt_f0 (ndarray): Target log-F0 sequences, shape can be either of
-          (``T``,), (``B x T``) or (``B x T x 1``). Both Numpy and torch arrays
-          are supported.
-        tgt_vuv (ndarray): Target voiced/unvoiced flag array, shape can be either
-          of (``T``, ), (``B x T``) or (``B x T x 1``).
-        lengths (list): Lengths of padded inputs. This should only be specified
-          if you give mini-batch inputs.
-        linear_domain (bool): Whether computes MSE on linear frequecy domain or
-          log-frequency domain.
+      src_f0 (ndarray): Input log-F0 sequences, shape can be either of
+        (``T``,), (``B x T``) or (``B x T x 1``). Both Numpy and torch arrays
+        are supported.
+      src_vuv (ndarray): Input voiced/unvoiced flag array, shape can be either
+        of (``T``, ), (``B x T``) or (``B x T x 1``).
+      tgt_f0 (ndarray): Target log-F0 sequences, shape can be either of
+        (``T``,), (``B x T``) or (``B x T x 1``). Both Numpy and torch arrays
+        are supported.
+       tgt_vuv (ndarray): Target voiced/unvoiced flag array, shape can be either
+        of (``T``, ), (``B x T``) or (``B x T x 1``).
+      lengths (list): Lengths of padded inputs. This should only be specified
+        if you give mini-batch inputs.
+      linear_domain (bool): Whether computes MSE on linear frequecy domain or
+        log-frequency domain.
 
     Returns:
         float: mean squared error.
@@ -226,9 +210,7 @@ def lf0_mean_squared_error(
 
     T = 0
     s = 0.0
-    for x, x_vuv, y, y_vuv, length in zip(
-        src_f0, src_vuv, tgt_f0, tgt_vuv, lengths
-    ):
+    for x, x_vuv, y, y_vuv, length in zip(src_f0, src_vuv, tgt_f0, tgt_vuv, lengths):
         x, x_vuv = x[:length], x_vuv[:length]
         y, y_vuv = y[:length], y_vuv[:length]
         voiced_indices = (x_vuv + y_vuv) >= 2
@@ -242,20 +224,21 @@ def lf0_mean_squared_error(
     return math.sqrt(float(s) / float(T))
 
 
-def vuv_error(src_vuv, tgt_vuv, lengths=None):
+def compute_vuv_error(src_vuv, tgt_vuv, lengths=None):
     """Voice/unvoiced error rate computation
 
     Args:
-        src_vuv (ndarray): Input voiced/unvoiced flag array shape can be either
-          of (``T``, ), (``B x T``) or (``B x T x 1``).
-        tgt_vuv (ndarray): Target voiced/unvoiced flag array shape can be either
-          of (``T``, ), (``B x T``) or (``B x T x 1``).
-        lengths (list): Lengths of padded inputs. This should only be specified
-          if you give mini-batch inputs.
+        src_vuv (ndarray): Input voiced/unvoiced flag array shape
+          can be either of (``T``, ), (``B x T``) or (``B x T x 1``).
+        tgt_vuv (ndarray): Target voiced/unvoiced flag array shape
+          can be either of (``T``, ), (``B x T``) or (``B x T x 1``).
+        lengths (list): Lengths of padded inputs. This should only
+          be specified if you give mini-batch inputs.
 
     Returns:
         float: voiced/unvoiced error rate (0 ~ 1).
     """
+
     if lengths is None:
         T = np.prod(src_vuv.shape)
         return float((src_vuv != tgt_vuv).sum()) / float(T)
@@ -283,7 +266,7 @@ def compute_f0_mse(ref_data, gen_data):
     f0_mse = (voiced_ref_data - voiced_gen_data) ** 2
     f0_mse = np.sum((f0_mse))
 
-    vuv_error_vector = sum_ref_gen_vector[sum_ref_gen_vector == 0.0]
+    # vuv_error_vector = sum_ref_gen_vector[sum_ref_gen_vector == 0.0]
     vuv_error = np.sum(sum_ref_gen_vector[sum_ref_gen_vector == 1.0])
 
     return f0_mse, vuv_error, voiced_frame_number
@@ -315,6 +298,7 @@ def F0_VUV_distortion(reference_list, generation_list):
     reference_list: ground_truth_list
     generation_list: synthesis_list
     """
+
     number = len(reference_list)
     total_voiced_frame_number = 0
     vuv_error = 0
@@ -339,12 +323,8 @@ def F0_VUV_distortion(reference_list, generation_list):
         distortion += temp_distortion
         total_frame_number += length
 
-        ref_all_files_data = np.concatenate(
-            (ref_all_files_data, f0_ref), axis=0
-        )
-        gen_all_files_data = np.concatenate(
-            (gen_all_files_data, f0_gen), axis=0
-        )
+        ref_all_files_data = np.concatenate((ref_all_files_data, f0_ref), axis=0)
+        gen_all_files_data = np.concatenate((gen_all_files_data, f0_gen), axis=0)
 
     distortion /= float(total_voiced_frame_number)
     f0_rmse = np.sqrt(distortion)
@@ -390,9 +370,8 @@ def invert_spectrogram(spectrogram, win_length, hop_length):
     Args:
       spectrogram: [1+n_fft//2, t]
     """
-    return librosa.istft(
-        spectrogram, hop_length, win_length=win_length, window="hann"
-    )
+
+    return librosa.istft(spectrogram, hop_length, win_length=win_length, window="hann")
 
 
 def griffin_lim(spectrogram, iter_vocoder, n_fft, hop_length, win_length):
@@ -417,6 +396,7 @@ def spectrogram2wav(
     Returns:
       wav: A 1-D numpy array.
     """
+
     hop_length = int(hop_length * sr)
     win_length = int(win_length * sr)
     n_fft = n_fft
@@ -520,15 +500,10 @@ if __name__ == "__main__":
     # print(y_mfcc, np.shape(y_mfcc))
 
     mel_spectrogram = librosa.feature.melspectrogram(y=y)
-    # print(mel_spectrogram, np.shape(mel_spectrogram))                     # dim = 128
 
     log_mel_spectrogram = librosa.core.power_to_db(mel_spectrogram)
-    # print(log_mel_spectrogram, np.shape(log_mel_spectrogram))             # dim = 128
 
-    melCepstrum1 = scipy.fftpack.dct(
-        log_mel_spectrogram, axis=0, type=2, norm="ortho"
-    )
-    # print(melCepstrum1, np.shape(melCepstrum1))                               # dim = 128
+    melCepstrum1 = scipy.fftpack.dct(log_mel_spectrogram, axis=0, type=2, norm="ortho")
 
     y = np.random.random((30,))
     # print(y, np.shape(y))
@@ -537,18 +512,14 @@ if __name__ == "__main__":
     # print(y_mfcc, np.shape(y_mfcc))
 
     mel_spectrogram = librosa.feature.melspectrogram(y=y)
-    print(
-        mel_spectrogram, np.shape(mel_spectrogram)
-    )  # dim = [n_mels, n_frames]
+    print(mel_spectrogram, np.shape(mel_spectrogram))  # dim = [n_mels, n_frames]
 
     log_mel_spectrogram = librosa.core.power_to_db(mel_spectrogram)
     print(
         log_mel_spectrogram, np.shape(log_mel_spectrogram)
     )  # dim = [n_mels, n_frames]
 
-    melCepstrum2 = scipy.fftpack.dct(
-        log_mel_spectrogram, axis=0, type=2, norm="ortho"
-    )
+    melCepstrum2 = scipy.fftpack.dct(log_mel_spectrogram, axis=0, type=2, norm="ortho")
     print(melCepstrum2, np.shape(melCepstrum2))  # dim = [n_mels, n_frames]
 
     res = melcd(melCepstrum1.transpose(1, 0), melCepstrum2.transpose(1, 0))
@@ -561,9 +532,7 @@ if __name__ == "__main__":
 
     f0_synthesis = F0_detection_wav(path_synthesis)
 
-    f0_rmse, vuv_error, f0_corr = F0_VUV_distortion(
-        [f0_ground_truth], [f0_synthesis]
-    )
+    f0_rmse, vuv_error, f0_corr = F0_VUV_distortion([f0_ground_truth], [f0_synthesis])
     print("with raw_f0:")
     print(
         "F0:- RMSE: {:.4f} Hz; CORR:{:.4f}; VUV: {:.4f}%".format(
