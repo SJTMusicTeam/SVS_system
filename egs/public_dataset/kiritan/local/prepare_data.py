@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
 import argparse
@@ -126,14 +125,11 @@ def process(args):
     f0_min = 50.0
 
     if args.model == "HMM":
-        frame_length = 25 / 1000
         frame_shift = 10 / 1000
     elif args.model == "TDNN":
-        frame_length = 60 / 1000
         frame_shift = 30 / 1000
 
     hop_length = int(args.sr * frame_shift)
-    # win_length = int(args.sr * frame_length)
 
     lab_list = os.listdir(args.labdir)
     phone_set = []

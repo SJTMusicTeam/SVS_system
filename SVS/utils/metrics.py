@@ -194,8 +194,8 @@ def lf0_mean_squared_error(
       tgt_f0 (ndarray): Target log-F0 sequences, shape can be either of
         (``T``,), (``B x T``) or (``B x T x 1``). Both Numpy and torch arrays
         are supported.
-       tgt_vuv (ndarray): Target voiced/unvoiced flag array, shape can be either
-        of (``T``, ), (``B x T``) or (``B x T x 1``).
+      tgt_vuv (ndarray): Target voiced/unvoiced flag array, shape can be 
+        either of (``T``, ), (``B x T``) or (``B x T x 1``).
       lengths (list): Lengths of padded inputs. This should only be specified
         if you give mini-batch inputs.
       linear_domain (bool): Whether computes MSE on linear frequecy domain or
@@ -303,7 +303,8 @@ def compute_f0_corr(ref_data, gen_data):
 
 def F0_VUV_distortion(reference_list, generation_list):
 
-    """
+    """Calculate F0-Vuv distortion
+
     reference_list: ground_truth_list
     generation_list: synthesis_list
     """
@@ -340,7 +341,7 @@ def F0_VUV_distortion(reference_list, generation_list):
         )
 
     distortion /= float(total_voiced_frame_number)
-    f0_rmse = np.sqrt(distortion)
+    # f0_rmse = np.sqrt(distortion)
     vuv_error /= float(total_frame_number)
     # f0_corr = compute_f0_corr(ref_all_files_data, gen_all_files_data)
     return (
@@ -355,10 +356,8 @@ def F0_VUV_distortion(reference_list, generation_list):
 
 def F0_detection_wav(wav_path, signal, args):
 
-    f0_bin = 256
     f0_max = 1100.0
     f0_min = 50.0
-    frame_length = 60 / 1000
     frame_shift = 30 / 1000
 
     if wav_path is not None:
@@ -381,6 +380,7 @@ def F0_detection_wav(wav_path, signal, args):
 def invert_spectrogram(spectrogram, win_length, hop_length):
 
     """Applies inverse fft.
+
     Args:
       spectrogram: [1+n_fft//2, t]
     """
@@ -410,6 +410,7 @@ def spectrogram2wav(
 ):
 
     """# Generate wave file from linear magnitude spectrogram
+
     Args:
       mag: A numpy array of (T, 1+n_fft//2)
     Returns:
