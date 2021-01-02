@@ -36,7 +36,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   echo " Stage1: data preprocessing "
   echo ============================
 
-  python local/prepare_data.py ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/raw ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/labels/mono hts_data \
+  python local/prepare_data.py ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/raw ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/labels/mono data \
     --label_type r --wav_extention raw
 
 fi

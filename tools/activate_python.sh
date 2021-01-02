@@ -3,4 +3,4 @@
 if [ -z "${PS1:-}" ]; then
     PS1=__dummy__
 fi
-. /Users/Shared/Anaconda/anaconda3/etc/profile.d/conda.sh && conda deactivate && conda activate svs
+. /export/c04/jiatong/project/svs/SVS_system/tools/anaconda/etc/profile.d/conda.sh && conda deactivate && conda activate svs

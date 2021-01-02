@@ -24,6 +24,7 @@ check_shellcheck*
 .vscode*
 *.vim
 *.swp
+*.log
 
 # recipe related
 egs*/*/*/data*
