@@ -23,6 +23,7 @@ For example: \
     `cd egs/public_dataset/kiritan`  \
     `sh train.sh` 
 
+
 - For CLSP User, using clsp_wrapper to use qsub.
 - For other user, using train.sh or infer.sh to run.
 
