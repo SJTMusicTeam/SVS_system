@@ -6,11 +6,11 @@
 . ./cmd.sh || exit 1;
 
 
-stage=0
-stop_stage=1
+stage=2
+stop_stage=2
 ngpu=1
 raw_data_dir=downloads
-
+expdir=exp/rnn
 
 # Set bash to 'debug' mode, it will exit on :
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
@@ -38,7 +38,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
 
   python local/prepare_data.py ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/raw ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/labels/mono data \
     --label_type r --wav_extention raw
-
+  ./local/train_dev_test_split.sh data train dev test
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then 
@@ -47,8 +47,13 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   echo " Stage2: collect_stats "
   echo =======================
 
-  ${train_cmd} train.py --collect_stats=True -c conf/train_rnn.yaml
-  
+  ${train_cmd} ${expdir}/stats.log \
+  train.py \
+    -c conf/train_rnn.yaml \
+    --collect_stats True \
+    --model_save_dir ${expdir} \
+    --stats_file ${expdir}/feats_stats.npz \
+    --stats_mel_file ${expdir}/feats_mel_stats.npz 
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then 
