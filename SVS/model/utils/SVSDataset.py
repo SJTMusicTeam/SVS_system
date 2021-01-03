@@ -141,7 +141,7 @@ class SVSCollator(object):
             real[i, :length, :] = batch[i]["phase"][:length].real
             imag[i, :length, :] = batch[i]["phase"][:length].imag
             pitch[i, :length] = batch[i]["pitch"][:length]
-            beat[i, :length] = batch[i]["pitch"][:length]
+            beat[i, :length] = batch[i]["beat"][:length]
             if self.n_mels > 0:
                 mel[i, :length, :] = batch[i]["mel"][:length]
 
