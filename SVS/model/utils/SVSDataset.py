@@ -303,8 +303,13 @@ class SVSDataset(Dataset):
             char, trimed_length = _phone2char(
                 phone[: self.max_len], self.char_max_len
             )
-        min_length = min(len(phone), np.shape(spectrogram)[0], 
-                         trimed_length, len(pitch), len(beat))
+        min_length = min(
+            len(phone),
+            np.shape(spectrogram)[0],
+            trimed_length,
+            len(pitch),
+            len(beat),
+        )
         phone = phone[:min_length]
         beat = beat[:min_length]
         pitch = pitch[:min_length]
@@ -316,11 +321,11 @@ class SVSDataset(Dataset):
 
         # print("char len: {}, phone len: {}, spectrom: {}".format(len(char), len(phone), np.shape(spectrogram)[0]))
         return {
-                   "phone": phone, 
-                   "beat": beat, 
-                   "pitch": pitch, 
-                   "spec": spectrogram, 
-                   "char": char, 
-                   "phase": phase, 
-                   "mel": mel
-               }
+            "phone": phone,
+            "beat": beat,
+            "pitch": pitch,
+            "spec": spectrogram,
+            "char": char,
+            "phase": phase,
+            "mel": mel,
+        }

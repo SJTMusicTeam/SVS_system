@@ -39,7 +39,10 @@ def collect_stats(train_loader, args):
         char_len_list,
         mel,
     ) in enumerate(train_loader, 1):
-        print(f"spec.shape: {spec.shape},length.shape: {length.shape}, mel.shape: {mel.shape}", flush=True)
+        print(
+            f"spec.shape: {spec.shape},length.shape: {length.shape}, mel.shape: {mel.shape}",
+            flush=True,
+        )
         for i, seq in enumerate(spec.cpu().numpy()):
             # print(f"seq.shape: {seq.shape}")
             seq_length = torch.max(length[i])
@@ -56,7 +59,10 @@ def collect_stats(train_loader, args):
             sum_square_mel += (seq ** 2).sum(0)
             count_mel += len(seq)
     assert count_mel == count
-    dirnames = [os.path.dirname(args.stats_file), os.path.dirname(args.stats_mel_file)]
+    dirnames = [
+        os.path.dirname(args.stats_file),
+        os.path.dirname(args.stats_mel_file),
+    ]
     for name in dirnames:
         if not os.path.exists(name):
             os.makedirs(name)
