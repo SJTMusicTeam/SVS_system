@@ -18,12 +18,13 @@ from pathlib import Path
 
 from SVS.model.layers.utterance_mvn import UtteranceMVN
 from SVS.model.layers.global_mvn import GlobalMVN
-import SVS.tools.metrics as Metrics
+import SVS.utils.metrics as Metrics
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def collect_stats(train_loader, args):
+    print("get in collect stats", flush=True)
     count, sum, sum_square = 0, 0, 0
     count_mel, sum_mel, sum_square_mel = 0, 0, 0
     for step, (
@@ -38,7 +39,7 @@ def collect_stats(train_loader, args):
         char_len_list,
         mel,
     ) in enumerate(train_loader, 1):
-        # print(f"spec.shape: {spec.shape},length.shape: {length.shape}, mel.shape: {mel.shape}")
+        print(f"spec.shape: {spec.shape},length.shape: {length.shape}, mel.shape: {mel.shape}", flush=True)
         for i, seq in enumerate(spec.cpu().numpy()):
             # print(f"seq.shape: {seq.shape}")
             seq_length = torch.max(length[i])
@@ -55,16 +56,18 @@ def collect_stats(train_loader, args):
             sum_square_mel += (seq ** 2).sum(0)
             count_mel += len(seq)
     assert count_mel == count
-    if not os.path.exists(args.model_save_dir):
-        os.makedirs(args.model_save_dir)
+    dirnames = [os.path.dirname(args.stats_file), os.path.dirname(args.stats_mel_file)]
+    for name in dirnames:
+        if not os.path.exists(name):
+            os.makedirs(name)
     np.savez(
-        Path(args.model_save_dir) / f"feats_stats.npz",
+        args.stats_file,
         count=count,
         sum=sum,
         sum_square=sum_square,
     )
     np.savez(
-        Path(args.model_save_dir) / f"feats_mel_stats.npz",
+        args.stats_mel_file,
         count=count_mel,
         sum=sum_mel,
         sum_square=sum_square_mel,

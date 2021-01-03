@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
-
+# Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
-import yamlargparse
-
-import sys
+from SVS.model.train import train
+import jsonargparse
 
 if __name__ == "__main__":
-    parser = yamlargparse.ArgumentParser(description="SVS training")
+    parser = jsonargparse.ArgumentParser(description="SVS training")
     parser.add_argument(
         "-c",
         "--config",
         help="config file path",
-        action=yamlargparse.ActionConfigFile,
+        action=jsonargparse.ActionConfigFile,
     )
     parser.add_argument(
         "--train_align", help="alignment data dir used for training."
@@ -29,11 +28,11 @@ if __name__ == "__main__":
     )
     parser.add_argument("--val_wav", help="wave data dir used for validation")
     parser.add_argument(
-        "--model-save-dir",
+        "--model_save_dir",
         help="output directory which model file will be saved in.",
     )
     parser.add_argument(
-        "--model-type",
+        "--model_type",
         default="GLU_Transformer",
         help="Type of model (New_Transformer or GLU_Transformer or LSTM)",
     )
@@ -44,7 +43,7 @@ if __name__ == "__main__":
         help="Initialize the model from given file",
     )
     parser.add_argument(
-        "--pretrain-encoder",
+        "--pretrain_encoder",
         default="",
     )
     parser.add_argument(
@@ -55,7 +54,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--max-epochs",
+        "--max_epochs",
         default=20,
         type=int,
         help="Max. number of epochs to train",
@@ -72,7 +71,7 @@ if __name__ == "__main__":
         help="gradient clipping. if < 0, no clipping",
     )
     parser.add_argument(
-        "--num-frames",
+        "--num_frames",
         default=100,
         type=int,
         help="number of frames in one utterance",
@@ -92,9 +91,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num_workers", default=4, type=int, help="number of cpu workers"
     )
-    parser.add_argument("--frame-length", default=0.06, type=float)
-    parser.add_argument("--frame-shift", default=0.03, type=float)
-    parser.add_argument("--sampling-rate", default=44100, type=int)
+    parser.add_argument("--frame_length", default=0.06, type=float)
+    parser.add_argument("--frame_shift", default=0.03, type=float)
+    parser.add_argument("--sampling_rate", default=44100, type=int)
     parser.add_argument("--preemphasis", default=0.97, type=float)
     parser.add_argument("--n_mels", default=80, type=int)
     parser.add_argument("--power", default=1.2, type=float)
@@ -102,15 +101,15 @@ if __name__ == "__main__":
     parser.add_argument("--ref_db", default=20, type=int)
     parser.add_argument("--nfft", default=2048, type=int)
     parser.add_argument("--phone_size", default=67, type=int)
-    parser.add_argument("--feat-dim", default=1324, type=int)
-    parser.add_argument("--embedding-size", default=256, type=int)
-    parser.add_argument("--hidden-size", default=256, type=int)
+    parser.add_argument("--feat_dim", default=1324, type=int)
+    parser.add_argument("--embedding_size", default=256, type=int)
+    parser.add_argument("--hidden_size", default=256, type=int)
     parser.add_argument(
-        "--glu-num-layers", default=1, type=int, help="number of glu layers"
+        "--glu_num_layers", default=1, type=int, help="number of glu layers"
     )
     parser.add_argument("--dropout", default=0.1, type=float)
     parser.add_argument("--dec_num_block", default=6, type=int)
-    parser.add_argument("--num-rnn-layers", default=2, type=int)
+    parser.add_argument("--num_rnn_layers", default=2, type=int)
     parser.add_argument("--dec_nhead", default=4, type=int)
     parser.add_argument("--local_gaussian", default=False, type=bool)
     parser.add_argument("--seed", default=666, type=int)
@@ -120,13 +119,13 @@ if __name__ == "__main__":
         help="whether use tensorboard",
         action="store_true",
     )
-    parser.add_argument("--noam-scale", default=1.0, type=float)
-    parser.add_argument("--noam-warmup-steps", default=25000, type=float)
+    parser.add_argument("--noam_scale", default=1.0, type=float)
+    parser.add_argument("--noam_warmup_steps", default=25000, type=float)
     parser.add_argument("--loss", default="l1", type=str)
     parser.add_argument("--perceptual_loss", default=-1, type=float)
     parser.add_argument("--double_mel_loss", default=False, type=float)
-    parser.add_argument("--use-pos-enc", default=0, type=int)
-    parser.add_argument("--gradient-accumulation-steps", default=1, type=int)
+    parser.add_argument("--use_pos_enc", default=0, type=int)
+    parser.add_argument("--gradient_accumulation_steps", default=1, type=int)
     parser.add_argument("--mask_free", default=False, type=bool)
     parser.add_argument("--use_asr_post", default=False, type=bool)
     parser.add_argument(
@@ -240,11 +239,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    from SVS.tools.system_info import print_system_info
-
-    print_system_info()
-
     print(args)
-    from SVS.model.train import train
 
     train(args)
