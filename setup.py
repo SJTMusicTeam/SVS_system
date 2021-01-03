@@ -13,7 +13,7 @@ from setuptools import setup
 requirements = {
     "install": [
         "setuptools>=38.5.1",
-        "configargparse>=1.2.1",
+        "jsonargparse>=3.2.1",
         "typeguard>=2.7.0",
         "dataclasses; python_version < '3.7'",
         "humanfriendly",

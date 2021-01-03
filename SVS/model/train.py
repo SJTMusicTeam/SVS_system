@@ -137,7 +137,10 @@ def train(args):
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
-    if torch.cuda.is_available() and args.auto_select_gpu == True:
+    if args.gpu_id < 0:
+        device = torch.device("cpu")
+        print(f"Warning: CPU is used")
+    elif torch.cuda.is_available() and args.auto_select_gpu == True:
         cvd = use_single_gpu()
         print(f"GPU {cvd} is used")
         torch.backends.cudnn.deterministic = True
@@ -146,8 +149,7 @@ def train(args):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     elif (
-        args.gpu_id >= 0
-        and torch.cuda.is_available()
+        torch.cuda.is_available()
         and args.auto_select_gpu == False
     ):
         torch.cuda.set_device(args.gpu_id)
@@ -221,11 +223,11 @@ def train(args):
         collate_fn=collate_fn_svs,
         pin_memory=True,
     )
-    # print(dev_set[0][3].shape)
     assert (
         args.feat_dim == dev_set[0][3].shape[1]
         or args.feat_dim == dev_set[0][6].shape[1]
     )
+    print("create loaders", flush=True)
     if args.collect_stats:
         collect_stats(train_loader, args)
         print(f"collect_stats finished !")
