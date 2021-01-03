@@ -5,7 +5,13 @@ set -euo pipefail
 if [ -z "${PS1:-}" ]; then
     PS1=__dummy__
 fi
-CONDA_URL=https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+
+unameOut="$(uname -s)"
+case "${unameOut}" in
+    Linux*)     CONDA_URL=https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh;;
+    Darwin*)    CONDA_URL=https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh;;
+    *)          CONDA_URL="UNKNOWN:${unameOut}", exit 1;;
+esac
 
 if [ $# -gt 4 ]; then
     echo "Usage: $0 [output] [conda-env-name] [python-version>]"
