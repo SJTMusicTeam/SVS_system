@@ -137,10 +137,7 @@ def train(args):
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
-    if args.gpu_id < 0:
-        device = torch.device("cpu")
-        print(f"Warning: CPU is used")
-    elif torch.cuda.is_available() and args.auto_select_gpu == True:
+    if torch.cuda.is_available() and args.auto_select_gpu == True:
         cvd = use_single_gpu()
         print(f"GPU {cvd} is used")
         torch.backends.cudnn.deterministic = True
