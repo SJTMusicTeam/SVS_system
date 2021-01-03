@@ -145,10 +145,7 @@ def train(args):
         # torch.backends.cudnn.enabled = False
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    elif (
-        torch.cuda.is_available()
-        and args.auto_select_gpu == False
-    ):
+    elif torch.cuda.is_available() and args.auto_select_gpu == False:
         torch.cuda.set_device(args.gpu_id)
         print(f"GPU {args.gpu_id} is used")
         torch.backends.cudnn.deterministic = True
