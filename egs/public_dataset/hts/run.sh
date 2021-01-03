@@ -27,6 +27,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
   echo =======================
   echo " Stage0: download data "
   echo =======================
+  mkdir -p ${raw_data_dir}
   ./local/download_and_untar.sh ${raw_data_dir}  http://hts.sp.nitech.ac.jp/archives/2.3/HTS-demo_NIT-SONG070-F001.tar.bz2 HTS-demo_NIT-SONG070-F001.tar.bz2
 fi
 
