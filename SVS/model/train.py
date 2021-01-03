@@ -224,8 +224,8 @@ def train(args):
         pin_memory=True,
     )
     assert (
-        args.feat_dim == dev_set[0][3].shape[1]
-        or args.feat_dim == dev_set[0][6].shape[1]
+        args.feat_dim == dev_set[0]["spec"].shape[1]
+        or args.feat_dim == dev_set[0]["mel"].shape[1]
     )
     print("create loaders", flush=True)
     if args.collect_stats:

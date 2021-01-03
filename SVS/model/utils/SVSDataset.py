@@ -115,8 +115,8 @@ class SVSCollator(object):
 
         batch_size = len(batch)
         # get spectrum dim
-        spec_dim = len(batch[0][3][0])
-        len_list = [len(batch[i][0]) for i in range(batch_size)]
+        spec_dim = len(batch[0]["spec"][0])
+        len_list = [len(batch[i]["phone"]) for i in range(batch_size)]
         spec = np.zeros((batch_size, self.max_len, spec_dim))
         real = np.zeros((batch_size, self.max_len, spec_dim))
         imag = np.zeros((batch_size, self.max_len, spec_dim))
@@ -129,7 +129,7 @@ class SVSCollator(object):
         if self.use_asr_post:
             phone = np.zeros((batch_size, self.max_len, self.phone_size))
         else:
-            char_len_list = [len(batch[i][4]) for i in range(batch_size)]
+            char_len_list = [len(batch[i]["char"]) for i in range(batch_size)]
             phone = np.zeros((batch_size, self.max_len))
             chars = np.zeros((batch_size, self.char_max_len))
             char_len_mask = np.zeros((batch_size, self.char_max_len))
@@ -137,20 +137,20 @@ class SVSCollator(object):
         for i in range(batch_size):
             length = min(len_list[i], self.max_len)
             length_mask[i, :length] = np.arange(1, length + 1)
-            spec[i, :length, :] = batch[i][3][:length]
-            real[i, :length, :] = batch[i][5][:length].real
-            imag[i, :length, :] = batch[i][5][:length].imag
-            pitch[i, :length] = batch[i][2][:length]
-            beat[i, :length] = batch[i][1][:length]
+            spec[i, :length, :] = batch[i]["spec"][:length]
+            real[i, :length, :] = batch[i]["phase"][:length].real
+            imag[i, :length, :] = batch[i]["phase"][:length].imag
+            pitch[i, :length] = batch[i]["pitch"][:length]
+            beat[i, :length] = batch[i]["pitch"][:length]
             if self.n_mels > 0:
-                mel[i, :length, :] = batch[i][6][:length]
+                mel[i, :length, :] = batch[i]["mel"][:length]
 
             if self.use_asr_post:
-                phone[i, :length, :] = batch[i][0][:length]
+                phone[i, :length, :] = batch[i]["phone"][:length]
             else:
-                char_leng = min(len(batch[i][4]), self.char_max_len)
-                phone[i, :length] = batch[i][0][:length]
-                chars[i, :char_leng] = batch[i][4][:char_leng]
+                char_leng = min(len(batch[i]["char"]), self.char_max_len)
+                phone[i, :length] = batch[i]["phone"][:length]
+                chars[i, :char_leng] = batch[i]["char"][:char_leng]
                 char_len_mask[i, :char_leng] = np.arange(1, char_leng + 1)
 
         spec = torch.from_numpy(spec)
@@ -303,7 +303,8 @@ class SVSDataset(Dataset):
             char, trimed_length = _phone2char(
                 phone[: self.max_len], self.char_max_len
             )
-        min_length = min(len(phone), np.shape(spectrogram)[0], trimed_length)
+        min_length = min(len(phone), np.shape(spectrogram)[0], 
+                         trimed_length, len(pitch), len(beat))
         phone = phone[:min_length]
         beat = beat[:min_length]
         pitch = pitch[:min_length]
@@ -314,4 +315,12 @@ class SVSDataset(Dataset):
             mel = mel[:min_length, :]
 
         # print("char len: {}, phone len: {}, spectrom: {}".format(len(char), len(phone), np.shape(spectrogram)[0]))
-        return phone, beat, pitch, spectrogram, char, phase, mel
+        return {
+                   "phone": phone, 
+                   "beat": beat, 
+                   "pitch": pitch, 
+                   "spec": spectrogram, 
+                   "char": char, 
+                   "phase": phase, 
+                   "mel": mel
+               }
