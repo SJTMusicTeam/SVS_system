@@ -2,8 +2,9 @@
 # Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
-from SVS.model.train import train
+import logging
 import jsonargparse
+from SVS.model.train import train
 
 if __name__ == "__main__":
     parser = jsonargparse.ArgumentParser(description="SVS training")
@@ -239,6 +240,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    print(args, flush=True)
+    logging.getLogger().setLevel(logging.INFO)
+    logging.info(f"{args}")
 
     train(args)
