@@ -2,7 +2,7 @@
 
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi & Shuai Guo)
 
-
+import logging
 import torch
 import os
 import time
@@ -42,7 +42,7 @@ def count_parameters(model):
 
 def infer(args):
     torch.cuda.set_device(args.gpu_id)
-    print(f"GPU {args.gpu_id} is used")
+    logging.info(f"GPU {args.gpu_id} is used")
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.enabled = False
@@ -185,17 +185,17 @@ def infer(args):
         )
     else:
         raise ValueError("Not Support Model Type %s" % args.model_type)
-    print(model)
-    print(f"The model has {count_parameters(model):,} trainable parameters")
+    logging.info(f"{model}")
+    logging.info(f"The model has {count_parameters(model):,} trainable parameters")
 
     # Load model weights
-    print("Loading pretrained weights from {}".format(args.model_file))
+    logging.info(f"Loading pretrained weights from {args.model_file}")
     checkpoint = torch.load(args.model_file, map_location=device)
     state_dict = checkpoint["state_dict"]
     model_dict = model.state_dict()
     state_dict_new = {}
     para_list = []
-    # print(model_dict)
+
     for k, v in state_dict.items():
         # assert k in model_dict
         if (
@@ -207,26 +207,19 @@ def infer(args):
             continue
         if model_dict[k].size() == state_dict[k].size():
             state_dict_new[k] = v
-            # print(k)
         else:
             para_list.append(k)
 
-    print(
-        "Total {} parameters, loaded {} parameters".format(
-            len(state_dict), len(state_dict_new)
-        )
+    logging.info(
+        f"Total {len(state_dict)} parameter sets, loaded {len(state_dict_new)} parameter set"
     )
 
     if len(para_list) > 0:
-        print(
-            "Not loading {} because of different sizes".format(
-                ", ".join(para_list)
-            )
+        logging.warning(
+            f"Not loading {para_list} because of different sizes"
         )
-    # model_dict.update(state_dict_new)
-    # model.load_state_dict(model_dict)
     model.load_state_dict(state_dict_new)
-    print("Loaded checkpoint {}".format(args.model_file))
+    logging.info(f"Loaded checkpoint {args.model_file}")
     model = model.to(device)
     model.eval()
 
@@ -444,8 +437,8 @@ def infer(args):
                             double_mel_losses.avg
                         )
                 end = time.time()
-                print(
-                    "{} -- sum_time: {}s".format(out_log, (end - start_t_test))
+                logging.info(
+                    f"{out_log} -- sum_time: {(end - start_t_test)}s"
                 )
 
     end_t_test = time.time()
@@ -463,4 +456,4 @@ def infer(args):
     out_log += " f0_rmse_value {:.4f} Hz, vuv_error_value {:.4f} %, F0_CORR {:.4f}; ".format(
         np.sqrt(f0_distortion_metric.avg), vuv_error_metric.avg * 100, f0_corr
     )
-    print("{} time: {:.2f}s".format(out_log, end_t_test - start_t_test))
+    logging.info("{} time: {:.2f}s".format(out_log, end_t_test - start_t_test))

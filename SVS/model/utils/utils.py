@@ -209,13 +209,8 @@ def train_one_epoch(
             spec, _ = sepc_normalizer(spec, length)
             mel, _ = mel_normalizer(mel, length)
 
-        # print(np.shape(output), np.shape(spec), np.shape(spec_origin))
-        # quit()
 
         if args.model_type == "USTC_DAR":
-            # print(np.shape(output_mel))
-            # print(np.shape(mel))
-            # quit()
             spec_loss = 0
         else:
             spec_loss = criterion(output, spec, length_mask)
@@ -241,14 +236,13 @@ def train_one_epoch(
         else:
             final_loss = train_loss
 
-        final_loss = final_loss / args.accumulation_steps  # 损失标准化
-        final_loss.backward()  # 反向传播，计算梯度
+        final_loss = final_loss / args.accumulation_steps
+        final_loss.backward()  
 
         if args.gradclip > 0:
             torch.nn.utils.clip_grad_norm_(model.parameters(), args.gradclip)
 
         if (epoch + 1) % args.accumulation_steps == 0:
-            # 更新参数
             if args.optimizer == "noam":
                 optimizer.step_and_update_lr()
             else:
@@ -771,7 +765,7 @@ def log_figure(step, output, spec, att, length, save_dir, args):
         )
         sf.write(
             os.path.join(save_dir, "{}_true.wav".format(step)),
-            wav,
+            wav_true,
             args.sampling_rate,
             format="wav",
             subtype="PCM_24",

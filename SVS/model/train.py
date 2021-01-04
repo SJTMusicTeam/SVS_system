@@ -3,6 +3,7 @@
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi & Shuai Guo)
 
 
+import logging
 import os
 import sys
 import numpy as np
@@ -74,11 +75,8 @@ def Auto_save_model(
         select_loss = sorted_dict_keys[0]  # smallest spec_loss of saved models
         if dev_info[save_loss_select] < select_loss:
             epoch_to_save[dev_info[save_loss_select]] = epoch
-            print(
-                "---------------------------------------------------------------------------------"
-            )
-            print(f"### - {save_loss_select} - ###")
-            print(
+            logging.info(f"### - {save_loss_select} - ###")
+            logging.info(
                 "add epoch: {:04d}, {}={:.4f}".format(
                     epoch, save_loss_select, dev_info[save_loss_select]
                 )
@@ -98,13 +96,13 @@ def Auto_save_model(
                         epoch_to_save[select_loss],
                     )
                 )
-                print(
+                logging.info(
                     "model of epoch:{} deleted".format(
                         epoch_to_save[select_loss]
                     )
                 )
 
-            print(
+            logging.info(
                 "delete epoch: {:04d}, {}={:.4f}".format(
                     epoch_to_save[select_loss], save_loss_select, select_loss
                 )
@@ -122,10 +120,7 @@ def Auto_save_model(
                 save_loss_select,
             )
 
-            print(epoch_to_save)
-            print(
-                "*********************************************************************************"
-            )
+            logging.info(epoch_to_save)
     if len(sorted(epoch_to_save.keys())) > args.num_saved_model:
         raise ValueError("")
 
@@ -139,7 +134,7 @@ def train(args):
 
     if torch.cuda.is_available() and args.auto_select_gpu == True:
         cvd = use_single_gpu()
-        print(f"GPU {cvd} is used")
+        logging.info(f"GPU {cvd} is used")
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
         # torch.backends.cudnn.enabled = False
@@ -147,7 +142,7 @@ def train(args):
 
     elif torch.cuda.is_available() and args.auto_select_gpu == False:
         torch.cuda.set_device(args.gpu_id)
-        print(f"GPU {args.gpu_id} is used")
+        logging.info(f"GPU {args.gpu_id} is used")
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
         # torch.backends.cudnn.enabled = False
@@ -155,7 +150,7 @@ def train(args):
 
     else:
         device = torch.device("cpu")
-        print(f"Warning: CPU is used")
+        logging.info(f"Warning: CPU is used")
 
     train_set = SVSDataset(
         align_root_path=args.train_align,
@@ -221,10 +216,10 @@ def train(args):
         args.feat_dim == dev_set[0]["spec"].shape[1]
         or args.feat_dim == dev_set[0]["mel"].shape[1]
     )
-    print("create loaders", flush=True)
+
     if args.collect_stats:
         collect_stats(train_loader, args)
-        print(f"collect_stats finished !")
+        logging.info(f"collect_stats finished !")
         quit()
     # prepare model
     if args.model_type == "GLU_Transformer":
@@ -383,9 +378,9 @@ def train(args):
 
     else:
         raise ValueError("Not Support Model Type %s" % args.model_type)
-    print(model)
+    logging.info(f"{model}")
     model = model.to(device)
-    print(f"The model has {count_parameters(model):,} trainable parameters")
+    logging.info(f"The model has {count_parameters(model):,} trainable parameters")
 
     model_load_dir = ""
     pretrain_encoder_dir = ""
@@ -399,15 +394,20 @@ def train(args):
         start_epoch = max(
             list(
                 map(
-                    lambda x: int(x[6:-8]) if x.endswith("pth.tar") else -1,
+                    lambda x: int(x.split(".")[0].split("_")[-1]) if x.endswith("pth.tar") else -1,
                     checks,
                 )
             )
         )
+        model_temp_load_dir = "{}/epoch_loss_{}.pth.tar".format(
+            args.model_save_dir, start_epoch
+        )
         if start_epoch < 0:
             model_load_dir = ""
+        elif os.path.isfile(model_temp_load_dir):
+            model_load_dir = model_temp_load_dir
         else:
-            model_load_dir = "{}/epoch_{}.pth.tar".format(
+            model_load_dir = "{}/epoch_spec_loss_{}.pth.tar".format(
                 args.model_save_dir, start_epoch
             )
 
@@ -429,11 +429,11 @@ def train(args):
                 state_dict_new[k_new] = v
             model_dict.update(state_dict_new)
         model.load_state_dict(model_dict)
-        print(f"Load {i} layers total. Load pretrain encoder success !")
+        logging.info(f"Load {i} layers total. Load pretrain encoder success !")
 
     # load weights for pre-trained model
     if model_load_dir != "":
-        print("Model Start to Load, dir: {}".format(model_load_dir))
+        logging.info(f"Model Start to Load, dir: {model_load_dir}")
         model_load = torch.load(model_load_dir, map_location=device)
         loading_dict = model_load["state_dict"]
         model_dict = model.state_dict()
@@ -452,21 +452,18 @@ def train(args):
                 state_dict_new[k] = v
             else:
                 para_list.append(k)
-        print(
-            "Total {} parameters, Loaded {} parameters".format(
-                len(loading_dict), len(state_dict_new)
-            )
+        logging.info(
+            f"Total {len(loading_dict)} parameter sets, Loaded {len(state_dict_new)} parameter sets"
         )
         if len(para_list) > 0:
-            print(
+            logging.warning(
                 "Not loading {} because of different sizes".format(
                     ", ".join(para_list)
                 )
             )
         model_dict.update(state_dict_new)
         model.load_state_dict(model_dict)
-        print("Loaded checkpoint {}".format(args.initmodel))
-        print("")
+        logging.info(f"Loaded checkpoint {args.initmodel}")
 
     # setup optimizer
     if args.optimizer == "noam":
@@ -568,7 +565,7 @@ def train(args):
             out_log += "mel_loss: {:.4f}, ".format(train_info["mel_loss"])
         if args.perceptual_loss > 0:
             out_log += "pe_loss: {:.4f}, ".format(train_info["pe_loss"])
-        print("{} time: {:.2f}s".format(out_log, end_t_train - start_t_train))
+        logging.info("{} time: {:.2f}s".format(out_log, end_t_train - start_t_train))
 
         """
         ### Dev Stage
@@ -597,9 +594,8 @@ def train(args):
             dev_log += "mel_loss: {:.4f}, ".format(dev_info["mel_loss"])
         if args.perceptual_loss > 0:
             dev_log += "pe_loss: {:.4f}, ".format(dev_info["pe_loss"])
-        print("{} time: {:.2f}s".format(dev_log, end_t_dev - start_t_train))
+        logging.info("{} time: {:.2f}s".format(dev_log, end_t_dev - start_t_train))
 
-        print("")
         sys.stdout.flush()
 
         torch.backends.cudnn.enabled = True

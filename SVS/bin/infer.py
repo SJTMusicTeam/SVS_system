@@ -2,8 +2,9 @@
 # Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
-from SVS.model.infer import infer
+import logging
 import jsonargparse
+from SVS.model.infer import infer
 
 
 parser = jsonargparse.ArgumentParser(description="SVS training")
@@ -119,6 +120,7 @@ parser.add_argument("--double_mel_loss", default=False, type=float)
 
 args = parser.parse_args()
 
-print(args)
+logging.getLogger().setLevel(logging.INFO)
+logging.info(f"{args}")
 
 infer(args)
