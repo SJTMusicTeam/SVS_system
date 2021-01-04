@@ -380,7 +380,9 @@ def train(args):
         raise ValueError("Not Support Model Type %s" % args.model_type)
     logging.info(f"{model}")
     model = model.to(device)
-    logging.info(f"The model has {count_parameters(model):,} trainable parameters")
+    logging.info(
+        f"The model has {count_parameters(model):,} trainable parameters"
+    )
 
     model_load_dir = ""
     pretrain_encoder_dir = ""
@@ -394,7 +396,9 @@ def train(args):
         start_epoch = max(
             list(
                 map(
-                    lambda x: int(x.split(".")[0].split("_")[-1]) if x.endswith("pth.tar") else -1,
+                    lambda x: int(x.split(".")[0].split("_")[-1])
+                    if x.endswith("pth.tar")
+                    else -1,
                     checks,
                 )
             )
@@ -565,7 +569,9 @@ def train(args):
             out_log += "mel_loss: {:.4f}, ".format(train_info["mel_loss"])
         if args.perceptual_loss > 0:
             out_log += "pe_loss: {:.4f}, ".format(train_info["pe_loss"])
-        logging.info("{} time: {:.2f}s".format(out_log, end_t_train - start_t_train))
+        logging.info(
+            "{} time: {:.2f}s".format(out_log, end_t_train - start_t_train)
+        )
 
         """
         ### Dev Stage
@@ -594,7 +600,9 @@ def train(args):
             dev_log += "mel_loss: {:.4f}, ".format(dev_info["mel_loss"])
         if args.perceptual_loss > 0:
             dev_log += "pe_loss: {:.4f}, ".format(dev_info["pe_loss"])
-        logging.info("{} time: {:.2f}s".format(dev_log, end_t_dev - start_t_train))
+        logging.info(
+            "{} time: {:.2f}s".format(dev_log, end_t_dev - start_t_train)
+        )
 
         sys.stdout.flush()
 
