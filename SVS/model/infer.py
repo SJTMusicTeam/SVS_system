@@ -186,7 +186,9 @@ def infer(args):
     else:
         raise ValueError("Not Support Model Type %s" % args.model_type)
     logging.info(f"{model}")
-    logging.info(f"The model has {count_parameters(model):,} trainable parameters")
+    logging.info(
+        f"The model has {count_parameters(model):,} trainable parameters"
+    )
 
     # Load model weights
     logging.info(f"Loading pretrained weights from {args.model_file}")
@@ -215,9 +217,7 @@ def infer(args):
     )
 
     if len(para_list) > 0:
-        logging.warning(
-            f"Not loading {para_list} because of different sizes"
-        )
+        logging.warning(f"Not loading {para_list} because of different sizes")
     model.load_state_dict(state_dict_new)
     logging.info(f"Loaded checkpoint {args.model_file}")
     model = model.to(device)
@@ -437,9 +437,7 @@ def infer(args):
                             double_mel_losses.avg
                         )
                 end = time.time()
-                logging.info(
-                    f"{out_log} -- sum_time: {(end - start_t_test)}s"
-                )
+                logging.info(f"{out_log} -- sum_time: {(end - start_t_test)}s")
 
     end_t_test = time.time()
 
