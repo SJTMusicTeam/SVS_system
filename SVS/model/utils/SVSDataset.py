@@ -1,4 +1,4 @@
-'''Copyright [2020] [Jiatong Shi & Shuai Guo]
+"""Copyright [2020] [Jiatong Shi & Shuai Guo]
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -10,7 +10,7 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
-limitations under the License.'''
+limitations under the License."""
 # !/usr/bin/env python3
 
 
@@ -22,15 +22,15 @@ from torch.utils.data import Dataset
 
 
 def _get_spectrograms(
-        fpath,
-        require_sr,
-        preemphasis,
-        n_fft,
-        hop_length,
-        win_length,
-        max_db,
-        ref_db,
-        n_mels=80,
+    fpath,
+    require_sr,
+    preemphasis,
+    n_fft,
+    hop_length,
+    win_length,
+    max_db,
+    ref_db,
+    n_mels=80,
 ):
     """Parse the wave file in `fpath` and
     Returns normalized melspectrogram and linear spectrogram.
@@ -106,12 +106,12 @@ def _phone2char(phones, char_max_len):
 
 class SVSCollator(object):
     def __init__(
-            self,
-            max_len,
-            char_max_len=80,
-            use_asr_post=False,
-            phone_size=68,
-            n_mels=80,
+        self,
+        max_len,
+        char_max_len=80,
+        use_asr_post=False,
+        phone_size=68,
+        n_mels=80,
     ):
         self.max_len = max_len
         # plus 1 for aligner to consider padding char
@@ -207,23 +207,23 @@ class SVSCollator(object):
 
 class SVSDataset(Dataset):
     def __init__(
-            self,
-            align_root_path,
-            pitch_beat_root_path,
-            wav_root_path,
-            char_max_len=80,
-            max_len=500,
-            sr=44100,
-            preemphasis=0.97,
-            nfft=2048,
-            frame_shift=0.03,
-            frame_length=0.06,
-            n_mels=80,
-            power=1.2,
-            max_db=100,
-            ref_db=20,
-            sing_quality="conf/sing_quality.csv",
-            standard=3,
+        self,
+        align_root_path,
+        pitch_beat_root_path,
+        wav_root_path,
+        char_max_len=80,
+        max_len=500,
+        sr=44100,
+        preemphasis=0.97,
+        nfft=2048,
+        frame_shift=0.03,
+        frame_length=0.06,
+        n_mels=80,
+        power=1.2,
+        max_db=100,
+        ref_db=20,
+        sing_quality="conf/sing_quality.csv",
+        standard=3,
     ):
 
         self.align_root_path = align_root_path
@@ -302,8 +302,7 @@ class SVSDataset(Dataset):
             print("error file: %s" % self.filename_list[i])
             print(
                 "spectrum_size: {}, alignment_size: {}, "
-                "pitch_size: {}, beat_size: {}"
-                    .format(
+                "pitch_size: {}, beat_size: {}".format(
                     np.shape(spectrogram)[0], len(phone), len(pitch), len(beat)
                 )
             )
@@ -331,7 +330,6 @@ class SVSDataset(Dataset):
         if mel is not None:
             mel = mel[:min_length, :]
 
-
         # print("char len: {}, phone len: {}, spectrom: {}".format(len(char), len(phone), np.shape(spectrogram)[0]))
         return {
             "phone": phone,
@@ -342,4 +340,3 @@ class SVSDataset(Dataset):
             "phase": phase,
             "mel": mel,
         }
-

@@ -1,4 +1,4 @@
-'''Copyright [2020] [Jiatong Shi & Hailan Lin]
+"""Copyright [2020] [Jiatong Shi & Hailan Lin]
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -10,7 +10,7 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
-limitations under the License.'''
+limitations under the License."""
 #!/usr/bin/env python3
 
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi, Hailan Lin)
@@ -26,9 +26,11 @@ from torch.nn import functional as F
 from torch.nn import Linear
 from torch.nn import LayerNorm
 from torch.nn import Module
+
 # from torch.nn.parameter import Parameter
 from torch.nn import ModuleList
 from torch.nn import TransformerEncoderLayer
+
 # from torch.nn.init import xavier_normal_
 # from torch.nn.init import constant_
 import torch.nn.init as init

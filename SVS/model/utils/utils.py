@@ -1,4 +1,4 @@
-'''Copyright [2020] [Jiatong Shi]
+"""Copyright [2020] [Jiatong Shi]
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -10,7 +10,7 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
-limitations under the License.'''
+limitations under the License."""
 #!/usr/bin/env python3
 
 
@@ -39,17 +39,20 @@ def collect_stats(train_loader, args):
     print("get in collect stats", flush=True)
     count, sum, sum_square = 0, 0, 0
     count_mel, sum_mel, sum_square_mel = 0, 0, 0
-    for step, (
-        phone,
-        beat,
-        pitch,
-        spec,
-        real,
-        imag,
-        length,
-        chars,
-        char_len_list,
-        mel,
+    for (
+        step,
+        (
+            phone,
+            beat,
+            pitch,
+            spec,
+            real,
+            imag,
+            length,
+            chars,
+            char_len_list,
+            mel,
+        ),
     ) in enumerate(train_loader, 1):
         # print(f"spec.shape: {spec.shape},length.shape:
         # {length.shape}, mel.shape: {mel.shape}")
@@ -77,10 +80,7 @@ def collect_stats(train_loader, args):
         if not os.path.exists(name):
             os.makedirs(name)
     np.savez(
-        args.stats_file,
-        count=count,
-        sum=sum,
-        sum_square=sum_square,
+        args.stats_file, count=count, sum=sum, sum_square=sum_square,
     )
     np.savez(
         args.stats_mel_file,
@@ -123,17 +123,20 @@ def train_one_epoch(
     # f0_ground_truth_all = np.reshape(np.array([]), (-1, 1))
     # f0_synthesis_all = np.reshape(np.array([]), (-1, 1))
 
-    for step, (
-        phone,
-        beat,
-        pitch,
-        spec,
-        real,
-        imag,
-        length,
-        chars,
-        char_len_list,
-        mel,
+    for (
+        step,
+        (
+            phone,
+            beat,
+            pitch,
+            spec,
+            real,
+            imag,
+            length,
+            chars,
+            char_len_list,
+            mel,
+        ),
     ) in enumerate(train_loader, 1):
         phone = phone.to(device)
         beat = beat.to(device)
@@ -287,10 +290,8 @@ def train_one_epoch(
                     log_save_dir,
                     args,
                 )
-                out_log = (
-                    "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
-                        step, losses.avg, spec_losses.avg
-                    )
+                out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
+                    step, losses.avg, spec_losses.avg
                 )
             else:
                 # normalize inverse 只在infer的时候用，因为log过程需要转换成wav,和计算mcd等指标
@@ -299,10 +300,8 @@ def train_one_epoch(
                 log_figure(
                     step, output, spec_origin, att, length, log_save_dir, args
                 )
-                out_log = (
-                    "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
-                        step, losses.avg, spec_losses.avg
-                    )
+                out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
+                    step, losses.avg, spec_losses.avg
                 )
 
             if args.perceptual_loss > 0:
@@ -346,17 +345,20 @@ def validate(
     start = time.time()
 
     with torch.no_grad():
-        for step, (
-            phone,
-            beat,
-            pitch,
-            spec,
-            real,
-            imag,
-            length,
-            chars,
-            char_len_list,
-            mel,
+        for (
+            step,
+            (
+                phone,
+                beat,
+                pitch,
+                spec,
+                real,
+                imag,
+                length,
+                chars,
+                char_len_list,
+                mel,
+            ),
         ) in enumerate(dev_loader, 1):
             phone = phone.to(device)
             beat = beat.to(device)
@@ -524,9 +526,11 @@ def validate(
                         log_save_dir,
                         args,
                     )
-                out_log = "step {}: train_loss {:.4f}; " \
-                          "spec_loss {:.4f}; mcd_value {:.4f};".format(
-                    step, losses.avg, spec_losses.avg, mcd_metric.avg
+                out_log = (
+                    "step {}: train_loss {:.4f}; "
+                    "spec_loss {:.4f}; mcd_value {:.4f};".format(
+                        step, losses.avg, spec_losses.avg, mcd_metric.avg
+                    )
                 )
                 if args.perceptual_loss > 0:
                     out_log += "pe_loss {:.4f}; ".format(pe_losses.avg)
@@ -598,10 +602,7 @@ def save_model(
         )
     else:
         save_checkpoint(
-            {
-                "epoch": epoch,
-                "state_dict": model.state_dict(),
-            },
+            {"epoch": epoch, "state_dict": model.state_dict(),},
             "{}/epoch_{}_{}.pth.tar".format(
                 args.model_save_dir, save_loss_select, epoch
             ),
