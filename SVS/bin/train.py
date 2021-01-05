@@ -2,8 +2,8 @@
 # Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
-import logging
 import jsonargparse
+import logging
 from SVS.model.train import train
 
 if __name__ == "__main__":
