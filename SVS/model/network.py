@@ -1,25 +1,34 @@
-#!/usr/bin/env python3
+'''Copyright [2020] [Jiatong Shi & Shuai Guo & Hailan Lin]
 
-# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi, Shuai Guo, Hailan Lin)
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.'''
+
+#!/usr/bin/env python3
 
 # debug only
 # import sys
 # sys.path.append("/Users/jiatongshi/projects/svs_system/SVS_system")
 
-import random
+import math
+import numpy as np
+from SVS.model.layers.conformer_related import Conformer_block
+import SVS.model.layers.module as module
+from SVS.model.layers.pretrain_module import Attention
+from SVS.model.layers.pretrain_module import clones
+from SVS.model.layers.pretrain_module import FFN
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-import math
 from torch.nn.init import xavier_uniform_
-from torch.nn.init import xavier_normal_
-from torch.nn.init import constant_
-
-import SVS.model.layers.module as module
-from SVS.model.layers.pretrain_module import clones, FFN, Attention
-from SVS.model.layers.global_mvn import GlobalMVN
-from SVS.model.layers.conformer_related import Conformer_block
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -99,8 +108,7 @@ def make_pad_mask(lengths, xs=None, length_dim=-1):
                  [0, 0, 1, 1, 1, 1],
                  [0, 0, 1, 1, 1, 1],
                  [0, 0, 1, 1, 1, 1],
-                 [0, 0, 1, 1, 1, 1]]], dtype=torch.uint8)
-    """
+                 [0, 0, 1, 1, 1, 1]]], dtype=torch.uint8)"""
     if length_dim == 0:
         raise ValueError("length_dim cannot be 0: {}".format(length_dim))
 
@@ -206,15 +214,12 @@ def make_non_pad_mask(lengths, xs=None, length_dim=-1):
                  [1, 1, 0, 0, 0, 0],
                  [1, 1, 0, 0, 0, 0],
                  [1, 1, 0, 0, 0, 0],
-                 [1, 1, 0, 0, 0, 0]]], dtype=torch.uint8)
-    """
+                 [1, 1, 0, 0, 0, 0]]], dtype=torch.uint8)"""
     return ~make_pad_mask(lengths, xs, length_dim)
 
 
 class Encoder(nn.Module):
-    """
-    Encoder Network
-    """
+    """Encoder Network"""
 
     def __init__(
         self,
@@ -226,9 +231,7 @@ class Encoder(nn.Module):
         num_layers=1,
         glu_kernel=3,
     ):
-        """
-        :param para: dictionary that contains all parameters
-        """
+        """:param para: dictionary that contains all parameters"""
         super(Encoder, self).__init__()
 
         self.emb_phone = nn.Embedding(phone_size, embed_size)
@@ -242,15 +245,14 @@ class Encoder(nn.Module):
                     num_layers, hidden_size, glu_kernel, dropout, hidden_size
                 )
             )
-        # self.GLU = module.GLU(num_layers, hidden_size, glu_kernel, dropout, hidden_size)
+        # self.GLU =
+        # module.GLU(num_layers, hidden_size, glu_kernel, dropout, hidden_size)
 
         self.fc_2 = nn.Linear(hidden_size, embed_size)
 
     def forward(self, text_phone, pos=None):
-        """
-        text_phone dim: [batch_size, text_phone_length]
-        output dim : [batch_size, text_phone_length, embedded_dim]
-        """
+        """text_phone dim: [batch_size, text_phone_length]
+        output dim : [batch_size, text_phone_length, embedded_dim]"""
         # don't use pos in glu, but leave the field for uniform interface
         embedded_phone = self.emb_phone(text_phone)
         glu_in = self.fc_1(embedded_phone)
@@ -308,9 +310,7 @@ class SA_Encoder(nn.Module):
 
 
 class Conformer_Encoder(nn.Module):
-    """
-    Conformer_Encoder Network
-    """
+    """Conformer_Encoder Network"""
 
     def __init__(
         self,
@@ -364,9 +364,11 @@ class Conformer_Encoder(nn.Module):
     def forward(self, text_phone, pos, length):
 
         if self.training:
-            query_mask = pos.ne(0).type(torch.float)
+            # query_mask = pos.ne(0).type(torch.float)
+            pass
         else:
-            query_mask = None
+            # query_mask = None
+            pass
         mask = pos.eq(0).unsqueeze(1).repeat(1, text_phone.size(1), 1)
 
         embedded_phone = self.emb_phone(text_phone)
@@ -376,11 +378,15 @@ class Conformer_Encoder(nn.Module):
 
         # print(f"embedded_phone: {np.shape(embedded_phone)}")
 
-        # length = torch.max(length,dim=1)[0]    # length = [batch size]
-        # embedded_phone = embedded_phone[:, : max(length)]       # for data parallel
-        # src_mask = make_non_pad_mask(length.tolist()).to(embedded_phone.device).unsqueeze(-2)
+        # length = torch.max(length,dim=1)[0]
+        # length = [batch size]
+        # embedded_phone = embedded_phone[:, : max(length)]
+        # for data parallel
+        # src_mask = make_non_pad_mask(length.tolist())
+        # .to(embedded_phone.device).unsqueeze(-2)
 
-        # print(f"length: {length}, text_phone: {np.shape(text_phone)}, src_mask: {np.shape(mask)}, embedded_phone: {np.shape(embedded_phone)}")
+        # print(f"length: {length}, text_phone: {np.shape(text_phone)},
+        # src_mask: {np.shape(mask)}, embedded_phone: {np.shape(embedded_phone)}")
 
         x, masks = self.conformer_block(embedded_phone, mask)
 
@@ -388,9 +394,7 @@ class Conformer_Encoder(nn.Module):
 
 
 class Encoder_Postnet(nn.Module):
-    """
-    Encoder Postnet
-    """
+    """Encoder Postnet"""
 
     def __init__(self, embed_size):
         super(Encoder_Postnet, self).__init__()
@@ -403,11 +407,9 @@ class Encoder_Postnet(nn.Module):
         self.pos = module.PositionalEncoding(embed_size)
 
     def aligner(self, encoder_out, align_phone, text_phone):
-        """
-        align_phone = [batch_size, align_phone_length]
+        """align_phone = [batch_size, align_phone_length]
         text_phone = [batch_size, text_phone_length]
-        align_phone_length( = frame_num) > text_phone_length
-        """
+        align_phone_length( = frame_num) > text_phone_length"""
         # batch
         align_phone = align_phone.long()
         for i in range(align_phone.shape[0]):
@@ -434,12 +436,10 @@ class Encoder_Postnet(nn.Module):
         return out
 
     def forward(self, encoder_out, align_phone, text_phone, pitch, beats):
-        """
-        pitch/beats : [batch_size, frame_num] -> [batch_size, frame_num，1]
-        """
-        batch_size = pitch.shape[0]
-        frame_num = pitch.shape[1]
-        embedded_dim = encoder_out.shape[2]
+        """pitch/beats : [batch_size, frame_num] -> [batch_size, frame_num，1]"""
+        # batch_size = pitch.shape[0]
+        # frame_num = pitch.shape[1]
+        # embedded_dim = encoder_out.shape[2]
 
         aligner_out = self.aligner(encoder_out, align_phone, text_phone)
 
@@ -458,11 +458,8 @@ class Encoder_Postnet(nn.Module):
 
 
 class Decoder_noGLU(nn.Module):
-    """
-    Decoder Network
-    """
+    """Decoder Network"""
 
-    # TODO： frame smoothing (triple the time resolution)
     def __init__(
         self,
         num_block,
@@ -507,11 +504,8 @@ class Decoder_noGLU(nn.Module):
 
 
 class Decoder(nn.Module):
-    """
-    Decoder Network
-    """
+    """Decoder Network"""
 
-    # TODO： frame smoothing (triple the time resolution)
     def __init__(
         self,
         num_block,
@@ -556,9 +550,7 @@ class Decoder(nn.Module):
 
 
 class Conformer_Decoder(nn.Module):
-    """
-    Conformer_Decoder Network
-    """
+    """Conformer_Decoder Network"""
 
     def __init__(
         self,
@@ -613,9 +605,11 @@ class Conformer_Decoder(nn.Module):
     def forward(self, src, pos):
 
         if self.training:
-            query_mask = pos.ne(0).type(torch.float)
+            pass
+            # query_mask = pos.ne(0).type(torch.float)
         else:
-            query_mask = None
+            pass
+            # query_mask = None
         mask = pos.eq(0).unsqueeze(1).repeat(1, src.size(1), 1)
 
         x, masks = self.conformer_block(src, mask)
@@ -625,9 +619,7 @@ class Conformer_Decoder(nn.Module):
 
 
 class GLU_TransformerSVS(nn.Module):
-    """
-    Transformer Network
-    """
+    """Transformer Network"""
 
     def __init__(
         self,
@@ -720,9 +712,7 @@ class GLU_TransformerSVS(nn.Module):
 
 
 class LSTMSVS(nn.Module):
-    """
-    LSTM singing voice synthesis model
-    """
+    """LSTM singing voice synthesis model"""
 
     def __init__(
         self,
@@ -828,7 +818,7 @@ class LSTMSVS(nn.Module):
         out = F.leaky_relu(self.linear_wrapper2(out))
 
         pos = self.pos(out)
-        pos_encode = self.fc_pos(pos)
+        # pos_encode = self.fc_pos(pos)
         out = pos + out
         out, _ = self.pos_lstm(out)
         out = F.leaky_relu(self.linear_wrapper3(out))
@@ -861,9 +851,7 @@ class LSTMSVS(nn.Module):
 
 
 class GRUSVS_gs(nn.Module):
-    """
-    GRU singing voice synthesis model by Guo Shuai (RUC)
-    """
+    """GRU singing voice synthesis model by Guo Shuai (RUC)"""
 
     def __init__(
         self,
@@ -984,7 +972,8 @@ class GRUSVS_gs(nn.Module):
             )  # weighted = [1, batch size, enc hid dim * 2]
             rnn_input = torch.cat(
                 (input_, weighted), dim=2
-            )  # rnn_input = [1, batch size, (enc hid dim * 2) + (enc hid dim * 2)]
+            )
+            # rnn_input = [1, batch size, (enc hid dim * 2) + (enc hid dim * 2)]
 
             output, hidden = self.rnnDecoder(rnn_input, hidden)
 
@@ -1111,9 +1100,7 @@ class TransformerSVS(nn.Module):
 
 
 class ConformerSVS(nn.Module):
-    """
-    Conformer Transformer Network
-    """
+    """Conformer Transformer Network"""
 
     def __init__(
         self,
@@ -1237,9 +1224,7 @@ class ConformerSVS(nn.Module):
 
 
 class ConformerSVS_FULL(nn.Module):
-    """
-    Conformer Transformer Network
-    """
+    """Conformer Transformer Network"""
 
     def __init__(
         self,
@@ -1364,15 +1349,13 @@ class ConformerSVS_FULL(nn.Module):
         return output, None, mel_output, None
 
 
-### Reproduce the DAR model from USTC
+# Reproduce the DAR model from USTC
 
 
 class USTC_Prenet(nn.Module):
-    """
-    Singing Voice Synthesis Using Deep Autoregressive Neural Networks for Acoustic Modeling from USTC, adapted by GS
-
-    - herf: https://arxiv.org/pdf/1906.08977.pdf
-    """
+    """Singing Voice Synthesis Using Deep Autoregressive Neural Networks
+       for Acoustic Modeling from USTC, adapted by GS
+    - herf: https://arxiv.org/pdf/1906.08977.pdf"""
 
     def __init__(
         self,
@@ -1433,7 +1416,8 @@ class USTC_Prenet(nn.Module):
         self.device = device
 
     def forward(self, x):
-        # x: [batch size, multi_history_num, n_dim] - n_mel=40 in USTC model & with 1 energy
+        # x: [batch size, multi_history_num, n_dim] - n_mel=40
+        # in USTC model & with 1 energy
 
         # padding - same
         batch_size = np.shape(x)[0]
@@ -1503,11 +1487,9 @@ class USTC_Prenet(nn.Module):
 
 
 class USTC_SVS(nn.Module):
-    """
-    Singing Voice Synthesis Using Deep Autoregressive Neural Networks for Acoustic Modeling from USTC, adapted by GS
-
-    - herf: https://arxiv.org/pdf/1906.08977.pdf
-    """
+    """Singing Voice Synthesis Using Deep Autoregressive Neural Networks
+       for Acoustic Modeling from USTC, adapted by GS
+       - herf: https://arxiv.org/pdf/1906.08977.pdf"""
 
     def __init__(
         self,
@@ -1625,7 +1607,8 @@ class USTC_SVS(nn.Module):
             batch_size, -1
         )  # [batch size, bi_num_layers * 2 * bi_d_model]
 
-        # output_uni_GRU = torch.zeros(batch_size, max_length, self.uni_d_model).to(self.device)
+        # output_uni_GRU = torch.zeros
+        # (batch_size, max_length, self.uni_d_model).to(self.device)
         output = torch.zeros(batch_size, max_length, self.output_dim).to(
             self.device
         )
@@ -1636,7 +1619,7 @@ class USTC_SVS(nn.Module):
 
             if i < self.multi_history_num:
                 index_begin = 0
-                index_end = index_begin + self.multi_history_num - 1
+                # index_end = index_begin + self.multi_history_num - 1
 
                 for shifted in range(self.multi_history_num):
                     if shifted == 0:
@@ -1685,7 +1668,8 @@ class USTC_SVS(nn.Module):
             step_input_uni_GRU = torch.cat(
                 (step_output_bi_GRU, step_output_prenet), dim=2
             )
-            # step_input_uni_GRU: [batch size, 1, 2*bi_d_model + multi_history_num * middle_dim]
+            # step_input_uni_GRU:
+            # [batch size, 1, 2*bi_d_model + multi_history_num * middle_dim]
 
             if i == 0:
                 step_output_uni_GRU, hidden_uni_GRU = self.uni_GRU(
@@ -1768,7 +1752,8 @@ def _test():
     # num_glu_block = 3
 
     # #test encoder and encoer_postnet
-    # encoder = Encoder(phone_size, embed_size, hidden_size, dropout, num_glu_block, num_layers=glu_num_layers, glu_kernel=glu_kernel)
+    # encoder = Encoder(phone_size, embed_size, hidden_size, dropout,
+    # num_glu_block, num_layers=glu_num_layers, glu_kernel=glu_kernel)
     # encoder_out, text_phone = encoder(phone.squeeze(2))
     # print('encoder_out.size():',encoder_out.size())
 
@@ -1777,8 +1762,10 @@ def _test():
     # print('post_net_out.size():',post_out.size())
 
     # # test model as a whole
-    # # model = GLU_Transformer(phone_size, hidden_size, embed_size, glu_num_layers, dropout, num_dec_block, nhead, feat_dim)
-    # # spec_pred = model(char, phone, pitch, beat, src_key_padding_mask=seq_len, char_key_padding_mask=char_seq_len)
+    # # model = GLU_Transformer(phone_size, hidden_size, embed_size,
+    # glu_num_layers, dropout, num_dec_block, nhead, feat_dim)
+    # # spec_pred = model(char, phone, pitch, beat, src_key_padding_mask=seq_len,
+    # char_key_padding_mask=char_seq_len)
     # # print(spec_pred)
 
     # # test decoder
@@ -1787,7 +1774,8 @@ def _test():
     #     length = seq_len_list[i]
     #     out_from_encoder[i, :length, :] = torch.randn(length, hidden_size)
     # decoder = Decoder(num_dec_block, embed_size, feat_dim, nhead, dropout)
-    # decoder_out, att = decoder(out_from_encoder, src_key_padding_mask=seq_len)
+    # decoder_out, att =
+    # decoder(out_from_encoder, src_key_padding_mask=seq_len)
     # print(decoder_out.size())
     # print(att.size())
 

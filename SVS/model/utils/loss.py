@@ -1,12 +1,25 @@
+'''Copyright [2020] [Jiatong Shi]
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.'''
 #!/usr/bin/env python3
 
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
-
-import torch
-import numpy as np
-from torch import nn
 import librosa
+import numpy as np
+import torch
+from torch import nn
+
 
 
 class MaskedLoss(torch.nn.Module):
@@ -47,10 +60,8 @@ def tq(f_bin, fs, fft_bins):
 
 
 def cband():
-    """
-    a pre-defined idealized critical band filter bank
-    :return: idealized critical band filter bank
-    """
+    """a pre-defined idealized critical band filter bank
+    :return: idealized critical band filter bank"""
     return np.array(
         [
             0,
@@ -84,13 +95,11 @@ def cband():
 
 
 def cal_psd2bark_dict(fs=16000, win_len=160):
-    """
-    compute a map from bark_band to PSD component index list
+    """compute a map from bark_band to PSD component index list
     :param fs: sampling rate (int)
     :param win_len: window length (int)
     :return: return (psd_list, bark_num) where psd_list is {bark_band_index: [spectrum_start, spectrum_end]} and bark
-    number is the number of bark available corresponding to the sampling rate
-    """
+    number is the number of bark available corresponding to the sampling rate"""
     # for current form, only less than 44100 sr can be processed
     assert fs <= 44100
     unit = fs // win_len
@@ -118,11 +127,9 @@ def cal_psd2bark_dict(fs=16000, win_len=160):
 
 
 def cal_spread_function(bark_num):
-    """
-    calculate spread function
+    """calculate spread function
     :param bark_num: point number used in analysis (int)
-    :return: torch.Tensor()
-    """
+    :return: torch.Tensor()"""
     bark_use = bark_num - 1
     sf = np.zeros((bark_use, bark_use))
     for i in range(bark_use):
@@ -139,11 +146,9 @@ def cal_spread_function(bark_num):
 
 
 def geomean(iterable):
-    """
-    calculate geometric mean of a given iterable
+    """calculate geometric mean of a given iterable
     :param iterable: a torch.Tensor with one dimension
-    :return: the geometric mean of a given iterable
-    """
+    :return: the geometric mean of a given iterable"""
     # sign = torch.sign(iterable)
     temp = torch.sum(torch.log10(torch.add(torch.abs(iterable), 1e-30)), -1)
     temp = torch.mul(temp, 1 / iterable.size()[-1])
@@ -152,11 +157,9 @@ def geomean(iterable):
 
 
 def arimean(iterable):
-    """
-    calculate arithmetic mean of a given iterable
+    """calculate arithmetic mean of a given iterable
     :param iterable: a torch.Tensor with one dimension
-    :return: the arithmetic mean of a given iterable
-    """
+    :return: the arithmetic mean of a given iterable"""
     return torch.mean(abs(iterable), -1)
 
 
@@ -177,8 +180,10 @@ class PerceptualEntropy(nn.Module):
             f_bin=np.array(range(win_len // 2)), fs=fs, fft_bins=win_len
         )
         self.renormalize = None
-        # for BWE, a cutoff should be used, since we only predict the high band signal
-        # self.cutoff = 17 # depend on bark band size and the widen frequency part
+        # for BWE, a cutoff should be used,
+        # since we only predict the high band signal
+        # self.cutoff = 17
+        # depend on bark band size and the widen frequency part
         # cutoff is one-based
         self.cutoff = 1
 
@@ -273,7 +278,7 @@ class PerceptualEntropy(nn.Module):
             )
             t = t.repeat((1, 1, k))
             bound = self.Tq[
-                self.psd_dict[i][0] - 1 : self.psd_dict[i][0] + k - 1
+                self.psd_dict[i][0] - 1: self.psd_dict[i][0] + k - 1
             ]
             bound = bound[np.newaxis, np.newaxis, :]
             bound = torch.Tensor(bound).repeat(t.shape[0], t.shape[1], 1)
@@ -284,7 +289,8 @@ class PerceptualEntropy(nn.Module):
             t = torch.max(t, bound)
             # t.retain_grad()
 
-            # compare to original model, we remove round, since it is not supported for auto-diff
+            # compare to original model, we remove round,
+            # since it is not supported for auto-diff
             pe_real = torch.log2(
                 torch.add(
                     torch.mul(
@@ -363,5 +369,6 @@ def _test_perceptual_entropy(filename):
 
 if __name__ == "__main__":
     _test_perceptual_entropy(
-        "/data1/gs/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info/train/1/0001.wav"
+        "/data1/gs/jiatong/SVS_system/SVS/data/public_dataset"
+        "/kiritan_data/wav_info/train/1/0001.wav"
     )

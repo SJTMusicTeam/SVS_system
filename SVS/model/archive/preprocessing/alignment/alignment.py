@@ -1,21 +1,28 @@
+'''Copyright [2020] [linhailan1]
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.'''
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Sun Feb  9 10:51:15 2020
 
-@author: linhailan1
-"""
-
+import argparse
 import math
 import os
-import argparse
+
 
 
 def DTW(template, sample, new_Map, name):
-    """
-    Alignment using DTW algorithm
-    Return the record and distance of the shortest path
-    """
+    """Alignment using DTW algorithm
+    Return the record and distance of the shortest path"""
     Max = -math.log(1e-300, 2)
     T_len = len(template)
     S_len = len(sample)
@@ -31,10 +38,8 @@ def DTW(template, sample, new_Map, name):
                 before[ind] = sample[0][key]
 
     for i in range(1, S_len):
-        """
-        calculate the probability of all phonemes
-        in the corresponding template in the i-th frame
-        """
+        """calculate the probability of all phonemes
+        in the corresponding template in the i-th frame"""
         frame_pos = [Max for i in range(T_len)]
         for key in sample[i].keys():
             for ind in range(len(template)):
@@ -69,19 +74,17 @@ def DTW(template, sample, new_Map, name):
         record_b = record_a[:]
 
     # either last phone or silence
-    l = len(after)
-    if after[l - 2] < after[l - 1]:
-        ind = l - 2
+    length = len(after)
+    if after[length - 2] < after[length - 1]:
+        ind = length - 2
     else:
-        ind = l - 1
+        ind = length - 1
     return record_a[ind], after[ind]
 
 
 def text_to_matrix_HMM(Map, file):
-    """
-    Used in HMM model
-    Read the posterior probability matrix and save it in dictionary M
-    """
+    """Used in HMM model
+    Read the posterior probability matrix and save it in dictionary M"""
     Min = 1e-300
     M = dict()
     post = file.readlines()
@@ -153,10 +156,8 @@ def text_to_matrix_TDNN(Map, file):
 
 
 def index_to_phone(args):
-    """
-    Establish the correspondence between phonemes and index,
-    and save them in the Map dictionary, (key = index, value = phoneme name)
-    """
+    """Establish the correspondence between phonemes and index,
+    and save them in the Map dictionary, (key = index, value = phoneme name)"""
     file = open(args.phone_map_path, "r")
     lines = file.readlines()
     file.close()
@@ -192,7 +193,8 @@ def check_phones(Phone_table, text):
     text_phone = text - Phone_set
     if len(text_phone) > 0:
         print(
-            "The phonemes in the text is not corresponds to the phonemes in the phone table!"
+            "The phonemes in the text is not corresponds to " 
+            "the phonemes in the phone table!"
         )
         if text_phone is not None:
             print("These phonemes are in the text but not in the phone table:")

@@ -1,39 +1,43 @@
+'''Copyright [2020] [Jiatong Shi & Shuai Guo]
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.'''
+
 #!/usr/bin/env python3
 
-# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi & Shuai Guo)
-
-
+import numpy as np
 import os
 import sys
-import numpy as np
-import torch
-import time
 from SVS.model.utils.gpu_util import use_single_gpu
-from SVS.model.utils.SVSDataset import SVSDataset, SVSCollator
-from SVS.model.network import (
-    GLU_TransformerSVS,
-    LSTMSVS,
-    GRUSVS_gs,
-    TransformerSVS,
-    ConformerSVS,
-    ConformerSVS_FULL,
-    USTC_SVS,
-)
+from SVS.model.utils.SVSDataset import SVSDataset
+from SVS.model.utils.SVSDataset import SVSCollator
+from SVS.model.network import GLU_TransformerSVS
+from SVS.model.network import LSTMSVS
+from SVS.model.network import GRUSVS_gs
+from SVS.model.network import TransformerSVS
+from SVS.model.network import ConformerSVS
+from SVS.model.network import ConformerSVS_FULL
+from SVS.model.network import USTC_SVS
 from SVS.model.utils.transformer_optim import ScheduledOptim
-from SVS.model.utils.loss import (
-    MaskedLoss,
-    cal_spread_function,
-    cal_psd2bark_dict,
-    PerceptualEntropy,
-)
-from SVS.model.utils.utils import (
-    train_one_epoch,
-    save_checkpoint,
-    validate,
-    record_info,
-    collect_stats,
-    save_model,
-)
+from SVS.model.utils.loss import MaskedLoss
+from SVS.model.utils.loss import cal_spread_function
+from SVS.model.utils.loss import cal_psd2bark_dict
+from SVS.model.utils.loss import PerceptualEntropy
+from SVS.model.utils.utils import train_one_epoch
+from SVS.model.utils.utils import validate
+from SVS.model.utils.utils import collect_stats
+from SVS.model.utils.utils import save_model
+import time
+import torch
 
 
 def count_parameters(model):
@@ -75,7 +79,7 @@ def Auto_save_model(
         if dev_info[save_loss_select] < select_loss:
             epoch_to_save[dev_info[save_loss_select]] = epoch
             print(
-                "---------------------------------------------------------------------------------"
+                "----------------------------------------------------------"
             )
             print(f"### - {save_loss_select} - ###")
             print(
@@ -124,7 +128,7 @@ def Auto_save_model(
 
             print(epoch_to_save)
             print(
-                "*********************************************************************************"
+                "**********************************************************"
             )
     if len(sorted(epoch_to_save.keys())) > args.num_saved_model:
         raise ValueError("")
@@ -137,7 +141,7 @@ def train(args):
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
-    if torch.cuda.is_available() and args.auto_select_gpu == True:
+    if torch.cuda.is_available() and args.auto_select_gpu is True:
         cvd = use_single_gpu()
         print(f"GPU {cvd} is used")
         torch.backends.cudnn.deterministic = True
@@ -148,7 +152,7 @@ def train(args):
     elif (
         args.gpu_id >= 0
         and torch.cuda.is_available()
-        and args.auto_select_gpu == False
+        and args.auto_select_gpu is False
     ):
         torch.cuda.set_device(args.gpu_id)
         print(f"GPU {args.gpu_id} is used")
@@ -159,7 +163,7 @@ def train(args):
 
     else:
         device = torch.device("cpu")
-        print(f"Warning: CPU is used")
+        print("Warning: CPU is used")
 
     train_set = SVSDataset(
         align_root_path=args.train_align,
@@ -228,7 +232,7 @@ def train(args):
     )
     if args.collect_stats:
         collect_stats(train_loader, args)
-        print(f"collect_stats finished !")
+        print("collect_stats finished !")
         quit()
     # prepare model
     if args.model_type == "GLU_Transformer":
@@ -301,7 +305,8 @@ def train(args):
             enc_normalize_before=args.enc_normalize_before,
             enc_concat_after=args.enc_concat_after,
             enc_positionwise_layer_type=args.enc_positionwise_layer_type,
-            enc_positionwise_conv_kernel_size=args.enc_positionwise_conv_kernel_size,
+            enc_positionwise_conv_kernel_size= \
+                args.enc_positionwise_conv_kernel_size,
             enc_macaron_style=args.enc_macaron_style,
             enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
             enc_selfattention_layer_type=args.enc_selfattention_layer_type,
@@ -335,7 +340,8 @@ def train(args):
             enc_normalize_before=args.enc_normalize_before,
             enc_concat_after=args.enc_concat_after,
             enc_positionwise_layer_type=args.enc_positionwise_layer_type,
-            enc_positionwise_conv_kernel_size=args.enc_positionwise_conv_kernel_size,
+            enc_positionwise_conv_kernel_size= \
+                args.enc_positionwise_conv_kernel_size,
             enc_macaron_style=args.enc_macaron_style,
             enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
             enc_selfattention_layer_type=args.enc_selfattention_layer_type,
@@ -354,7 +360,8 @@ def train(args):
             dec_normalize_before=args.dec_normalize_before,
             dec_concat_after=args.dec_concat_after,
             dec_positionwise_layer_type=args.dec_positionwise_layer_type,
-            dec_positionwise_conv_kernel_size=args.dec_positionwise_conv_kernel_size,
+            dec_positionwise_conv_kernel_size= \
+                args.dec_positionwise_conv_kernel_size,
             dec_macaron_style=args.dec_macaron_style,
             dec_pos_enc_layer_type=args.dec_pos_enc_layer_type,
             dec_selfattention_layer_type=args.dec_selfattention_layer_type,
@@ -579,7 +586,7 @@ def train(args):
         """
         torch.backends.cudnn.enabled = False  # 莫名的bug，关掉才可以跑
 
-        start_t_dev = time.time()
+        # start_t_dev = time.time()
         dev_info = validate(
             dev_loader,
             model,
