@@ -1,4 +1,4 @@
-'''Copyright [2020] [Jiatong Shi & Shuai Guo]
+"""Copyright [2020] [Jiatong Shi & Shuai Guo]
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -10,7 +10,7 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
-limitations under the License.'''
+limitations under the License."""
 
 #!/usr/bin/env python3
 
@@ -156,7 +156,6 @@ def train(args):
         device = torch.device("cpu")
         logging.info(f"Warning: CPU is used")
 
-
     train_set = SVSDataset(
         align_root_path=args.train_align,
         pitch_beat_root_path=args.train_pitch,
@@ -297,8 +296,7 @@ def train(args):
             enc_normalize_before=args.enc_normalize_before,
             enc_concat_after=args.enc_concat_after,
             enc_positionwise_layer_type=args.enc_positionwise_layer_type,
-            enc_positionwise_conv_kernel_size= \
-                args.enc_positionwise_conv_kernel_size,
+            enc_positionwise_conv_kernel_size=args.enc_positionwise_conv_kernel_size,
             enc_macaron_style=args.enc_macaron_style,
             enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
             enc_selfattention_layer_type=args.enc_selfattention_layer_type,
@@ -332,8 +330,7 @@ def train(args):
             enc_normalize_before=args.enc_normalize_before,
             enc_concat_after=args.enc_concat_after,
             enc_positionwise_layer_type=args.enc_positionwise_layer_type,
-            enc_positionwise_conv_kernel_size= \
-                args.enc_positionwise_conv_kernel_size,
+            enc_positionwise_conv_kernel_size=args.enc_positionwise_conv_kernel_size,
             enc_macaron_style=args.enc_macaron_style,
             enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
             enc_selfattention_layer_type=args.enc_selfattention_layer_type,
@@ -352,8 +349,7 @@ def train(args):
             dec_normalize_before=args.dec_normalize_before,
             dec_concat_after=args.dec_concat_after,
             dec_positionwise_layer_type=args.dec_positionwise_layer_type,
-            dec_positionwise_conv_kernel_size= \
-                args.dec_positionwise_conv_kernel_size,
+            dec_positionwise_conv_kernel_size=args.dec_positionwise_conv_kernel_size,
             dec_macaron_style=args.dec_macaron_style,
             dec_pos_enc_layer_type=args.dec_pos_enc_layer_type,
             dec_selfattention_layer_type=args.dec_selfattention_layer_type,
@@ -598,10 +594,8 @@ def train(args):
         )
         end_t_dev = time.time()
 
-        dev_log = (
-            "Dev epoch: {:04d}, loss: {:.4f}, spec_loss: {:.4f}, ".format(
-                epoch, dev_info["loss"], dev_info["spec_loss"]
-            )
+        dev_log = "Dev epoch: {:04d}, loss: {:.4f}, spec_loss: {:.4f}, ".format(
+            epoch, dev_info["loss"], dev_info["spec_loss"]
         )
         dev_log += "mcd_value: {:.4f}, ".format(dev_info["mcd_value"])
         if args.n_mels > 0:

@@ -1,4 +1,4 @@
-'''Copyright [2020] [linhailan1]
+"""Copyright [2020] [linhailan1]
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -10,14 +10,13 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
-limitations under the License.'''
+limitations under the License."""
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import argparse
 import math
 import os
-
 
 
 def DTW(template, sample, new_Map, name):
@@ -193,7 +192,7 @@ def check_phones(Phone_table, text):
     text_phone = text - Phone_set
     if len(text_phone) > 0:
         print(
-            "The phonemes in the text is not corresponds to " 
+            "The phonemes in the text is not corresponds to "
             "the phonemes in the phone table!"
         )
         if text_phone is not None:

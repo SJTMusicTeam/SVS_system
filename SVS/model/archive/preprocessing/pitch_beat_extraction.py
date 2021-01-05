@@ -1,4 +1,4 @@
-'''Copyright [2020] [linhailan1]
+"""Copyright [2020] [linhailan1]
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -10,7 +10,7 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
-limitations under the License.'''
+limitations under the License."""
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Extract beats and pitches, and save it under the same folder as the wav file
@@ -56,7 +56,7 @@ for root, dirs, files in os.walk(args.datadir):
                 n_fft=n_fft,
                 win_length=win_length,
             )
-            #file=open((os.path.join(args.outdir, name))+'_beats.txt', "w+")
+            # file=open((os.path.join(args.outdir, name))+'_beats.txt', "w+")
             # for beat in beats:
             #    file.write(str(beat)+' ')
             # file.close()

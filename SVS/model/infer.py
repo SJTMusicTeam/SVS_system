@@ -1,4 +1,4 @@
-'''Copyright [2020] [Jiatong Shi & Shuai Guo]
+"""Copyright [2020] [Jiatong Shi & Shuai Guo]
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -10,7 +10,7 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
-limitations under the License.'''
+limitations under the License."""
 #!/usr/bin/env python3
 
 import logging
@@ -31,6 +31,7 @@ from SVS.model.utils.utils import log_figure
 import SVS.tools.metrics as Metrics
 import time
 import torch
+
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -116,8 +117,7 @@ def infer(args):
             enc_normalize_before=args.enc_normalize_before,
             enc_concat_after=args.enc_concat_after,
             enc_positionwise_layer_type=args.enc_positionwise_layer_type,
-            enc_positionwise_conv_kernel_size= \
-                args.enc_positionwise_conv_kernel_size,
+            enc_positionwise_conv_kernel_size=args.enc_positionwise_conv_kernel_size,
             enc_macaron_style=args.enc_macaron_style,
             enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
             enc_selfattention_layer_type=args.enc_selfattention_layer_type,
@@ -151,8 +151,7 @@ def infer(args):
             enc_normalize_before=args.enc_normalize_before,
             enc_concat_after=args.enc_concat_after,
             enc_positionwise_layer_type=args.enc_positionwise_layer_type,
-            enc_positionwise_conv_kernel_size= \
-                args.enc_positionwise_conv_kernel_size,
+            enc_positionwise_conv_kernel_size=args.enc_positionwise_conv_kernel_size,
             enc_macaron_style=args.enc_macaron_style,
             enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
             enc_selfattention_layer_type=args.enc_selfattention_layer_type,
@@ -171,8 +170,7 @@ def infer(args):
             dec_normalize_before=args.dec_normalize_before,
             dec_concat_after=args.dec_concat_after,
             dec_positionwise_layer_type=args.dec_positionwise_layer_type,
-            dec_positionwise_conv_kernel_size= \
-                args.dec_positionwise_conv_kernel_size,
+            dec_positionwise_conv_kernel_size=args.dec_positionwise_conv_kernel_size,
             dec_macaron_style=args.dec_macaron_style,
             dec_pos_enc_layer_type=args.dec_pos_enc_layer_type,
             dec_selfattention_layer_type=args.dec_selfattention_layer_type,
@@ -280,17 +278,20 @@ def infer(args):
     start_t_test = time.time()
 
     with torch.no_grad():
-        for step, (
-            phone,
-            beat,
-            pitch,
-            spec,
-            real,
-            imag,
-            length,
-            chars,
-            char_len_list,
-            mel,
+        for (
+            step,
+            (
+                phone,
+                beat,
+                pitch,
+                spec,
+                real,
+                imag,
+                length,
+                chars,
+                char_len_list,
+                mel,
+            ),
         ) in enumerate(test_loader, 1):
             # if step >= args.decode_sample:
             #     break
@@ -424,8 +425,9 @@ def infer(args):
                     args.prediction_path,
                     args,
                 )
-                out_log = "step {}:train_loss{:.4f};spec_loss{:.4f};mcd_value{:.4f};" \
-                    .format(step, losses.avg, spec_losses.avg, mcd_metric.avg)
+                out_log = "step {}:train_loss{:.4f};spec_loss{:.4f};mcd_value{:.4f};".format(
+                    step, losses.avg, spec_losses.avg, mcd_metric.avg
+                )
                 if args.perceptual_loss > 0:
                     out_log += " pe_loss {:.4f}; ".format(pe_losses.avg)
                 if args.n_mels > 0:
@@ -449,10 +451,7 @@ def infer(args):
     f0_corr = Metrics.compute_f0_corr(f0_ground_truth_all, f0_synthesis_all)
 
     out_log += "\n\t mcd_value {:.4f} dB ".format(mcd_metric.avg)
-    out_log += \
-        " f0_rmse_value {:.4f} Hz, vuv_error_value {:.4f} %, F0_CORR {:.4f}; " \
-        .format(
+    out_log += " f0_rmse_value {:.4f} Hz, vuv_error_value {:.4f} %, F0_CORR {:.4f}; ".format(
         np.sqrt(f0_distortion_metric.avg), vuv_error_metric.avg * 100, f0_corr
     )
     logging.info("{} time: {:.2f}s".format(out_log, end_t_test - start_t_test))
-
