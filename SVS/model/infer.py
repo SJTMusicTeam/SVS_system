@@ -265,7 +265,10 @@ def infer(args):
     if args.n_mels > 0:
         mel_losses = AverageMeter()
         mcd_metric = AverageMeter()
-        f0_distortion_metric, vuv_error_metric = AverageMeter(), AverageMeter()
+        f0_distortion_metric, vuv_error_metric = (
+            AverageMeter(),
+            AverageMeter(),
+        )
         if args.double_mel_loss:
             double_mel_losses = AverageMeter()
     model.eval()
@@ -389,7 +392,10 @@ def infer(args):
                 output, _ = sepc_normalizer.inverse(output, length)
                 # spec,_ = sepc_normalizer.inverse(spec,length)
 
-            mcd_value, length_sum = Metrics.Calculate_melcd_fromLinearSpectrum(
+            (
+                mcd_value,
+                length_sum,
+            ) = Metrics.Calculate_melcd_fromLinearSpectrum(
                 output, spec_origin, length, args
             )
             (
