@@ -1486,8 +1486,8 @@ class USTC_Prenet(nn.Module):
 
 class USTC_SVS(nn.Module):
     """Singing Voice Synthesis Using Deep Autoregressive Neural Networks
-       for Acoustic Modeling from USTC, adapted by GS
-       - herf: https://arxiv.org/pdf/1906.08977.pdf"""
+    for Acoustic Modeling from USTC, adapted by GS
+    - herf: https://arxiv.org/pdf/1906.08977.pdf"""
 
     def __init__(
         self,
