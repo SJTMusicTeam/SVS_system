@@ -1,39 +1,36 @@
+"""Copyright [2020] [Jiatong Shi & Shuai Guo]
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License."""
 #!/usr/bin/env python3
 
-# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi & Shuai Guo)
-
 import logging
-import torch
-import os
-import time
 import numpy as np
-
-from SVS.model.utils.gpu_util import use_single_gpu
-from SVS.model.utils.SVSDataset import SVSDataset, SVSCollator
-from SVS.model.network import (
-    GLU_TransformerSVS,
-    TransformerSVS,
-    LSTMSVS,
-    ConformerSVS,
-    ConformerSVS_FULL,
-)
-from SVS.model.utils.loss import MaskedLoss
-from SVS.model.utils.utils import (
-    AverageMeter,
-    record_info,
-    log_figure,
-    spectrogram2wav,
-)
-from SVS.model.utils.utils import (
-    train_one_epoch,
-    save_checkpoint,
-    validate,
-    record_info,
-    collect_stats,
-    save_model,
-)
+import os
 from SVS.model.layers.global_mvn import GlobalMVN
+from SVS.model.network import GLU_TransformerSVS
+from SVS.model.network import GRUSVS_gs
+from SVS.model.network import TransformerSVS
+from SVS.model.network import LSTMSVS
+from SVS.model.network import ConformerSVS
+from SVS.model.network import ConformerSVS_FULL
+from SVS.model.utils.loss import MaskedLoss
+from SVS.model.utils.SVSDataset import SVSDataset
+from SVS.model.utils.SVSDataset import SVSCollator
+from SVS.model.utils.utils import AverageMeter
+from SVS.model.utils.utils import log_figure
 import SVS.tools.metrics as Metrics
+import time
+import torch
 
 
 def count_parameters(model):
@@ -268,7 +265,10 @@ def infer(args):
     if args.n_mels > 0:
         mel_losses = AverageMeter()
         mcd_metric = AverageMeter()
-        f0_distortion_metric, vuv_error_metric = AverageMeter(), AverageMeter()
+        f0_distortion_metric, vuv_error_metric = (
+            AverageMeter(),
+            AverageMeter(),
+        )
         if args.double_mel_loss:
             double_mel_losses = AverageMeter()
     model.eval()
@@ -281,17 +281,20 @@ def infer(args):
     start_t_test = time.time()
 
     with torch.no_grad():
-        for step, (
-            phone,
-            beat,
-            pitch,
-            spec,
-            real,
-            imag,
-            length,
-            chars,
-            char_len_list,
-            mel,
+        for (
+            step,
+            (
+                phone,
+                beat,
+                pitch,
+                spec,
+                real,
+                imag,
+                length,
+                chars,
+                char_len_list,
+                mel,
+            ),
         ) in enumerate(test_loader, 1):
             # if step >= args.decode_sample:
             #     break
@@ -384,12 +387,15 @@ def infer(args):
             if args.n_mels > 0:
                 mel_losses.update(mel_loss.item(), phone.size(0))
 
-            ### normalize inverse stage
+            # normalize inverse stage
             if args.normalize and args.stats_file:
                 output, _ = sepc_normalizer.inverse(output, length)
                 # spec,_ = sepc_normalizer.inverse(spec,length)
 
-            mcd_value, length_sum = Metrics.Calculate_melcd_fromLinearSpectrum(
+            (
+                mcd_value,
+                length_sum,
+            ) = Metrics.Calculate_melcd_fromLinearSpectrum(
                 output, spec_origin, length, args
             )
             (
@@ -425,7 +431,7 @@ def infer(args):
                     args.prediction_path,
                     args,
                 )
-                out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f}; mcd_value {:.4f}; ".format(
+                out_log = "step {}:train_loss{:.4f};spec_loss{:.4f};mcd_value{:.4f};".format(
                     step, losses.avg, spec_losses.avg, mcd_metric.avg
                 )
                 if args.perceptual_loss > 0:

@@ -1,12 +1,24 @@
-#!/usr/bin/env python3
+"""Copyright [2020] [Jiatong Shi & Shuai Guo]
 
-# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi, Shuai Guo)
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-from torch.utils.data import Dataset
-import numpy as np
-import torch
-import os
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License."""
+# !/usr/bin/env python3
+
+
 import librosa
+import numpy as np
+import os
+import torch
+from torch.utils.data import Dataset
 
 
 def _get_spectrograms(
@@ -26,8 +38,7 @@ def _get_spectrograms(
       fpath: A string. The full path of a sound file.
     Returns:
       mel: A 2d array of shape (T, n_mels) and dtype of float32.
-      mag: A 2d array of shape (T, 1+n_fft/2) and dtype of float32.
-    """
+      mag: A 2d array of shape (T, 1+n_fft/2) and dtype of float32."""
     # Loading sound file
     y, sr = librosa.load(fpath, sr=None)
     if sr != require_sr:
@@ -80,7 +91,6 @@ def _load_sing_quality(quality_file, standard=3):
 
 
 def _phone2char(phones, char_max_len):
-
     ini = -1
     chars = []
     phones_index = 0
@@ -237,9 +247,9 @@ class SVSDataset(Dataset):
             quality = None
         # get file_list
         self.filename_list = os.listdir(align_root_path)
-        phone_list, beat_list, pitch_list, spectrogram_list = [], [], [], []
+        # phone_list, beat_list, pitch_list, spectrogram_list = [], [], [], []
         for filename in self.filename_list:
-            if quality == None:
+            if quality is None:
                 break
             if filename[-4:] != ".npy" or filename[:4] not in quality:
                 print("remove file {}".format(filename))
@@ -252,7 +262,7 @@ class SVSDataset(Dataset):
         path = os.path.join(self.align_root_path, self.filename_list[i])
         try:
             phone = np.load(path)
-        except:
+        except Exception:
             print("error path {}".format(path))
         beat_path = os.path.join(
             self.pitch_beat_root_path,
@@ -291,8 +301,12 @@ class SVSDataset(Dataset):
         if np.abs(len(phone) - np.shape(spectrogram)[0]) > 3:
             print("error file: %s" % self.filename_list[i])
             print(
-                "spectrum_size: {}, alignment_size: {}, pitch_size: {}, beat_size: {}".format(
-                    np.shape(spectrogram)[0], len(phone), len(pitch), len(beat)
+                "spectrum_size: {}, alignment_size: {}, "
+                "pitch_size: {}, beat_size: {}".format(
+                    np.shape(spectrogram)[0],
+                    len(phone),
+                    len(pitch),
+                    len(beat),
                 )
             )
         assert np.abs(len(phone) - np.shape(spectrogram)[0]) < 5

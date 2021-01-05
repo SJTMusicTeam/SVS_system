@@ -1,26 +1,43 @@
+"""Copyright [2019] [Yusuke Fujita]
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License."""
 # Copyright 2019 Hitachi, Ltd. (author: Yusuke Fujita)
 # Licensed under the MIT license.
-#
 # This library provides utilities for kaldi-style data directory.
 
 
 from __future__ import print_function
-import os
-import sys
-import numpy as np
-import subprocess
-import soundfile as sf
-import io
 from functools import lru_cache
+import io
+import numpy as np
+import os
+import soundfile as sf
+import subprocess
+import sys
 
 
 def load_segments(segments_file):
-    """ load segments file as array """
+    # load segments file as array
     if not os.path.exists(segments_file):
         return None
     return np.loadtxt(
         segments_file,
-        dtype=[("utt", "object"), ("rec", "object"), ("st", "f"), ("et", "f")],
+        dtype=[
+            ("utt", "object"),
+            ("rec", "object"),
+            ("st", "f"),
+            ("et", "f"),
+        ],
         ndmin=1,
     )
 
@@ -48,7 +65,7 @@ def load_segments_rechash(segments_file):
 
 
 def load_wav_scp(wav_scp_file):
-    """ return dictionary { rec: wav_rxfilename } """
+    # return dictionary { rec: wav_rxfilename }
     lines = [line.strip().split(None, 1) for line in open(wav_scp_file)]
     return {x[0]: x[1] for x in lines}
 
@@ -59,8 +76,7 @@ def load_wav(wav_rxfilename, start=0, end=None):
     "lru_cache" holds recently loaded audio so that can be called
     many times on the same audio file.
     OPTIMIZE: controls lru_cache size for random access,
-    considering memory size
-    """
+    considering memory size"""
     if wav_rxfilename.endswith("|"):
         # input piped command
         p = subprocess.Popen(
@@ -83,13 +99,13 @@ def load_wav(wav_rxfilename, start=0, end=None):
 
 
 def load_utt2spk(utt2spk_file):
-    """ returns dictionary { uttid: spkid } """
+    # returns dictionary { uttid: spkid }
     lines = [line.strip().split(None, 1) for line in open(utt2spk_file)]
     return {x[0]: x[1] for x in lines}
 
 
 def load_spk2utt(spk2utt_file):
-    """ returns dictionary { spkid: list of uttids } """
+    # returns dictionary { spkid: list of uttids }
     if not os.path.exists(spk2utt_file):
         return None
     lines = [line.strip().split() for line in open(spk2utt_file)]
@@ -97,7 +113,7 @@ def load_spk2utt(spk2utt_file):
 
 
 def load_reco2dur(reco2dur_file):
-    """ returns dictionary { recid: duration }  """
+    # returns dictionary { recid: duration }
     if not os.path.exists(reco2dur_file):
         return None
     lines = [line.strip().split(None, 1) for line in open(reco2dur_file)]
@@ -111,8 +127,7 @@ def process_wav(wav_rxfilename, process):
         process: command which can be connected via pipe,
                 use stdin and stdout
     Returns:
-        wav_rxfilename: output piped command
-    """
+        wav_rxfilename: output piped command"""
     if wav_rxfilename.endswith("|"):
         # input piped command
         return wav_rxfilename + process + "|"
