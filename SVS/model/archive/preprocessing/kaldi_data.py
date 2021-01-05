@@ -32,7 +32,12 @@ def load_segments(segments_file):
         return None
     return np.loadtxt(
         segments_file,
-        dtype=[("utt", "object"), ("rec", "object"), ("st", "f"), ("et", "f")],
+        dtype=[
+            ("utt", "object"),
+            ("rec", "object"),
+            ("st", "f"),
+            ("et", "f"),
+        ],
         ndmin=1,
     )
 

@@ -995,7 +995,11 @@ class Conformer_block(torch.nn.Module):
 
         # convolution module definition
         convolution_layer = ConvolutionModule
-        convolution_layer_args = (attention_dim, cnn_module_kernel, activation)
+        convolution_layer_args = (
+            attention_dim,
+            cnn_module_kernel,
+            activation,
+        )
 
         self.encoders = repeat(
             num_blocks,
