@@ -16,6 +16,7 @@ For example: \
     `cd egs/public_dataset/kiritan`  \
     `./run.sh` 
 
+
 Please refer to configuration file (e.g. train.yaml) for parameters.
 
 

@@ -1,40 +1,44 @@
+"""Copyright [2020] [Jiatong Shi & Shuai Guo]
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License."""
+
 #!/usr/bin/env python3
 
-# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi & Shuai Guo)
-
-
 import logging
+import numpy as np
 import os
 import sys
-import numpy as np
-import torch
-import time
 from SVS.model.utils.gpu_util import use_single_gpu
-from SVS.model.utils.SVSDataset import SVSDataset, SVSCollator
-from SVS.model.network import (
-    GLU_TransformerSVS,
-    LSTMSVS,
-    GRUSVS_gs,
-    TransformerSVS,
-    ConformerSVS,
-    ConformerSVS_FULL,
-    USTC_SVS,
-)
+from SVS.model.utils.SVSDataset import SVSDataset
+from SVS.model.utils.SVSDataset import SVSCollator
+from SVS.model.network import GLU_TransformerSVS
+from SVS.model.network import LSTMSVS
+from SVS.model.network import GRUSVS_gs
+from SVS.model.network import TransformerSVS
+from SVS.model.network import ConformerSVS
+from SVS.model.network import ConformerSVS_FULL
+from SVS.model.network import USTC_SVS
 from SVS.model.utils.transformer_optim import ScheduledOptim
-from SVS.model.utils.loss import (
-    MaskedLoss,
-    cal_spread_function,
-    cal_psd2bark_dict,
-    PerceptualEntropy,
-)
-from SVS.model.utils.utils import (
-    train_one_epoch,
-    save_checkpoint,
-    validate,
-    record_info,
-    collect_stats,
-    save_model,
-)
+from SVS.model.utils.loss import MaskedLoss
+from SVS.model.utils.loss import cal_spread_function
+from SVS.model.utils.loss import cal_psd2bark_dict
+from SVS.model.utils.loss import PerceptualEntropy
+from SVS.model.utils.utils import train_one_epoch
+from SVS.model.utils.utils import validate
+from SVS.model.utils.utils import collect_stats
+from SVS.model.utils.utils import save_model
+import time
+import torch
 
 
 def count_parameters(model):
@@ -78,7 +82,7 @@ def Auto_save_model(
             logging.info(f"### - {save_loss_select} - ###")
             logging.info(
                 "add epoch: {:04d}, {}={:.4f}".format(
-                    epoch, save_loss_select, dev_info[save_loss_select]
+                    epoch, save_loss_select, dev_info[save_loss_select],
                 )
             )
 
@@ -104,7 +108,7 @@ def Auto_save_model(
 
             logging.info(
                 "delete epoch: {:04d}, {}={:.4f}".format(
-                    epoch_to_save[select_loss], save_loss_select, select_loss
+                    epoch_to_save[select_loss], save_loss_select, select_loss,
                 )
             )
             epoch_to_save.pop(select_loss)
@@ -132,7 +136,7 @@ def train(args):
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
-    if torch.cuda.is_available() and args.auto_select_gpu == True:
+    if torch.cuda.is_available() and args.auto_select_gpu is True:
         cvd = use_single_gpu()
         logging.info(f"GPU {cvd} is used")
         torch.backends.cudnn.deterministic = True
@@ -417,7 +421,7 @@ def train(args):
 
     # load encoder parm from Transformer-TTS
     if pretrain_encoder_dir != "":
-        pretrain = torch.load(pretrain_encoder_dir, map_location=device)
+        pretrain = torch.load(pretrain_encoder_dir, map_location=device,)
         pretrain_dict = pretrain["model"]
         model_dict = model.state_dict()
         state_dict_new = {}
@@ -473,7 +477,7 @@ def train(args):
     if args.optimizer == "noam":
         optimizer = ScheduledOptim(
             torch.optim.Adam(
-                model.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1e-09
+                model.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1e-09,
             ),
             args.hidden_size,
             args.noam_warmup_steps,
@@ -481,7 +485,7 @@ def train(args):
         )
     elif args.optimizer == "adam":
         optimizer = torch.optim.Adam(
-            model.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1e-09
+            model.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1e-09,
         )
         if args.scheduler == "OneCycleLR":
             scheduler = torch.optim.lr_scheduler.OneCycleLR(
@@ -492,11 +496,11 @@ def train(args):
             )
         elif args.scheduler == "ReduceLROnPlateau":
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer, "min", verbose=True, patience=50, factor=0.5
+                optimizer, "min", verbose=True, patience=50, factor=0.5,
             )
         elif args.scheduler == "ExponentialLR":
             scheduler = torch.optim.lr_scheduler.ExponentialLR(
-                optimizer, verbose=True, gamma=0.9886
+                optimizer, verbose=True, gamma=0.9886,
             )
     else:
         raise ValueError("Not Support Optimizer")
@@ -519,11 +523,11 @@ def train(args):
     if args.perceptual_loss > 0:
         win_length = int(args.sampling_rate * args.frame_length)
         psd_dict, bark_num = cal_psd2bark_dict(
-            fs=args.sampling_rate, win_len=win_length
+            fs=args.sampling_rate, win_len=win_length,
         )
         sf = cal_spread_function(bark_num)
         loss_perceptual_entropy = PerceptualEntropy(
-            bark_num, sf, args.sampling_rate, win_length, psd_dict
+            bark_num, sf, args.sampling_rate, win_length, psd_dict,
         )
     else:
         loss_perceptual_entropy = None
@@ -562,7 +566,7 @@ def train(args):
         elif args.optimizer == "adam":
             out_log += "lr: {:.6f}, ".format(optimizer.param_groups[0]["lr"])
         out_log += "loss: {:.4f}, spec_loss: {:.4f} ".format(
-            train_info["loss"], train_info["spec_loss"]
+            train_info["loss"], train_info["spec_loss"],
         )
 
         if args.n_mels > 0:
@@ -570,7 +574,7 @@ def train(args):
         if args.perceptual_loss > 0:
             out_log += "pe_loss: {:.4f}, ".format(train_info["pe_loss"])
         logging.info(
-            "{} time: {:.2f}s".format(out_log, end_t_train - start_t_train)
+            "{} time: {:.2f}s".format(out_log, end_t_train - start_t_train,)
         )
 
         """
@@ -578,7 +582,7 @@ def train(args):
         """
         torch.backends.cudnn.enabled = False  # 莫名的bug，关掉才可以跑
 
-        start_t_dev = time.time()
+        # start_t_dev = time.time()
         dev_info = validate(
             dev_loader,
             model,
@@ -590,10 +594,8 @@ def train(args):
         )
         end_t_dev = time.time()
 
-        dev_log = (
-            "Dev epoch: {:04d}, loss: {:.4f}, spec_loss: {:.4f}, ".format(
-                epoch, dev_info["loss"], dev_info["spec_loss"]
-            )
+        dev_log = "Dev epoch: {:04d}, loss: {:.4f}, spec_loss: {:.4f}, ".format(
+            epoch, dev_info["loss"], dev_info["spec_loss"],
         )
         dev_log += "mcd_value: {:.4f}, ".format(dev_info["mcd_value"])
         if args.n_mels > 0:
@@ -625,7 +627,7 @@ def train(args):
         if not os.path.exists(args.model_save_dir):
             os.makedirs(args.model_save_dir)
 
-        total_loss_counter, total_loss_epoch_to_save = Auto_save_model(
+        (total_loss_counter, total_loss_epoch_to_save,) = Auto_save_model(
             args,
             epoch,
             model,
@@ -641,7 +643,7 @@ def train(args):
         if (
             dev_info["spec_loss"] != 0
         ):  # spec_loss 有意义时再存模型，比如 USTC DAR model 不需要计算线性谱spec loss
-            spec_loss_counter, spec_loss_epoch_to_save = Auto_save_model(
+            (spec_loss_counter, spec_loss_epoch_to_save,) = Auto_save_model(
                 args,
                 epoch,
                 model,

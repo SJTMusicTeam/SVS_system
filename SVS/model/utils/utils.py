@@ -1,24 +1,36 @@
+"""Copyright [2020] [Jiatong Shi]
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License."""
 #!/usr/bin/env python3
 
-# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
-
-import os
-import torch
-import numpy as np
-import copy
-import time
-import librosa
-import matplotlib.pyplot as plt
-import soundfile as sf
 from librosa.display import specshow
+from pathlib import Path
 from scipy import signal
 
-from pathlib import Path
+import copy
+import librosa
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+import soundfile as sf
+import time
+import torch
 
 from SVS.model.layers.utterance_mvn import UtteranceMVN
 from SVS.model.layers.global_mvn import GlobalMVN
 import SVS.utils.metrics as Metrics
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -27,22 +39,23 @@ def collect_stats(train_loader, args):
     print("get in collect stats", flush=True)
     count, sum, sum_square = 0, 0, 0
     count_mel, sum_mel, sum_square_mel = 0, 0, 0
-    for step, (
-        phone,
-        beat,
-        pitch,
-        spec,
-        real,
-        imag,
-        length,
-        chars,
-        char_len_list,
-        mel,
+    for (
+        step,
+        (
+            phone,
+            beat,
+            pitch,
+            spec,
+            real,
+            imag,
+            length,
+            chars,
+            char_len_list,
+            mel,
+        ),
     ) in enumerate(train_loader, 1):
-        print(
-            f"spec.shape: {spec.shape},length.shape: {length.shape}, mel.shape: {mel.shape}",
-            flush=True,
-        )
+        # print(f"spec.shape: {spec.shape},length.shape:
+        # {length.shape}, mel.shape: {mel.shape}")
         for i, seq in enumerate(spec.cpu().numpy()):
             # print(f"seq.shape: {seq.shape}")
             seq_length = torch.max(length[i])
@@ -67,10 +80,7 @@ def collect_stats(train_loader, args):
         if not os.path.exists(name):
             os.makedirs(name)
     np.savez(
-        args.stats_file,
-        count=count,
-        sum=sum,
-        sum_square=sum_square,
+        args.stats_file, count=count, sum=sum, sum_square=sum_square,
     )
     np.savez(
         args.stats_mel_file,
@@ -96,8 +106,8 @@ def train_one_epoch(
         pe_losses = AverageMeter()
     if args.n_mels > 0:
         mel_losses = AverageMeter()
-        mcd_metric = AverageMeter()
-        f0_distortion_metric, vuv_error_metric = AverageMeter(), AverageMeter()
+        # mcd_metric = AverageMeter()
+        # f0_distortion_metric, vuv_error_metric = AverageMeter(), AverageMeter()
         if args.double_mel_loss:
             double_mel_losses = AverageMeter()
     model.train()
@@ -110,20 +120,23 @@ def train_one_epoch(
 
     start = time.time()
 
-    f0_ground_truth_all = np.reshape(np.array([]), (-1, 1))
-    f0_synthesis_all = np.reshape(np.array([]), (-1, 1))
+    # f0_ground_truth_all = np.reshape(np.array([]), (-1, 1))
+    # f0_synthesis_all = np.reshape(np.array([]), (-1, 1))
 
-    for step, (
-        phone,
-        beat,
-        pitch,
-        spec,
-        real,
-        imag,
-        length,
-        chars,
-        char_len_list,
-        mel,
+    for (
+        step,
+        (
+            phone,
+            beat,
+            pitch,
+            spec,
+            real,
+            imag,
+            length,
+            chars,
+            char_len_list,
+            mel,
+        ),
     ) in enumerate(train_loader, 1):
         phone = phone.to(device)
         beat = beat.to(device)
@@ -177,7 +190,8 @@ def train_one_epoch(
                 pos_spec=length,
             )
         elif args.model_type == "Conformer":
-            # print(f"chars: {np.shape(chars)}, phone: {np.shape(phone)}, length: {np.shape(length)}")
+            # print(f"chars: {np.shape(chars)}, phone:
+            # {np.shape(phone)}, length: {np.shape(length)}")
             output, att, output_mel, output_mel2 = model(
                 chars,
                 phone,
@@ -264,7 +278,7 @@ def train_one_epoch(
             end = time.time()
 
             if args.model_type == "USTC_DAR":
-                ### normalize inverse 只在infer的时候用，因为log过程需要转换成wav,和计算mcd等指标
+                # normalize inverse 只在infer的时候用，因为log过程需要转换成wav,和计算mcd等指标
                 if args.normalize and args.stats_file:
                     output_mel, _ = mel_normalizer.inverse(output_mel, length)
                 log_figure_mel(
@@ -276,22 +290,18 @@ def train_one_epoch(
                     log_save_dir,
                     args,
                 )
-                out_log = (
-                    "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
-                        step, losses.avg, spec_losses.avg
-                    )
+                out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
+                    step, losses.avg, spec_losses.avg
                 )
             else:
-                ### normalize inverse 只在infer的时候用，因为log过程需要转换成wav,和计算mcd等指标
+                # normalize inverse 只在infer的时候用，因为log过程需要转换成wav,和计算mcd等指标
                 if args.normalize and args.stats_file:
                     output, _ = sepc_normalizer.inverse(output, length)
                 log_figure(
                     step, output, spec_origin, att, length, log_save_dir, args
                 )
-                out_log = (
-                    "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
-                        step, losses.avg, spec_losses.avg
-                    )
+                out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
+                    step, losses.avg, spec_losses.avg
                 )
 
             if args.perceptual_loss > 0:
@@ -335,17 +345,20 @@ def validate(
     start = time.time()
 
     with torch.no_grad():
-        for step, (
-            phone,
-            beat,
-            pitch,
-            spec,
-            real,
-            imag,
-            length,
-            chars,
-            char_len_list,
-            mel,
+        for (
+            step,
+            (
+                phone,
+                beat,
+                pitch,
+                spec,
+                real,
+                imag,
+                length,
+                chars,
+                char_len_list,
+                mel,
+            ),
         ) in enumerate(dev_loader, 1):
             phone = phone.to(device)
             beat = beat.to(device)
@@ -473,7 +486,7 @@ def validate(
                     )
 
             if args.model_type == "USTC_DAR":
-                ### normalize inverse stage
+                # normalize inverse stage
                 if args.normalize and args.stats_file:
                     output_mel, _ = mel_normalizer.inverse(output_mel, length)
                 mcd_value, length_sum = (
@@ -481,7 +494,7 @@ def validate(
                     1,
                 )  # FIX ME! Calculate_melcd_fromMelSpectrum
             else:
-                ### normalize inverse stage
+                # normalize inverse stage
                 if args.normalize and args.stats_file:
                     output, _ = sepc_normalizer.inverse(output, length)
                 (
@@ -513,8 +526,11 @@ def validate(
                         log_save_dir,
                         args,
                     )
-                out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f}; mcd_value {:.4f};".format(
-                    step, losses.avg, spec_losses.avg, mcd_metric.avg
+                out_log = (
+                    "step {}: train_loss {:.4f}; "
+                    "spec_loss {:.4f}; mcd_value {:.4f};".format(
+                        step, losses.avg, spec_losses.avg, mcd_metric.avg
+                    )
                 )
                 if args.perceptual_loss > 0:
                     out_log += "pe_loss {:.4f}; ".format(pe_losses.avg)
@@ -586,10 +602,7 @@ def save_model(
         )
     else:
         save_checkpoint(
-            {
-                "epoch": epoch,
-                "state_dict": model.state_dict(),
-            },
+            {"epoch": epoch, "state_dict": model.state_dict(),},
             "{}/epoch_{}_{}.pth.tar".format(
                 args.model_save_dir, save_loss_select, epoch
             ),
@@ -612,8 +625,7 @@ def record_info(train_info, dev_info, epoch, logger):
 def invert_spectrogram(spectrogram, win_length, hop_length):
     """Applies inverse fft.
     Args:
-      spectrogram: [1+n_fft//2, t]
-    """
+      spectrogram: [1+n_fft//2, t]"""
     return librosa.istft(
         spectrogram, hop_length, win_length=win_length, window="hann"
     )
@@ -639,8 +651,7 @@ def spectrogram2wav(
     Args:
       mag: A numpy array of (T, 1+n_fft//2)
     Returns:
-      wav: A 1-D numpy array.
-    """
+      wav: A 1-D numpy array."""
     hop_length = int(hop_length * sr)
     win_length = int(win_length * sr)
     n_fft = n_fft
@@ -677,18 +688,24 @@ def log_figure_mel(step, output, spec, att, length, save_dir, args):
 
     # FIX ME! Need WaveRNN to produce wav from mel-spec
 
-    # wav = spectrogram2wav(output, args.max_db, args.ref_db, args.preemphasis, args.power, args.sampling_rate, args.frame_shift, args.frame_length, args.nfft)
-    # wav_true = spectrogram2wav(out_spec, args.max_db, args.ref_db, args.preemphasis, args.power, args.sampling_rate, args.frame_shift, args.frame_length, args.nfft)
+    # wav = spectrogram2wav(output, args.max_db, args.ref_db,
+    # args.preemphasis, args.power, args.sampling_rate,
+    # args.frame_shift, args.frame_length, args.nfft)
+    # wav_true = spectrogram2wav(out_spec, args.max_db,
+    # args.ref_db, args.preemphasis, args.power, args.sampling_rate,
+    # args.frame_shift, args.frame_length, args.nfft)
 
     # if librosa.__version__ < '0.8.0':
-    #     librosa.output.write_wav(os.path.join(save_dir, '{}.wav'.format(step)), wav, args.sampling_rate)
-    #     librosa.output.write_wav(os.path.join(save_dir, '{}_true.wav'.format(step)), wav_true, args.sampling_rate)
+    #     librosa.output.write_wav(os.path.join(save_dir,
+    #     '{}.wav'.format(step)), wav, args.sampling_rate)
+    #     librosa.output.write_wav(os.path.join(save_dir,
+    #     '{}_true.wav'.format(step)), wav_true, args.sampling_rate)
     # else:
     #     # librosa > 0.8 remove librosa.output.write_wav module
-    #     sf.write(os.path.join(save_dir, '{}.wav'.format(step)), wav, args.sampling_rate,
-    #                                                             format='wav', subtype='PCM_24')
-    #     sf.write(os.path.join(save_dir, '{}_true.wav'.format(step)), wav, args.sampling_rate,
-    #                                                             format='wav', subtype='PCM_24')
+    #     sf.write(os.path.join(save_dir, '{}.wav'.format(step)),
+    #     wav, args.sampling_rate,format='wav', subtype='PCM_24')
+    #     sf.write(os.path.join(save_dir, '{}_true.wav'.format(step)),
+    #     wav, args.sampling_rate,format='wav', subtype='PCM_24')
 
     plt.subplot(1, 2, 1)
     specshow(output.T)
@@ -832,7 +849,8 @@ def Calculate_dataset_duration(dataset_path):
 
 
 if __name__ == "__main__":
-    # path = "/data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info"
+    # path = "/data5/jiatong/SVS_system/SVS/data/
+    # public_dataset/kiritan_data/wav_info"
     path = (
         "/data5/jiatong/SVS_system/SVS/data/public_dataset/hts_data/wav_info"
     )
