@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
+# Copyright 2021 Columbia University (author: Xun Lin)
+# Update on Jan 3rd, 2021
+
+# cd egs/public_dataset/oniku_kurumi_utagoe_db
+# os.getcwd()
+
+# The unit of time notation for phoneme labels is 100ns for this dataset
+# "python3 prepare_data.py ONIKU_KURUMI_UTAGOE_DB ONIKU_KURUMI_UTAGOE_DB ONIKU_KURUMI_UTAGOE_DB_data --label_type ns"
 
 import argparse
 import librosa
@@ -23,7 +30,7 @@ def same_split(alignment):
     for i in range(size - 1):
         index = round(len(alignment) / size) * (i + 1)
         while (
-            index < len(alignment) and alignment[index] != alignment[index + 1]
+                index < len(alignment) and alignment[index] != alignment[index + 1]
         ):
             index += 1
         segments.append(alignment[start:index])
@@ -91,12 +98,12 @@ def make_segment(alignment, sil="pau"):
     if silence_end[-1] != len(alignment) - 1:
         if silence_end[-1] - silence_start[-1] > 5:
             segment_info[pack_zero(start_id)] = {
-                "alignment": alignment[silence_end[-1] - 5 :],
+                "alignment": alignment[silence_end[-1] - 5:],
                 "start": silence_end[-1] - 5,
             }
         else:
             segment_info[pack_zero(start_id)] = {
-                "alignment": alignment[silence_start[-1] :],
+                "alignment": alignment[silence_start[-1]:],
                 "start": silence_start[-1],
             }
     return segment_info
@@ -120,7 +127,6 @@ def load_label(label_file, s_type="s", sr=48000, frame_shift=0.03, sil="pau"):
 
 
 def process(args):
-
     f0_max = 1100.0
     f0_min = 50.0
 
@@ -131,7 +137,12 @@ def process(args):
 
     hop_length = int(args.sr * frame_shift)
 
-    lab_list = os.listdir(args.labdir)
+    # lab_list = os.listdir(args.labdir)
+    lab_list = [os.path.join(name, name + ".lab") for name in os.listdir('ONIKU_KURUMI_UTAGOE_DB')
+                if os.path.isdir(os.path.join('ONIKU_KURUMI_UTAGOE_DB', name))]
+
+    lab_list.sort()
+
     phone_set = []
     idscp = {}
     index = 1
@@ -184,10 +195,10 @@ def process(args):
             start = segments[seg]["start"]
             name = seg
             seg_signal = signal[
-                int(start * hop_length) : int(
-                    start * hop_length + len(alignment) * hop_length
-                )
-            ]
+                         int(start * hop_length): int(
+                             start * hop_length + len(alignment) * hop_length
+                         )
+                         ]
 
             """extract beats"""
             tempo, beats = librosa.beat.beat_track(

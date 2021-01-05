@@ -13,12 +13,10 @@ See the License for the specific language governing permissions and
 limitations under the License.'''
 #!/usr/bin/env python3
 
-# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
 from librosa.display import specshow
 from pathlib import Path
 from scipy import signal
-from SVS.model.layers.global_mvn import GlobalMVN
 
 import copy
 import librosa
@@ -26,17 +24,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import soundfile as sf
-import SVS.tools.metrics as Metrics
 import time
 import torch
-# from SVS.model.layers.utterance_mvn import UtteranceMVN
 
+from SVS.model.layers.utterance_mvn import UtteranceMVN
+from SVS.model.layers.global_mvn import GlobalMVN
+import SVS.utils.metrics as Metrics
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def collect_stats(train_loader, args):
+    print("get in collect stats", flush=True)
     count, sum, sum_square = 0, 0, 0
     count_mel, sum_mel, sum_square_mel = 0, 0, 0
     for step, (
@@ -69,16 +69,21 @@ def collect_stats(train_loader, args):
             sum_square_mel += (seq ** 2).sum(0)
             count_mel += len(seq)
     assert count_mel == count
-    if not os.path.exists(args.model_save_dir):
-        os.makedirs(args.model_save_dir)
+    dirnames = [
+        os.path.dirname(args.stats_file),
+        os.path.dirname(args.stats_mel_file),
+    ]
+    for name in dirnames:
+        if not os.path.exists(name):
+            os.makedirs(name)
     np.savez(
-        Path(args.model_save_dir) / "feats_stats.npz",
+        args.stats_file,
         count=count,
         sum=sum,
         sum_square=sum_square,
     )
     np.savez(
-        Path(args.model_save_dir) / "feats_mel_stats.npz",
+        args.stats_mel_file,
         count=count_mel,
         sum=sum_mel,
         sum_square=sum_square_mel,
@@ -215,13 +220,7 @@ def train_one_epoch(
             spec, _ = sepc_normalizer(spec, length)
             mel, _ = mel_normalizer(mel, length)
 
-        # print(np.shape(output), np.shape(spec), np.shape(spec_origin))
-        # quit()
-
         if args.model_type == "USTC_DAR":
-            # print(np.shape(output_mel))
-            # print(np.shape(mel))
-            # quit()
             spec_loss = 0
         else:
             spec_loss = criterion(output, spec, length_mask)
@@ -247,14 +246,13 @@ def train_one_epoch(
         else:
             final_loss = train_loss
 
-        final_loss = final_loss / args.accumulation_steps  # 损失标准化
-        final_loss.backward()  # 反向传播，计算梯度
+        final_loss = final_loss / args.accumulation_steps
+        final_loss.backward()
 
         if args.gradclip > 0:
             torch.nn.utils.clip_grad_norm_(model.parameters(), args.gradclip)
 
         if (epoch + 1) % args.accumulation_steps == 0:
-            # 更新参数
             if args.optimizer == "noam":
                 optimizer.step_and_update_lr()
             else:
@@ -782,7 +780,7 @@ def log_figure(step, output, spec, att, length, save_dir, args):
         )
         sf.write(
             os.path.join(save_dir, "{}_true.wav".format(step)),
-            wav,
+            wav_true,
             args.sampling_rate,
             format="wav",
             subtype="PCM_24",
