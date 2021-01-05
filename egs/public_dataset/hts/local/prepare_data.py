@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
 import argparse
@@ -126,15 +125,11 @@ def process(args):
     f0_min = 50.0
 
     if args.model == "HMM":
-        frame_length = 25 / 1000
         frame_shift = 10 / 1000
     elif args.model == "TDNN":
-        frame_length = 60 / 1000
         frame_shift = 30 / 1000
 
     hop_length = int(args.sr * frame_shift)
-    win_length = int(args.sr * frame_length)
-    n_fft = win_length
 
     lab_list = os.listdir(args.labdir)
     phone_set = []
@@ -197,10 +192,10 @@ def process(args):
             tempo, beats = librosa.beat.beat_track(
                 y=seg_signal, sr=args.sr, hop_length=hop_length
             )
-            times = librosa.frames_to_time(beats, sr=args.sr)
-            frames = librosa.time_to_frames(
-                times, sr=args.sr, hop_length=hop_length, n_fft=n_fft
-            )
+            # times = librosa.frames_to_time(beats, sr=args.sr)
+            # frames = librosa.time_to_frames(
+            #     times, sr=args.sr, hop_length=hop_length, n_fft=n_fft
+            # )
             np.save(
                 os.path.join(song_pitch_beat, name) + "_beats", np.array(beats)
             )
