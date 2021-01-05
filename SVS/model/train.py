@@ -82,7 +82,7 @@ def Auto_save_model(
             logging.info(f"### - {save_loss_select} - ###")
             logging.info(
                 "add epoch: {:04d}, {}={:.4f}".format(
-                    epoch, save_loss_select, dev_info[save_loss_select]
+                    epoch, save_loss_select, dev_info[save_loss_select],
                 )
             )
 
@@ -108,7 +108,7 @@ def Auto_save_model(
 
             logging.info(
                 "delete epoch: {:04d}, {}={:.4f}".format(
-                    epoch_to_save[select_loss], save_loss_select, select_loss
+                    epoch_to_save[select_loss], save_loss_select, select_loss,
                 )
             )
             epoch_to_save.pop(select_loss)
@@ -421,7 +421,7 @@ def train(args):
 
     # load encoder parm from Transformer-TTS
     if pretrain_encoder_dir != "":
-        pretrain = torch.load(pretrain_encoder_dir, map_location=device)
+        pretrain = torch.load(pretrain_encoder_dir, map_location=device,)
         pretrain_dict = pretrain["model"]
         model_dict = model.state_dict()
         state_dict_new = {}
@@ -477,7 +477,7 @@ def train(args):
     if args.optimizer == "noam":
         optimizer = ScheduledOptim(
             torch.optim.Adam(
-                model.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1e-09
+                model.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1e-09,
             ),
             args.hidden_size,
             args.noam_warmup_steps,
@@ -485,7 +485,7 @@ def train(args):
         )
     elif args.optimizer == "adam":
         optimizer = torch.optim.Adam(
-            model.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1e-09
+            model.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1e-09,
         )
         if args.scheduler == "OneCycleLR":
             scheduler = torch.optim.lr_scheduler.OneCycleLR(
@@ -496,11 +496,11 @@ def train(args):
             )
         elif args.scheduler == "ReduceLROnPlateau":
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer, "min", verbose=True, patience=50, factor=0.5
+                optimizer, "min", verbose=True, patience=50, factor=0.5,
             )
         elif args.scheduler == "ExponentialLR":
             scheduler = torch.optim.lr_scheduler.ExponentialLR(
-                optimizer, verbose=True, gamma=0.9886
+                optimizer, verbose=True, gamma=0.9886,
             )
     else:
         raise ValueError("Not Support Optimizer")
@@ -523,11 +523,11 @@ def train(args):
     if args.perceptual_loss > 0:
         win_length = int(args.sampling_rate * args.frame_length)
         psd_dict, bark_num = cal_psd2bark_dict(
-            fs=args.sampling_rate, win_len=win_length
+            fs=args.sampling_rate, win_len=win_length,
         )
         sf = cal_spread_function(bark_num)
         loss_perceptual_entropy = PerceptualEntropy(
-            bark_num, sf, args.sampling_rate, win_length, psd_dict
+            bark_num, sf, args.sampling_rate, win_length, psd_dict,
         )
     else:
         loss_perceptual_entropy = None
@@ -566,7 +566,7 @@ def train(args):
         elif args.optimizer == "adam":
             out_log += "lr: {:.6f}, ".format(optimizer.param_groups[0]["lr"])
         out_log += "loss: {:.4f}, spec_loss: {:.4f} ".format(
-            train_info["loss"], train_info["spec_loss"]
+            train_info["loss"], train_info["spec_loss"],
         )
 
         if args.n_mels > 0:
@@ -574,7 +574,7 @@ def train(args):
         if args.perceptual_loss > 0:
             out_log += "pe_loss: {:.4f}, ".format(train_info["pe_loss"])
         logging.info(
-            "{} time: {:.2f}s".format(out_log, end_t_train - start_t_train)
+            "{} time: {:.2f}s".format(out_log, end_t_train - start_t_train,)
         )
 
         """
@@ -595,7 +595,7 @@ def train(args):
         end_t_dev = time.time()
 
         dev_log = "Dev epoch: {:04d}, loss: {:.4f}, spec_loss: {:.4f}, ".format(
-            epoch, dev_info["loss"], dev_info["spec_loss"]
+            epoch, dev_info["loss"], dev_info["spec_loss"],
         )
         dev_log += "mcd_value: {:.4f}, ".format(dev_info["mcd_value"])
         if args.n_mels > 0:
@@ -627,7 +627,7 @@ def train(args):
         if not os.path.exists(args.model_save_dir):
             os.makedirs(args.model_save_dir)
 
-        total_loss_counter, total_loss_epoch_to_save = Auto_save_model(
+        (total_loss_counter, total_loss_epoch_to_save,) = Auto_save_model(
             args,
             epoch,
             model,
@@ -643,7 +643,7 @@ def train(args):
         if (
             dev_info["spec_loss"] != 0
         ):  # spec_loss 有意义时再存模型，比如 USTC DAR model 不需要计算线性谱spec loss
-            spec_loss_counter, spec_loss_epoch_to_save = Auto_save_model(
+            (spec_loss_counter, spec_loss_epoch_to_save,) = Auto_save_model(
                 args,
                 epoch,
                 model,
