@@ -17,4 +17,5 @@ fi
 # pycodestyle
 pycodestyle -r ${modules} --show-source --show-pep8
 
-LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}:$(pwd)/tools/chainer_ctc/ext/warp-ctc/build" pytest -q
+# TODO
+# pytest -q
