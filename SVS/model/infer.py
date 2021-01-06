@@ -11,21 +11,21 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License."""
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 
 import logging
 import numpy as np
 import os
 from SVS.model.layers.global_mvn import GlobalMVN
-from SVS.model.network import GLU_TransformerSVS
-from SVS.model.network import GRUSVS_gs
-from SVS.model.network import TransformerSVS
-from SVS.model.network import LSTMSVS
 from SVS.model.network import ConformerSVS
 from SVS.model.network import ConformerSVS_FULL
+from SVS.model.network import GLU_TransformerSVS
+from SVS.model.network import GRUSVS_gs
+from SVS.model.network import LSTMSVS
+from SVS.model.network import TransformerSVS
 from SVS.model.utils.loss import MaskedLoss
-from SVS.model.utils.SVSDataset import SVSDataset
 from SVS.model.utils.SVSDataset import SVSCollator
+from SVS.model.utils.SVSDataset import SVSDataset
 from SVS.model.utils.utils import AverageMeter
 from SVS.model.utils.utils import log_figure
 import SVS.tools.metrics as Metrics

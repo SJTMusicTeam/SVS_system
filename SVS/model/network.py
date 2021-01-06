@@ -12,7 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License."""
 
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 
 # debug only
 # import sys
@@ -34,7 +34,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def make_pad_mask(lengths, xs=None, length_dim=-1):
-    """Make mask tensor containing indices of padded part.
+    """
+
+    Make mask tensor containing indices of padded part.
     Args:
         lengths (LongTensor or List): Batch of lengths (B,).
         xs (Tensor, optional): The reference tensor.
@@ -108,7 +110,10 @@ def make_pad_mask(lengths, xs=None, length_dim=-1):
                  [0, 0, 1, 1, 1, 1],
                  [0, 0, 1, 1, 1, 1],
                  [0, 0, 1, 1, 1, 1],
-                 [0, 0, 1, 1, 1, 1]]], dtype=torch.uint8)"""
+                 [0, 0, 1, 1, 1, 1]]], dtype=torch.uint8)
+
+    """
+
     if length_dim == 0:
         raise ValueError("length_dim cannot be 0: {}".format(length_dim))
 
@@ -140,7 +145,9 @@ def make_pad_mask(lengths, xs=None, length_dim=-1):
 
 
 def make_non_pad_mask(lengths, xs=None, length_dim=-1):
-    """Make mask tensor containing indices of non-padded part.
+    """
+
+    Make mask tensor containing indices of non-padded part.
     Args:
         lengths (LongTensor or List): Batch of lengths (B,).
         xs (Tensor, optional): The reference tensor.
@@ -214,7 +221,10 @@ def make_non_pad_mask(lengths, xs=None, length_dim=-1):
                  [1, 1, 0, 0, 0, 0],
                  [1, 1, 0, 0, 0, 0],
                  [1, 1, 0, 0, 0, 0],
-                 [1, 1, 0, 0, 0, 0]]], dtype=torch.uint8)"""
+                 [1, 1, 0, 0, 0, 0]]], dtype=torch.uint8)
+
+    """
+
     return ~make_pad_mask(lengths, xs, length_dim)
 
 
@@ -252,7 +262,10 @@ class Encoder(nn.Module):
 
     def forward(self, text_phone, pos=None):
         """text_phone dim: [batch_size, text_phone_length]
-        output dim : [batch_size, text_phone_length, embedded_dim]"""
+        output dim : [batch_size, text_phone_length, embedded_dim]
+
+        """
+
         # don't use pos in glu, but leave the field for uniform interface
         embedded_phone = self.emb_phone(text_phone)
         glu_in = self.fc_1(embedded_phone)
@@ -386,7 +399,8 @@ class Conformer_Encoder(nn.Module):
         # .to(embedded_phone.device).unsqueeze(-2)
 
         # print(f"length: {length}, text_phone: {np.shape(text_phone)},
-        # src_mask: {np.shape(mask)}, embedded_phone: {np.shape(embedded_phone)}")
+        # src_mask: {np.shape(mask)}, embedded_phone:
+        # {np.shape(embedded_phone)}")
 
         x, masks = self.conformer_block(embedded_phone, mask)
 
@@ -407,9 +421,13 @@ class Encoder_Postnet(nn.Module):
         self.pos = module.PositionalEncoding(embed_size)
 
     def aligner(self, encoder_out, align_phone, text_phone):
-        """align_phone = [batch_size, align_phone_length]
+        """
+        align_phone = [batch_size, align_phone_length]
         text_phone = [batch_size, text_phone_length]
-        align_phone_length( = frame_num) > text_phone_length"""
+        align_phone_length( = frame_num) > text_phone_length
+
+        """
+
         # batch
         align_phone = align_phone.long()
         for i in range(align_phone.shape[0]):
@@ -436,7 +454,7 @@ class Encoder_Postnet(nn.Module):
         return out
 
     def forward(self, encoder_out, align_phone, text_phone, pitch, beats):
-        """pitch/beats : [batch_size, frame_num] -> [batch_size, frame_num，1]"""
+        """pitch/beats:[batch_size, frame_num]->[batch_size, frame_num，1]"""
         # batch_size = pitch.shape[0]
         # frame_num = pitch.shape[1]
         # embedded_dim = encoder_out.shape[2]
@@ -971,7 +989,7 @@ class GRUSVS_gs(nn.Module):
                 1, 0, 2
             )  # weighted = [1, batch size, enc hid dim * 2]
             rnn_input = torch.cat((input_, weighted), dim=2)
-            # rnn_input = [1, batch size, (enc hid dim * 2) + (enc hid dim * 2)]
+            # rnn_input = [1, batch size,(enc hid dim * 2)+(enc hid dim * 2)]
 
             output, hidden = self.rnnDecoder(rnn_input, hidden)
 
@@ -1353,7 +1371,9 @@ class ConformerSVS_FULL(nn.Module):
 class USTC_Prenet(nn.Module):
     """Singing Voice Synthesis Using Deep Autoregressive Neural Networks
        for Acoustic Modeling from USTC, adapted by GS
-    - herf: https://arxiv.org/pdf/1906.08977.pdf"""
+    - herf: https://arxiv.org/pdf/1906.08977.pdf
+
+    """
 
     def __init__(
         self,
@@ -1762,7 +1782,7 @@ def _test():
     # # test model as a whole
     # # model = GLU_Transformer(phone_size, hidden_size, embed_size,
     # glu_num_layers, dropout, num_dec_block, nhead, feat_dim)
-    # # spec_pred = model(char, phone, pitch, beat, src_key_padding_mask=seq_len,
+    # spec_pred = model(char, phone, pitch, beat, src_key_padding_mask=seq_len,
     # char_key_padding_mask=char_seq_len)
     # # print(spec_pred)
 
