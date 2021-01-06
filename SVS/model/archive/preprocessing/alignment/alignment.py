@@ -86,7 +86,7 @@ def DTW(template, sample, new_Map, name):
 
 
 def text_to_matrix_HMM(Map, file):
-    """Used in HMM model.
+    """Be used in HMM model.
 
     Read the posterior probability matrix and save it in dictionary M
     """

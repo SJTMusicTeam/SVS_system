@@ -65,7 +65,7 @@ def tq(f_bin, fs, fft_bins):
 
 
 def cband():
-    """A pre-defined idealized critical band filter bank.
+    """Pre-define idealized critical band filter bank.
 
     :return: idealized critical band filter bank
     """

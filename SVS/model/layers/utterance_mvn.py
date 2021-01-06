@@ -40,7 +40,7 @@ class UtteranceMVN(nn.Module):
     def forward(
         self, x: torch.Tensor, ilens: torch.Tensor = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Forward function
+        """Forward function.
 
         Args:
             x: (B, L, ...)

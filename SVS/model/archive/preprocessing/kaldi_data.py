@@ -78,7 +78,7 @@ def load_wav_scp(wav_scp_file):
 
 @lru_cache(maxsize=1)
 def load_wav(wav_rxfilename, start=0, end=None):
-    """This function reads audio file and return data in numpy.
+    """Read audio file and return data in numpy.
 
     float32 array."lru_cache" holds recently loaded audio so that can be called
     many times on the same audio file.
@@ -132,7 +132,7 @@ def load_reco2dur(reco2dur_file):
 
 
 def process_wav(wav_rxfilename, process):
-    """This function returns preprocessed wav_rxfilename.
+    """Returns preprocessed wav_rxfilename.
 
     Args:
         wav_rxfilename: input

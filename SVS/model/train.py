@@ -141,11 +141,8 @@ def Auto_save_model(
     return counter, epoch_to_save
 
 
-"""train."""
-
-
 def train(args):
-
+    """train."""
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
