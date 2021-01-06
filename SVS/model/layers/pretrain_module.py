@@ -16,8 +16,8 @@ from collections import OrderedDict
 import copy
 import math
 import numpy as np
-import torch as t
 from scipy.constants import hp
+import torch as t
 from torch.autograd import Variable
 import torch.nn as nn
 

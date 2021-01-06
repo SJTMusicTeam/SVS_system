@@ -18,6 +18,7 @@ limitations under the License."""
 import copy
 import math
 import numpy as np
+from SVS.model.layers.pretrain_module import Attention
 import torch
 import torch.nn as nn
 
@@ -35,7 +36,7 @@ from torch.nn import TransformerEncoderLayer
 # from torch.nn.init import constant_
 import torch.nn.init as init
 from torch.nn.init import xavier_uniform_
-from SVS.model.layers.pretrain_module import Attention
+
 
 SCALE_WEIGHT = 0.5 ** 0.5
 
