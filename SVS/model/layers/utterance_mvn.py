@@ -1,4 +1,4 @@
-"""Copyright [2020] [Jiatong Shi]
+"""Copyright [2020] [Jiatong Shi].
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -10,8 +10,8 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
-limitations under the License."""
-
+limitations under the License.
+"""
 from SVS.model.utils.nets_utils import make_pad_mask
 import torch
 import torch.nn as nn
@@ -19,24 +19,28 @@ from typing import Tuple
 
 
 class UtteranceMVN(nn.Module):
+    """UtteranceMVN."""
+
     def __init__(
         self,
         norm_means: bool = True,
         norm_vars: bool = True,
         eps: float = 1.0e-20,
     ):
+        """init."""
         super().__init__()
         self.norm_means = norm_means
         self.norm_vars = norm_vars
         self.eps = eps
 
     def extra_repr(self):
+        """extra_repr."""
         return f"norm_means={self.norm_means}, norm_vars={self.norm_vars}"
 
     def forward(
         self, x: torch.Tensor, ilens: torch.Tensor = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Forward function
+        """Forward function.
 
         Args:
             x: (B, L, ...)
@@ -59,7 +63,7 @@ def utterance_mvn(
     norm_vars: bool = False,
     eps: float = 1.0e-20,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Apply utterance mean and variance normalization
+    """Apply utterance mean and variance normalization.
 
     Args:
         x: (B, T, D), assumed zero padded
@@ -67,7 +71,6 @@ def utterance_mvn(
         norm_means:
         norm_vars:
         eps:
-
     """
     if ilens is None:
         ilens = x.new_full([x.size(0)], x.size(1))

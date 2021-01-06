@@ -30,7 +30,7 @@ def same_split(alignment):
     for i in range(size - 1):
         index = round(len(alignment) / size) * (i + 1)
         while (
-                index < len(alignment) and alignment[index] != alignment[index + 1]
+            index < len(alignment) and alignment[index] != alignment[index + 1]
         ):
             index += 1
         segments.append(alignment[start:index])
@@ -98,12 +98,12 @@ def make_segment(alignment, sil="pau"):
     if silence_end[-1] != len(alignment) - 1:
         if silence_end[-1] - silence_start[-1] > 5:
             segment_info[pack_zero(start_id)] = {
-                "alignment": alignment[silence_end[-1] - 5:],
+                "alignment": alignment[silence_end[-1] - 5 :],
                 "start": silence_end[-1] - 5,
             }
         else:
             segment_info[pack_zero(start_id)] = {
-                "alignment": alignment[silence_start[-1]:],
+                "alignment": alignment[silence_start[-1] :],
                 "start": silence_start[-1],
             }
     return segment_info
@@ -138,8 +138,11 @@ def process(args):
     hop_length = int(args.sr * frame_shift)
 
     # lab_list = os.listdir(args.labdir)
-    lab_list = [os.path.join(name, name + ".lab") for name in os.listdir('ONIKU_KURUMI_UTAGOE_DB')
-                if os.path.isdir(os.path.join('ONIKU_KURUMI_UTAGOE_DB', name))]
+    lab_list = [
+        os.path.join(name, name + ".lab")
+        for name in os.listdir("ONIKU_KURUMI_UTAGOE_DB")
+        if os.path.isdir(os.path.join("ONIKU_KURUMI_UTAGOE_DB", name))
+    ]
 
     lab_list.sort()
 
@@ -195,10 +198,10 @@ def process(args):
             start = segments[seg]["start"]
             name = seg
             seg_signal = signal[
-                         int(start * hop_length): int(
-                             start * hop_length + len(alignment) * hop_length
-                         )
-                         ]
+                int(start * hop_length) : int(
+                    start * hop_length + len(alignment) * hop_length
+                )
+            ]
 
             """extract beats"""
             tempo, beats = librosa.beat.beat_track(
