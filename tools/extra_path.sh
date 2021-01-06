@@ -11,7 +11,7 @@ else
 fi
 
 if [ -z "${TOOL_DIR}" ]; then
-    echo "ERROR: Cannot derive the directory path of SVS_system/tools. This might be a bug."
+    echo "ERROR: Cannot derive the directory path of espnet/tools. This might be a bug."
     return 1
 fi
 
