@@ -145,8 +145,9 @@ def process(args):
             data = os.listdir(os.path.join(args.datadir, data_dir))
             for file in data:
                 if file[-4:] == ".lab":
-                    lab_list.append(os.path.join(args.datadir, data_dir + "/" + file))
-
+                    lab_list.append(
+                        os.path.join(args.datadir, data_dir + "/" + file)
+                    )
 
     print(lab_list[0])
     # lab_list = os.listdir(args.labdir)
