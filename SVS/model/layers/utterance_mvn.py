@@ -36,13 +36,16 @@ class UtteranceMVN(nn.Module):
     def forward(
         self, x: torch.Tensor, ilens: torch.Tensor = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Forward function
+
+        """
+        Forward function
 
         Args:
             x: (B, L, ...)
             ilens: (B,)
 
         """
+
         return utterance_mvn(
             x,
             ilens,
@@ -59,7 +62,9 @@ def utterance_mvn(
     norm_vars: bool = False,
     eps: float = 1.0e-20,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Apply utterance mean and variance normalization
+
+    """
+    Apply utterance mean and variance normalization
 
     Args:
         x: (B, T, D), assumed zero padded
@@ -67,8 +72,8 @@ def utterance_mvn(
         norm_means:
         norm_vars:
         eps:
-
     """
+
     if ilens is None:
         ilens = x.new_full([x.size(0)], x.size(1))
     else:

@@ -21,7 +21,8 @@ import os
 
 def DTW(template, sample, new_Map, name):
 
-    """Alignment using DTW algorithm
+    """
+    Alignment using DTW algorithm
     Return the record and distance of the shortest path
     """
 
@@ -41,7 +42,8 @@ def DTW(template, sample, new_Map, name):
 
     for i in range(1, S_len):
 
-        """calculate the probability of all phonemes
+        """
+        calculate the probability of all phonemes
         in the corresponding template in the i-th frame
         """
 
@@ -89,7 +91,8 @@ def DTW(template, sample, new_Map, name):
 
 def text_to_matrix_HMM(Map, file):
 
-    """Used in HMM model
+    """
+    Used in HMM model
     Read the posterior probability matrix and save it in dictionary M
     """
 
@@ -165,7 +168,8 @@ def text_to_matrix_TDNN(Map, file):
 
 def index_to_phone(args):
 
-    """Establish the correspondence between phonemes and index,
+    """
+    Establish the correspondence between phonemes and index,
     and save them in the Map dictionary, (key = index, value = phoneme name)
     """
 

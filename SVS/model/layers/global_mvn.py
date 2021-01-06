@@ -22,7 +22,8 @@ from typing import Union
 
 
 class GlobalMVN(nn.Module):
-    """Apply global mean and variance normalization
+    """
+    Apply global mean and variance normalization
 
     TODO(kamo): Make this class portable somehow
 
@@ -74,7 +75,8 @@ class GlobalMVN(nn.Module):
     def forward(
         self, x: torch.Tensor, ilens: torch.Tensor = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Forward function
+        """
+        Forward function
 
         Args:
             x: (B, L, ...)
