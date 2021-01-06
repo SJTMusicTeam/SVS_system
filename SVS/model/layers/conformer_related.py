@@ -20,10 +20,12 @@ from torch import nn
 
 
 class ConvolutionModule(nn.Module):
+
     """ConvolutionModule in Conformer model.
     Args:
         channels (int): The number of channels of conv layers.
-        kernel_size (int): Kernerl size of conv layers."""
+        kernel_size (int): Kernerl size of conv layers.
+    """
 
     def __init__(self, channels, kernel_size, activation=nn.ReLU(), bias=True):
         """Construct an ConvolutionModule object."""
@@ -60,11 +62,14 @@ class ConvolutionModule(nn.Module):
         self.activation = activation
 
     def forward(self, x):
+
         """Compute convolution module.
         Args:
             x (torch.Tensor): Input tensor (#batch, time, channels).
         Returns:
-            torch.Tensor: Output tensor (#batch, time, channels)."""
+            torch.Tensor: Output tensor (#batch, time, channels).
+        """
+
         # exchange the temporal dimension and the feature dimension
         x = x.transpose(1, 2)
 
@@ -82,6 +87,7 @@ class ConvolutionModule(nn.Module):
 
 
 class EncoderLayer(nn.Module):
+
     """Encoder layer module.
     Args:
         size (int): Input dimension.
@@ -108,7 +114,8 @@ class EncoderLayer(nn.Module):
             if True, additional linear will be applied.
             i.e. x -> x + linear(concat(x, att(x)))
             if False, no additional linear will be applied.
-            i.e. x -> x + att(x)"""
+            i.e. x -> x + att(x)
+    """
 
     def __init__(
         self,
@@ -147,6 +154,7 @@ class EncoderLayer(nn.Module):
             self.concat_linear = nn.Linear(size + size, size)
 
     def forward(self, x_input, mask, cache=None):
+
         """Compute encoded features.
         Args:
             x_input (Union[Tuple, torch.Tensor]): Input tensor w/ or w/o pos emb.
@@ -156,7 +164,9 @@ class EncoderLayer(nn.Module):
             cache (torch.Tensor): Cache tensor of the input (#batch, time - 1, size).
         Returns:
             torch.Tensor: Output tensor (#batch, time, size).
-            torch.Tensor: Mask tensor (#batch, time)."""
+            torch.Tensor: Mask tensor (#batch, time).
+        """
+
         if isinstance(x_input, tuple):
             x, pos_emb = x_input[0], x_input[1]
         else:
@@ -256,10 +266,12 @@ def get_activation(act):
 
 
 class VGG2L(torch.nn.Module):
+
     """VGG2L module for transformer encoder.
     Args:
         idim (int): dimension of inputs
-        odim (int): dimension of outputs"""
+        odim (int): dimension of outputs
+    """
 
     def __init__(self, idim, odim):
         """Construct a VGG2L object."""
@@ -281,13 +293,16 @@ class VGG2L(torch.nn.Module):
         self.output = torch.nn.Linear(128 * ((idim // 2) // 2), odim)
 
     def forward(self, x, x_mask):
+
         """VGG2L forward for x.
         Args:
             x (torch.Tensor): input torch (B, T, idim)
             x_mask (torch.Tensor): (B, 1, T)
         Returns:
             x (torch.Tensor): input torch (B, sub(T), attention_dim)
-            x_mask (torch.Tensor): (B, 1, sub(T))"""
+            x_mask (torch.Tensor): (B, 1, sub(T))
+        """
+
         x = x.unsqueeze(1)
         x = self.vgg2l(x)
 
@@ -301,12 +316,15 @@ class VGG2L(torch.nn.Module):
         return x, x_mask
 
     def create_new_mask(self, x_mask, x):
+
         """Create a subsampled version of x_mask.
         Args:
             x_mask (torch.Tensor): (B, 1, T)
             x (torch.Tensor): (B, sub(T), attention_dim)
         Returns:
-            x_mask (torch.Tensor): (B, 1, sub(T))"""
+            x_mask (torch.Tensor): (B, 1, sub(T))
+        """
+
         x_t1 = x_mask.size(2) - (x_mask.size(2) % 3)
         x_mask = x_mask[:, :, :x_t1][:, :, ::3]
 
@@ -317,11 +335,13 @@ class VGG2L(torch.nn.Module):
 
 
 class MultiHeadedAttention(nn.Module):
+
     """Multi-Head Attention layer.
     Args:
         n_head (int): The number of heads.
         n_feat (int): The number of features.
-        dropout_rate (float): Dropout rate."""
+        dropout_rate (float): Dropout rate.
+    """
 
     def __init__(self, n_head, n_feat, dropout_rate):
         """Construct an MultiHeadedAttention object."""
@@ -338,6 +358,7 @@ class MultiHeadedAttention(nn.Module):
         self.dropout = nn.Dropout(p=dropout_rate)
 
     def forward_qkv(self, query, key, value):
+
         """Transform query, key and value.
         Args:
             query (torch.Tensor): Query tensor
@@ -352,7 +373,9 @@ class MultiHeadedAttention(nn.Module):
             torch.Tensor: Transformed key tensor
             (#batch, n_head, time2, d_k).
             torch.Tensor: Transformed value tensor
-            (#batch, n_head, time2, d_k)."""
+            (#batch, n_head, time2, d_k).
+        """
+
         n_batch = query.size(0)
         q = self.linear_q(query).view(n_batch, -1, self.h, self.d_k)
         k = self.linear_k(key).view(n_batch, -1, self.h, self.d_k)
@@ -364,6 +387,7 @@ class MultiHeadedAttention(nn.Module):
         return q, k, v
 
     def forward_attention(self, value, scores, mask):
+
         """Compute attention context vector.
         Args:
             value (torch.Tensor): Transformed value
@@ -376,7 +400,9 @@ class MultiHeadedAttention(nn.Module):
             torch.Tensor: Transformed value
             (#batch, time1, d_model)
             weighted by the attention score
-            (#batch, time1, time2)."""
+            (#batch, time1, time2).
+        """
+
         n_batch = value.size(0)
         if mask is not None:
             # print(f"mask: {numpy.shape(mask)}")
@@ -408,6 +434,7 @@ class MultiHeadedAttention(nn.Module):
         return self.linear_out(x)  # (batch, time1, d_model)
 
     def forward(self, query, key, value, mask):
+
         """Compute scaled dot product attention.
         Args:
             query (torch.Tensor): Query tensor
@@ -421,7 +448,9 @@ class MultiHeadedAttention(nn.Module):
                 (#batch, time1, time2).
         Returns:
             torch.Tensor: Output tensor
-            (#batch, time1, d_model)."""
+            (#batch, time1, d_model).
+        """
+
         # print(f"query: {numpy.shape(query)},
         # k: {numpy.shape(key)}, v: {numpy.shape(value)}")
 
@@ -435,12 +464,14 @@ class MultiHeadedAttention(nn.Module):
 
 
 class RelPositionMultiHeadedAttention(MultiHeadedAttention):
+
     """Multi-Head Attention layer with relative position encoding.
     Paper: https://arxiv.org/abs/1901.02860
     Args:
         n_head (int): The number of heads.
         n_feat (int): The number of features.
-        dropout_rate (float): Dropout rate."""
+        dropout_rate (float): Dropout rate.
+    """
 
     def __init__(self, n_head, n_feat, dropout_rate):
         """Construct an RelPositionMultiHeadedAttention object."""
@@ -455,13 +486,16 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         torch.nn.init.xavier_uniform_(self.pos_bias_v)
 
     def rel_shift(self, x, zero_triu=False):
+
         """Compute relative positinal encoding.
         Args:
             x (torch.Tensor): Input tensor (batch, time, size).
             zero_triu (bool): If true,
             return the lower triangular part of the matrix.
         Returns:
-            torch.Tensor: Output tensor."""
+            torch.Tensor: Output tensor.
+        """
+
         zero_pad = torch.zeros(
             (*x.size()[:3], 1), device=x.device, dtype=x.dtype
         )
@@ -477,6 +511,7 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         return x
 
     def forward(self, query, key, value, pos_emb, mask):
+
         """Compute 'Scaled Dot Product Attention' with rel.
         positional encoding.
         Args:
@@ -488,7 +523,9 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
             mask (torch.Tensor): Mask tensor (#batch, 1, time2) or
                 (#batch, time1, time2).
         Returns:
-            torch.Tensor: Output tensor (#batch, time1, d_model)."""
+            torch.Tensor: Output tensor (#batch, time1, d_model).
+        """
+
         q, k, v = self.forward_qkv(query, key, value)
         q = q.transpose(1, 2)  # (batch, time1, head, d_k)
 
@@ -528,22 +565,27 @@ def _pre_hook(
     unexpected_keys,
     error_msgs,
 ):
+
     """Perform pre-hook in load_state_dict for backward compatibility.
     Note:
         We saved self.pe until v.0.5.2 but we have omitted it later.
-        Therefore, we remove the item "pe" from `state_dict` for backward compatibility."""
+        Therefore, we remove the item "pe" from `state_dict` for backward compatibility.
+    """
+
     k = prefix + "pe"
     if k in state_dict:
         state_dict.pop(k)
 
 
 class PositionalEncoding(torch.nn.Module):
+
     """Positional encoding.
     Args:
         d_model (int): Embedding dimension.
         dropout_rate (float): Dropout rate.
         max_len (int): Maximum input length.
-        reverse (bool): Whether to reverse the input position."""
+        reverse (bool): Whether to reverse the input position.
+    """
 
     def __init__(self, d_model, dropout_rate, max_len=5000, reverse=False):
         """Construct an PositionalEncoding object."""
@@ -582,23 +624,28 @@ class PositionalEncoding(torch.nn.Module):
         self.pe = pe.to(device=x.device, dtype=x.dtype)
 
     def forward(self, x: torch.Tensor):
+
         """Add positional encoding.
         Args:
             x (torch.Tensor): Input tensor (batch, time, `*`).
         Returns:
-            torch.Tensor: Encoded tensor (batch, time, `*`)."""
+            torch.Tensor: Encoded tensor (batch, time, `*`).
+        """
+
         self.extend_pe(x)
         x = x * self.xscale + self.pe[:, : x.size(1)]
         return self.dropout(x)
 
 
 class ScaledPositionalEncoding(PositionalEncoding):
+
     """Scaled positional encoding module.
     See Sec. 3.2  https://arxiv.org/abs/1809.08895
     Args:
         d_model (int): Embedding dimension.
         dropout_rate (float): Dropout rate.
-        max_len (int): Maximum input length."""
+        max_len (int): Maximum input length.
+    """
 
     def __init__(self, d_model, dropout_rate, max_len=5000):
         """Initialize class."""
@@ -612,35 +659,43 @@ class ScaledPositionalEncoding(PositionalEncoding):
         self.alpha.data = torch.tensor(1.0)
 
     def forward(self, x):
+
         """Add positional encoding.
         Args:
             x (torch.Tensor): Input tensor (batch, time, `*`).
         Returns:
-            torch.Tensor: Encoded tensor (batch, time, `*`)."""
+            torch.Tensor: Encoded tensor (batch, time, `*`).
+        """
+
         self.extend_pe(x)
         x = x + self.alpha * self.pe[:, : x.size(1)]
         return self.dropout(x)
 
 
 class RelPositionalEncoding(PositionalEncoding):
+
     """Relative positional encoding module.
     See : Appendix B in https://arxiv.org/abs/1901.02860
     Args:
         d_model (int): Embedding dimension.
         dropout_rate (float): Dropout rate.
-        max_len (int): Maximum input length."""
+        max_len (int): Maximum input length.
+    """
 
     def __init__(self, d_model, dropout_rate, max_len=5000):
         """Initialize class."""
         super().__init__(d_model, dropout_rate, max_len, reverse=True)
 
     def forward(self, x):
+
         """Compute positional encoding.
         Args:
             x (torch.Tensor): Input tensor (batch, time, `*`).
         Returns:
             torch.Tensor: Encoded tensor (batch, time, `*`).
-            torch.Tensor: Positional embedding tensor (1, time, `*`)."""
+            torch.Tensor: Positional embedding tensor (1, time, `*`).
+        """
+
         self.extend_pe(x)
         x = x * self.xscale
         pos_emb = self.pe[:, : x.size(1)]
@@ -648,10 +703,12 @@ class RelPositionalEncoding(PositionalEncoding):
 
 
 class LayerNorm(torch.nn.LayerNorm):
+
     """Layer normalization module.
     Args:
         nout (int): Output dim size.
-        dim (int): Dimension to be normalized."""
+        dim (int): Dimension to be normalized.
+    """
 
     def __init__(self, nout, dim=-1):
         """Construct an LayerNorm object."""
@@ -659,11 +716,14 @@ class LayerNorm(torch.nn.LayerNorm):
         self.dim = dim
 
     def forward(self, x):
+
         """Apply layer normalization.
         Args:
             x (torch.Tensor): Input tensor.
         Returns:
-            torch.Tensor: Normalized tensor."""
+            torch.Tensor: Normalized tensor.
+        """
+
         if self.dim == -1:
             return super(LayerNorm, self).forward(x)
         return (
@@ -672,21 +732,26 @@ class LayerNorm(torch.nn.LayerNorm):
 
 
 class MultiLayeredConv1d(torch.nn.Module):
+
     """Multi-layered conv1d for Transformer block.
     This is a module of multi-leyered conv1d designed
     to replace positionwise feed-forward network
     in Transforner block, which is introduced in
     `FastSpeech: Fast, Robust and Controllable Text to Speech`_.
     .. _`FastSpeech: Fast, Robust and Controllable Text to Speech`:
-        https://arxiv.org/pdf/1905.09263.pdf"""
+        https://arxiv.org/pdf/1905.09263.pdf
+    """
 
     def __init__(self, in_chans, hidden_chans, kernel_size, dropout_rate):
+
         """Initialize MultiLayeredConv1d module.
         Args:
             in_chans (int): Number of input channels.
             hidden_chans (int): Number of hidden channels.
             kernel_size (int): Kernel size of conv1d.
-            dropout_rate (float): Dropout rate."""
+            dropout_rate (float): Dropout rate.
+        """
+
         super(MultiLayeredConv1d, self).__init__()
         self.w_1 = torch.nn.Conv1d(
             in_chans,
@@ -705,27 +770,34 @@ class MultiLayeredConv1d(torch.nn.Module):
         self.dropout = torch.nn.Dropout(dropout_rate)
 
     def forward(self, x):
+
         """Calculate forward propagation.
         Args:
             x (torch.Tensor): Batch of input tensors (B, T, in_chans).
         Returns:
-            torch.Tensor: Batch of output tensors (B, T, hidden_chans)."""
+            torch.Tensor: Batch of output tensors (B, T, hidden_chans).
+        """
+
         x = torch.relu(self.w_1(x.transpose(-1, 1))).transpose(-1, 1)
         return self.w_2(self.dropout(x).transpose(-1, 1)).transpose(-1, 1)
 
 
 class Conv1dLinear(torch.nn.Module):
+
     """Conv1D + Linear for Transformer block.
     A variant of MultiLayeredConv1d,
-    which replaces second conv-layer to linear."""
+    which replaces second conv-layer to linear.
+    """
 
     def __init__(self, in_chans, hidden_chans, kernel_size, dropout_rate):
+
         """Initialize Conv1dLinear module.
         Args:
             in_chans (int): Number of input channels.
             hidden_chans (int): Number of hidden channels.
             kernel_size (int): Kernel size of conv1d.
-            dropout_rate (float): Dropout rate."""
+            dropout_rate (float): Dropout rate.
+        """
         super(Conv1dLinear, self).__init__()
         self.w_1 = torch.nn.Conv1d(
             in_chans,
@@ -738,21 +810,26 @@ class Conv1dLinear(torch.nn.Module):
         self.dropout = torch.nn.Dropout(dropout_rate)
 
     def forward(self, x):
+
         """Calculate forward propagation.
         Args:
             x (torch.Tensor): Batch of input tensors (B, T, in_chans).
         Returns:
-            torch.Tensor: Batch of output tensors (B, T, hidden_chans)."""
+            torch.Tensor: Batch of output tensors (B, T, hidden_chans).
+        """
+
         x = torch.relu(self.w_1(x.transpose(-1, 1))).transpose(-1, 1)
         return self.w_2(self.dropout(x))
 
 
 class PositionwiseFeedForward(torch.nn.Module):
+
     """Positionwise feed forward layer.
     Args:
         idim (int): Input dimenstion.
         hidden_units (int): The number of hidden units.
-        dropout_rate (float): Dropout rate."""
+        dropout_rate (float): Dropout rate.
+    """
 
     def __init__(
         self, idim, hidden_units, dropout_rate, activation=torch.nn.ReLU()
@@ -780,22 +857,27 @@ class MultiSequential(torch.nn.Sequential):
 
 
 def repeat(N, fn):
+
     """Repeat module N times.
     Args:
         N (int): Number of repeat time.
         fn (Callable): Function to generate module.
     Returns:
-        MultiSequential: Repeated model instance."""
+        MultiSequential: Repeated model instance.
+    """
+
     return MultiSequential(*[fn(n) for n in range(N)])
 
 
 class Conv2dSubsampling(torch.nn.Module):
+
     """Convolutional 2D subsampling (to 1/4 length).
     Args:
         idim (int): Input dimension.
         odim (int): Output dimension.
         dropout_rate (float): Dropout rate.
-        pos_enc (torch.nn.Module): Custom position encoding layer."""
+        pos_enc (torch.nn.Module): Custom position encoding layer.
+    """
 
     def __init__(self, idim, odim, dropout_rate, pos_enc=None):
         """Construct an Conv2dSubsampling object."""
@@ -814,6 +896,7 @@ class Conv2dSubsampling(torch.nn.Module):
         )
 
     def forward(self, x, x_mask):
+
         """Subsample x.
         Args:
             x (torch.Tensor): Input tensor (#batch, time, idim).
@@ -822,7 +905,9 @@ class Conv2dSubsampling(torch.nn.Module):
             torch.Tensor: Subsampled tensor (#batch, time', odim),
                 where time' = time // 4.
             torch.Tensor: Subsampled mask (#batch, 1, time'),
-                where time' = time // 4."""
+                where time' = time // 4.
+        """
+
         x = x.unsqueeze(1)  # (b, c, t, f)
         x = self.conv(x)
         b, c, t, f = x.size()
@@ -832,9 +917,12 @@ class Conv2dSubsampling(torch.nn.Module):
         return x, x_mask[:, :, :-2:2][:, :, :-2:2]
 
     def __getitem__(self, key):
+
         """Get item.
         When reset_parameters() is called, if use_scaled_pos_enc is used,
-            return the positioning encoding."""
+            return the positioning encoding.
+        """
+
         if key != -1:
             raise NotImplementedError(
                 "Support only `-1` (for `reset_parameters`)."
@@ -843,6 +931,7 @@ class Conv2dSubsampling(torch.nn.Module):
 
 
 class Conformer_block(torch.nn.Module):
+
     """Conformer encoder module.
     Args:
         idim (int): Input dimension.
@@ -873,7 +962,8 @@ class Conformer_block(torch.nn.Module):
         activation_type (str): Encoder activation function type.
         use_cnn_module (bool): Whether to use convolution module.
         cnn_module_kernel (int): Kernerl size of convolution module.
-        padding_idx (int): Padding idx for input_layer=embed."""
+        padding_idx (int): Padding idx for input_layer=embed.
+    """
 
     def __init__(
         self,
@@ -1027,13 +1117,15 @@ class Conformer_block(torch.nn.Module):
             self.after_norm = LayerNorm(attention_dim)
 
     def forward(self, xs, masks=None):
+
         """Encode input sequence.
         Args:
             xs (torch.Tensor): Input tensor (#batch, time, idim).
             masks (torch.Tensor): Mask tensor (#batch, time).
         Returns:
             torch.Tensor: Output tensor (#batch, time, attention_dim).
-            torch.Tensor: Mask tensor (#batch, time)."""
+            torch.Tensor: Mask tensor (#batch, time).
+        """
 
         # print(
         # f"xs shape : {numpy.shape(xs)}, masks shape: {numpy.shape(masks)}"

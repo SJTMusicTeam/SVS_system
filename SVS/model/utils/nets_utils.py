@@ -16,6 +16,7 @@ import torch
 
 
 def make_pad_mask(lengths, xs=None, length_dim=-1):
+
     """Make mask tensor containing indices of padded part.
 
     Args:
@@ -98,7 +99,9 @@ def make_pad_mask(lengths, xs=None, length_dim=-1):
                  [0, 0, 1, 1, 1, 1],
                  [0, 0, 1, 1, 1, 1],
                  [0, 0, 1, 1, 1, 1],
-                 [0, 0, 1, 1, 1, 1]]], dtype=torch.uint8)"""
+                 [0, 0, 1, 1, 1, 1]]], dtype=torch.uint8)
+    """
+
     if length_dim == 0:
         raise ValueError("length_dim cannot be 0: {}".format(length_dim))
 
@@ -130,12 +133,15 @@ def make_pad_mask(lengths, xs=None, length_dim=-1):
 
 
 def make_non_pad_mask(lengths, xs=None, length_dim=-1):
+
     """Make mask tensor containing indices of non-padded part.
 
     Args:
         lengths (LongTensor or List): Batch of lengths (B,).
-        xs (Tensor, optional): The reference tensor. If set, masks will be the same shape as this tensor.
-        length_dim (int, optional): Dimension indicator of the above tensor. See the example.
+        xs (Tensor, optional): The reference tensor. If set,
+        masks will be the same shape as this tensor.
+        length_dim (int, optional): Dimension indicator of the above tensor.
+        See the example.
 
     Returns:
         ByteTensor: mask tensor containing indices of padded part.
@@ -211,6 +217,6 @@ def make_non_pad_mask(lengths, xs=None, length_dim=-1):
                  [1, 1, 0, 0, 0, 0],
                  [1, 1, 0, 0, 0, 0],
                  [1, 1, 0, 0, 0, 0]]], dtype=torch.uint8)
-
     """
+
     return ~make_pad_mask(lengths, xs, length_dim)

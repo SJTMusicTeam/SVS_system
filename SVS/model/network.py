@@ -110,7 +110,6 @@ def make_pad_mask(lengths, xs=None, length_dim=-1):
                  [0, 0, 1, 1, 1, 1],
                  [0, 0, 1, 1, 1, 1],
                  [0, 0, 1, 1, 1, 1]]], dtype=torch.uint8)
-
     """
 
     if length_dim == 0:
@@ -220,7 +219,6 @@ def make_non_pad_mask(lengths, xs=None, length_dim=-1):
                  [1, 1, 0, 0, 0, 0],
                  [1, 1, 0, 0, 0, 0],
                  [1, 1, 0, 0, 0, 0]]], dtype=torch.uint8)
-
     """
 
     return ~make_pad_mask(lengths, xs, length_dim)
@@ -262,7 +260,6 @@ class Encoder(nn.Module):
 
         """text_phone dim: [batch_size, text_phone_length]
         output dim : [batch_size, text_phone_length, embedded_dim]
-
         """
 
         # don't use pos in glu, but leave the field for uniform interface
@@ -1372,7 +1369,6 @@ class USTC_Prenet(nn.Module):
     """Singing Voice Synthesis Using Deep Autoregressive Neural Networks
        for Acoustic Modeling from USTC, adapted by GS
     - herf: https://arxiv.org/pdf/1906.08977.pdf
-
     """
 
     def __init__(
@@ -1509,7 +1505,6 @@ class USTC_SVS(nn.Module):
     """Singing Voice Synthesis Using Deep Autoregressive Neural Networks
     for Acoustic Modeling from USTC, adapted by GS
     - herf: https://arxiv.org/pdf/1906.08977.pdf
-
     """
 
     def __init__(

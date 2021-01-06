@@ -32,13 +32,16 @@ def _get_spectrograms(
     ref_db,
     n_mels=80,
 ):
+
     """Parse the wave file in `fpath` and
     Returns normalized melspectrogram and linear spectrogram.
     Args:
       fpath: A string. The full path of a sound file.
     Returns:
       mel: A 2d array of shape (T, n_mels) and dtype of float32.
-      mag: A 2d array of shape (T, 1+n_fft/2) and dtype of float32."""
+      mag: A 2d array of shape (T, 1+n_fft/2) and dtype of float32.
+    """
+
     # Loading sound file
     y, sr = librosa.load(fpath, sr=None)
     if sr != require_sr:
@@ -139,7 +142,7 @@ class SVSCollator(object):
         if self.use_asr_post:
             phone = np.zeros((batch_size, self.max_len, self.phone_size))
         else:
-            char_len_list = [len(batch[i]["char"]) for i in range(batch_size)]
+            # char_len_list=[len(batch[i]["char"]) for i in range(batch_size)]
             phone = np.zeros((batch_size, self.max_len))
             chars = np.zeros((batch_size, self.char_max_len))
             char_len_mask = np.zeros((batch_size, self.char_max_len))
@@ -333,7 +336,8 @@ class SVSDataset(Dataset):
         if mel is not None:
             mel = mel[:min_length, :]
 
-        # print("char len: {}, phone len: {}, spectrom: {}".format(len(char), len(phone), np.shape(spectrogram)[0]))
+        # print("char len: {}, phone len: {}, spectrom: {}"
+        # .format(len(char), len(phone), np.shape(spectrogram)[0]))
         return {
             "phone": phone,
             "beat": beat,

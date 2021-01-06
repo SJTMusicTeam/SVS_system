@@ -72,11 +72,14 @@ def load_wav_scp(wav_scp_file):
 
 @lru_cache(maxsize=1)
 def load_wav(wav_rxfilename, start=0, end=None):
+
     """This function reads audio file and return data in numpy.float32 array.
     "lru_cache" holds recently loaded audio so that can be called
     many times on the same audio file.
     OPTIMIZE: controls lru_cache size for random access,
-    considering memory size"""
+    considering memory size
+    """
+
     if wav_rxfilename.endswith("|"):
         # input piped command
         p = subprocess.Popen(
@@ -121,13 +124,16 @@ def load_reco2dur(reco2dur_file):
 
 
 def process_wav(wav_rxfilename, process):
+
     """This function returns preprocessed wav_rxfilename
     Args:
         wav_rxfilename: input
         process: command which can be connected via pipe,
                 use stdin and stdout
     Returns:
-        wav_rxfilename: output piped command"""
+        wav_rxfilename: output piped command
+    """
+
     if wav_rxfilename.endswith("|"):
         # input piped command
         return wav_rxfilename + process + "|"

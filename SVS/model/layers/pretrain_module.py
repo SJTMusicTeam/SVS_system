@@ -32,10 +32,13 @@ class Linear(nn.Module):
     """Linear Module"""
 
     def __init__(self, in_dim, out_dim, bias=True, w_init="linear"):
+
         """:param in_dim: dimension of input
         :param out_dim: dimension of output
         :param bias: boolean. if True, bias is included.
-        :param w_init: str. weight inits with xavier initialization."""
+        :param w_init: str. weight inits with xavier initialization.
+        """
+
         super(Linear, self).__init__()
         self.linear_layer = nn.Linear(in_dim, out_dim, bias=bias)
 
@@ -61,6 +64,7 @@ class Conv(nn.Module):
         bias=True,
         w_init="linear",
     ):
+
         """:param in_channels: dimension of input
         :param out_channels: dimension of output
         :param kernel_size: size of kernel
@@ -68,7 +72,9 @@ class Conv(nn.Module):
         :param padding: size of padding
         :param dilation: dilation rate
         :param bias: boolean. if True, bias is included.
-        :param w_init: str. weight inits with xavier initialization."""
+        :param w_init: str. weight inits with xavier initialization.
+        """
+
         super(Conv, self).__init__()
 
         self.conv = nn.Conv1d(
@@ -405,9 +411,12 @@ class Prenet(nn.Module):
     """Prenet before passing through the network"""
 
     def __init__(self, input_size, hidden_size, output_size, p=0.5):
+
         """:param input_size: dimension of input
         :param hidden_size: dimension of hidden unit
-        :param output_size: dimension of output"""
+        :param output_size: dimension of output
+        """
+
         super(Prenet, self).__init__()
         self.input_size = input_size
         self.output_size = output_size
@@ -444,12 +453,15 @@ class CBHG(nn.Module):
         max_pool_kernel_size=2,
         is_post=False,
     ):
+
         """:param hidden_size: dimension of hidden unit
         :param K: # of convolution banks
         :param projection_size: dimension of projection unit
         :param num_gru_layers: # of layers of GRUcell
         :param max_pool_kernel_size: max pooling kernel size
-        :param is_post: whether post processing or not"""
+        :param is_post: whether post processing or not
+        """
+
         super(CBHG, self).__init__()
         self.hidden_size = hidden_size
         self.projection_size = projection_size
@@ -567,8 +579,11 @@ class Highwaynet(nn.Module):
     """Highway network"""
 
     def __init__(self, num_units, num_layers=4):
+
         """:param num_units: dimension of hidden unit
-        :param num_layers: # of highway layers"""
+        :param num_layers: # of highway layers
+        """
+
         super(Highwaynet, self).__init__()
         self.num_units = num_units
         self.num_layers = num_layers

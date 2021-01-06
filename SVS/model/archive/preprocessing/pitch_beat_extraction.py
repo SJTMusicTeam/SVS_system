@@ -11,7 +11,8 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License."""
-#!/usr/bin/env python3
+
+# !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Extract beats and pitches, and save it under the same folder as the wav file
 
@@ -73,7 +74,7 @@ for root, dirs, files in os.walk(args.datadir):
                 win_length=win_length,
             )
             pitches = pitches.T
-            # file = open((os.path.join(args.outdir, name))+'_pitches.txt', "w+")
+            # file=open((os.path.join(args.outdir, name))+'_pitches.txt',"w+")
             pitch = np.zeros((pitches.shape[0]))
             for i in range(pitches.shape[0]):
                 pitch[i] = max(pitches[i])

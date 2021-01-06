@@ -11,7 +11,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License."""
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 
 
 import copy
@@ -109,7 +109,8 @@ def train_one_epoch(
     if args.n_mels > 0:
         mel_losses = AverageMeter()
         # mcd_metric = AverageMeter()
-        # f0_distortion_metric, vuv_error_metric = AverageMeter(), AverageMeter()
+        # f0_distortion_metric, vuv_error_metric =
+        # AverageMeter(), AverageMeter()
         if args.double_mel_loss:
             double_mel_losses = AverageMeter()
     model.train()
@@ -656,11 +657,14 @@ def griffin_lim(spectrogram, iter_vocoder, n_fft, hop_length, win_length):
 def spectrogram2wav(
     mag, max_db, ref_db, preemphasis, power, sr, hop_length, win_length, n_fft
 ):
+
     """# Generate wave file from linear magnitude spectrogram
     Args:
       mag: A numpy array of (T, 1+n_fft//2)
     Returns:
-      wav: A 1-D numpy array."""
+      wav: A 1-D numpy array.
+    """
+
     hop_length = int(hop_length * sr)
     win_length = int(win_length * sr)
     n_fft = n_fft

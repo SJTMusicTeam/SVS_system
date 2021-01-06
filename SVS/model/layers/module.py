@@ -11,7 +11,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License."""
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi, Hailan Lin)
 
@@ -24,8 +24,8 @@ import torch.nn as nn
 
 from torch.nn import Dropout
 from torch.nn import functional as F
-from torch.nn import Linear
 from torch.nn import LayerNorm
+from torch.nn import Linear
 from torch.nn import Module
 
 # from torch.nn.parameter import Parameter
@@ -63,7 +63,7 @@ class GatedConv(nn.Module):
 
 
 class StackedCNN(nn.Module):
-    """ Stacked CNN class """
+    """Stacked CNN class"""
 
     def __init__(
         self, num_layers, input_size, cnn_kernel_width=3, dropout=0.2
@@ -106,13 +106,15 @@ class GLU(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
+
     """Positional Encoding.
     Modified from
     https://github.com/pytorch/examples/blob/master/word_language_model/model.py
     Args:
         d_model: the embed dim (required).
         dropout: the dropout value (default=0.1).
-        max_len: the max. length of the incoming sequence (default=5000)."""
+        max_len: the max. length of the incoming sequence (default=5000).
+    """
 
     def __init__(self, d_model, dropout=0.1, max_len=5000, device="cuda"):
         super(PositionalEncoding, self).__init__()
@@ -131,12 +133,15 @@ class PositionalEncoding(nn.Module):
         self.register_buffer("pe", pe)
 
     def forward(self, x):
+
         """Inputs of forward function
         Args:
             x: the sequence fed to the positional encoder model (required).
         Shape:
             x: [sequence length, batch size, embed dim]
-            output: [sequence length, batch size, embed dim]"""
+            output: [sequence length, batch size, embed dim]
+        """
+
         x = x + self.pe[: x.size(0), :]
         return self.dropout(x)
 
@@ -153,12 +158,15 @@ class CBHG(nn.Module):
         max_pool_kernel_size=2,
         is_post=False,
     ):
+
         """:param hidden_size: dimension of hidden unit
         :param K: # of convolution banks
         :param projection_size: dimension of projection unit
         :param num_gru_layers: # of layers of GRUcell
         :param max_pool_kernel_size: max pooling kernel size
-        :param is_post: whether post processing or not"""
+        :param is_post: whether post processing or not
+        """
+
         super(CBHG, self).__init__()
         self.hidden_size = hidden_size
         self.projection_size = projection_size
@@ -276,8 +284,11 @@ class Highwaynet(nn.Module):
     """Highway network"""
 
     def __init__(self, num_units, num_layers=4):
+
         """:param num_units: dimension of hidden unit
-        :param num_layers: # of highway layers"""
+        :param num_layers: # of highway layers
+        """
+
         super(Highwaynet, self).__init__()
         self.num_units = num_units
         self.num_layers = num_layers
@@ -388,12 +399,15 @@ class TransformerGLULayer(Module):
 
 
 class TransformerEncoder(Module):
-    r"""TransformerEncoder is a stack of N encoder layers
+
+    """TransformerEncoder is a stack of N encoder layers
     Args:
         encoder_layer: an instance of the
             TransformerEncoderLayer() class (required).
         num_layers: the number of sub-encoder-layers in the encoder (required).
-        norm: the layer normalization component (optional)."""
+        norm: the layer normalization component (optional).
+    """
+
     __constants__ = ["norm"]
 
     def __init__(self, encoder_layer, num_layers, norm=None):
@@ -405,7 +419,8 @@ class TransformerEncoder(Module):
 
     def forward(self, src, mask=None, query_mask=None):
         # #type: (Tensor, Optional[Tensor], Optional[Tensor]) -> Tensor
-        r"""Pass the input through the encoder layers in turn.
+
+        """Pass the input through the encoder layers in turn.
         Args:
             src: the sequence to the encoder (required).
             mask: the mask for the src sequence (optional).
@@ -413,7 +428,9 @@ class TransformerEncoder(Module):
                 the mask for the src keys per batch (optional).
 
         Shape:
-            see the docs in Transformer class."""
+            see the docs in Transformer class.
+        """
+
         output = src
 
         for mod in self.layers:
@@ -426,6 +443,7 @@ class TransformerEncoder(Module):
 
 
 class Transformer(nn.Module):
+
     """Transformer encoder based Singing Voice synthesis
     Args:
         hidden_state:
@@ -434,7 +452,8 @@ class Transformer(nn.Module):
         num_block: the number of sub-encoder-layers in the encoder.
         fc_dim: the dimension of the feedforward network model.
         dropout: the dropout value.
-        pos_enc: True if positional encoding is used."""
+        pos_enc: True if positional encoding is used.
+    """
 
     def __init__(
         self,

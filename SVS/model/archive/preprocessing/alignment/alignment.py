@@ -11,7 +11,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License."""
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import argparse
@@ -20,8 +20,11 @@ import os
 
 
 def DTW(template, sample, new_Map, name):
+
     """Alignment using DTW algorithm
-    Return the record and distance of the shortest path"""
+    Return the record and distance of the shortest path
+    """
+
     Max = -math.log(1e-300, 2)
     T_len = len(template)
     S_len = len(sample)
@@ -37,8 +40,11 @@ def DTW(template, sample, new_Map, name):
                 before[ind] = sample[0][key]
 
     for i in range(1, S_len):
+
         """calculate the probability of all phonemes
-        in the corresponding template in the i-th frame"""
+        in the corresponding template in the i-th frame
+        """
+
         frame_pos = [Max for i in range(T_len)]
         for key in sample[i].keys():
             for ind in range(len(template)):
@@ -82,8 +88,11 @@ def DTW(template, sample, new_Map, name):
 
 
 def text_to_matrix_HMM(Map, file):
+
     """Used in HMM model
-    Read the posterior probability matrix and save it in dictionary M"""
+    Read the posterior probability matrix and save it in dictionary M
+    """
+
     Min = 1e-300
     M = dict()
     post = file.readlines()
@@ -155,8 +164,11 @@ def text_to_matrix_TDNN(Map, file):
 
 
 def index_to_phone(args):
+
     """Establish the correspondence between phonemes and index,
-    and save them in the Map dictionary, (key = index, value = phoneme name)"""
+    and save them in the Map dictionary, (key = index, value = phoneme name)
+    """
+
     file = open(args.phone_map_path, "r")
     lines = file.readlines()
     file.close()

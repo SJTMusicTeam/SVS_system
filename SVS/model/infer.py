@@ -450,9 +450,7 @@ def infer(args):
                             double_mel_losses.avg
                         )
                 end = time.time()
-                logging.info(
-                    f"{out_log} -- sum_time: {(end - start_t_test)}s"
-                )
+                logging.info(f"{out_log} -- sum_time: {(end - start_t_test)}s")
 
     end_t_test = time.time()
 
@@ -474,6 +472,4 @@ def infer(args):
             f0_corr,
         )
     )
-    logging.info(
-        "{} time: {:.2f}s".format(out_log, end_t_test - start_t_test)
-    )
+    logging.info("{} time: {:.2f}s".format(out_log, end_t_test - start_t_test))
