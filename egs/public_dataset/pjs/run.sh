@@ -28,7 +28,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
   echo " Stage0: download data "
   echo =======================
   mkdir -p ${raw_data_dir}
-  ./local/download_from_google_drive.sh https://drive.google.com/u/0/uc\?id\=1hPHwOkSe2Vnq6hXrhVtzNskJjVMQmvN_\&export\=download ${raw_data_dir} zip
+  ./local/download_from_google_drive.sh https://drive.google.com/u/0/uc\?id=1hPHwOkSe2Vnq6hXrhVtzNskJjVMQmvN_\&export=download ${raw_data_dir} zip
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then 
