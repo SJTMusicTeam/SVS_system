@@ -127,21 +127,16 @@ def process(args):
     f0_min = 50.0
 
     if args.model == "HMM":
-        frame_length = 25 / 1000
         frame_shift = 10 / 1000
     elif args.model == "TDNN":
-        frame_length = 60 / 1000
         frame_shift = 30 / 1000
 
     hop_length = int(args.sr * frame_shift)
-    win_length = int(args.sr * frame_length)
 
     data_list = os.listdir(args.datadir)
-    print(args.datadir)
     lab_list = []
     for data_dir in data_list:
         if data_dir[:3] == "pjs":
-            # print(os.path.join(args.datadir, data_dir))
             data = os.listdir(os.path.join(args.datadir, data_dir))
             for file in data:
                 if file[-4:] == ".lab":
@@ -149,8 +144,6 @@ def process(args):
                         os.path.join(args.datadir, data_dir + "/" + file)
                     )
 
-    print(lab_list[0])
-    # lab_list = os.listdir(args.labdir)
     phone_set = []
     idscp = {}
     index = 1
