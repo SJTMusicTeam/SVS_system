@@ -132,7 +132,7 @@ def load_reco2dur(reco2dur_file):
 
 
 def process_wav(wav_rxfilename, process):
-    """Returns preprocessed wav_rxfilename.
+    """Return preprocessed wav_rxfilename.
 
     Args:
         wav_rxfilename: input
