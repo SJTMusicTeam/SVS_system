@@ -107,8 +107,8 @@ class GLU(nn.Module):
 
 class PositionalEncoding(nn.Module):
 
-    """
-    Positional Encoding.
+    """Positional Encoding.
+
     Modified from
     https://github.com/pytorch/examples/blob/master/word_language_model/model.py
     Args:
@@ -135,8 +135,8 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, x):
 
-        """
-        Inputs of forward function
+        """Inputs of forward function
+
         Args:
             x: the sequence fed to the positional encoder model (required).
         Shape:
@@ -161,14 +161,12 @@ class CBHG(nn.Module):
         is_post=False,
     ):
 
-        """
-        :param hidden_size: dimension of hidden unit
-        :param K: # of convolution banks
-        :param projection_size: dimension of projection unit
-        :param num_gru_layers: # of layers of GRUcell
-        :param max_pool_kernel_size: max pooling kernel size
-        :param is_post: whether post processing or not
-        """
+        # :param hidden_size: dimension of hidden unit
+        # :param K: # of convolution banks
+        # :param projection_size: dimension of projection unit
+        # :param num_gru_layers: # of layers of GRUcell
+        # :param max_pool_kernel_size: max pooling kernel size
+        # :param is_post: whether post processing or not
 
         super(CBHG, self).__init__()
         self.hidden_size = hidden_size
@@ -288,10 +286,8 @@ class Highwaynet(nn.Module):
 
     def __init__(self, num_units, num_layers=4):
 
-        """
-        :param num_units: dimension of hidden unit
-        :param num_layers: # of highway layers
-        """
+        # :param num_units: dimension of hidden unit
+        # :param num_layers: # of highway layers
 
         super(Highwaynet, self).__init__()
         self.num_units = num_units
@@ -404,8 +400,8 @@ class TransformerGLULayer(Module):
 
 class TransformerEncoder(Module):
 
-    """
-    TransformerEncoder is a stack of N encoder layers
+    """TransformerEncoder is a stack of N encoder layers
+
     Args:
         encoder_layer: an instance of the
             TransformerEncoderLayer() class (required).
@@ -425,8 +421,8 @@ class TransformerEncoder(Module):
     def forward(self, src, mask=None, query_mask=None):
         # #type: (Tensor, Optional[Tensor], Optional[Tensor]) -> Tensor
 
-        """
-        Pass the input through the encoder layers in turn.
+        """Pass the input through the encoder layers in turn.
+
         Args:
             src: the sequence to the encoder (required).
             mask: the mask for the src sequence (optional).
@@ -450,8 +446,8 @@ class TransformerEncoder(Module):
 
 class Transformer(nn.Module):
 
-    """
-    Transformer encoder based Singing Voice synthesis
+    """Transformer encoder based Singing Voice synthesis
+
     Args:
         hidden_state:
             the number of expected features in the encoder/decoder inputs.

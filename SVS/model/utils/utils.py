@@ -634,8 +634,10 @@ def record_info(train_info, dev_info, epoch, logger):
 
 def invert_spectrogram(spectrogram, win_length, hop_length):
     """Applies inverse fft.
+
     Args:
-      spectrogram: [1+n_fft//2, t]"""
+      spectrogram: [1+n_fft//2, t]
+    """
     return librosa.istft(
         spectrogram, hop_length, win_length=win_length, window="hann"
     )
@@ -658,7 +660,8 @@ def spectrogram2wav(
     mag, max_db, ref_db, preemphasis, power, sr, hop_length, win_length, n_fft
 ):
 
-    """# Generate wave file from linear magnitude spectrogram
+    """Generate wave file from linear magnitude spectrogram
+
     Args:
       mag: A numpy array of (T, 1+n_fft//2)
     Returns:

@@ -576,9 +576,7 @@ def train(args):
     # args.num_saved_model = 5
 
     for epoch in range(start_epoch + 1, 1 + args.max_epochs):
-        """
-        ### Train Stage
-        """
+        """Train Stage"""
         start_t_train = time.time()
         train_info = train_one_epoch(
             train_loader,
@@ -615,9 +613,7 @@ def train(args):
             )
         )
 
-        """
-        ### Dev Stage
-        """
+        """Dev Stage"""
         torch.backends.cudnn.enabled = False  # 莫名的bug，关掉才可以跑
 
         # start_t_dev = time.time()
@@ -663,9 +659,7 @@ def train(args):
             if after > before:  # decay per 250 learning steps
                 scheduler.step()
 
-        """
-        ### Save model Stage
-        """
+        """Save model Stage"""
         if not os.path.exists(args.model_save_dir):
             os.makedirs(args.model_save_dir)
 

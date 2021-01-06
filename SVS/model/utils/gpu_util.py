@@ -23,6 +23,7 @@ import torch
 def get_free_gpus():
 
     """Get IDs of free GPUs using `nvidia-smi`.
+
     Returns:
         sorted list of GPUs which have no running process.
     """
@@ -69,6 +70,7 @@ def get_free_gpus():
 def use_single_gpu():
 
     """Use single GPU device.
+
     If CUDA_VISIBLE_DEVICES is set, select a device from the variable.
     Otherwise, get a free GPU device and use it.
     Returns:

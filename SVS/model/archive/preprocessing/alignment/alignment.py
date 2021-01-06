@@ -21,8 +21,8 @@ import os
 
 def DTW(template, sample, new_Map, name):
 
-    """
-    Alignment using DTW algorithm
+    """Alignment using DTW algorithm
+
     Return the record and distance of the shortest path
     """
 
@@ -41,11 +41,8 @@ def DTW(template, sample, new_Map, name):
                 before[ind] = sample[0][key]
 
     for i in range(1, S_len):
-
-        """
-        calculate the probability of all phonemes
-        in the corresponding template in the i-th frame
-        """
+        # calculate the probability of all phonemes
+        # in the corresponding template in the i-th frame
 
         frame_pos = [Max for i in range(T_len)]
         for key in sample[i].keys():
@@ -91,8 +88,8 @@ def DTW(template, sample, new_Map, name):
 
 def text_to_matrix_HMM(Map, file):
 
-    """
-    Used in HMM model
+    """Used in HMM model
+
     Read the posterior probability matrix and save it in dictionary M
     """
 
@@ -168,8 +165,8 @@ def text_to_matrix_TDNN(Map, file):
 
 def index_to_phone(args):
 
-    """
-    Establish the correspondence between phonemes and index,
+    """Establish the correspondence between phonemes and index,
+
     and save them in the Map dictionary, (key = index, value = phoneme name)
     """
 
@@ -275,11 +272,10 @@ if __name__ == "__main__":
 
     # run DTW algorithm and write result to the output directory
     for name in Matrix.keys():
-        """
-        file = open(os.path.join(args.output_dir, name) + '.m', "w+")
-        file.write(str(Matrix[name]))
-        file.close()
-        """
+        # file = open(os.path.join(args.output_dir, name) + '.m', "w+")
+        # file.write(str(Matrix[name]))
+        # file.close()
+
         record, result = DTW(Template[name], Matrix[name], new_Map, name)
 
         file = open(os.path.join(args.output_dir, name), "w+")
