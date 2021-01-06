@@ -26,8 +26,8 @@ from SVS.model.network import TransformerSVS
 from SVS.model.network import USTC_SVS
 
 from SVS.model.utils.gpu_util import use_single_gpu
-from SVS.model.utils.loss import cal_spread_function
 from SVS.model.utils.loss import cal_psd2bark_dict
+from SVS.model.utils.loss import cal_spread_function
 from SVS.model.utils.loss import MaskedLoss
 from SVS.model.utils.loss import PerceptualEntropy
 from SVS.model.utils.SVSDataset import SVSCollator

@@ -210,7 +210,8 @@ def infer(args):
             para_list.append(k)
 
     logging.info(
-        f"Total {len(state_dict)} parameter sets, loaded {len(state_dict_new)} parameter set"
+        f"Total {len(state_dict)} parameter sets, "
+        f"loaded {len(state_dict_new)} parameter set"
     )
 
     if len(para_list) > 0:
@@ -240,7 +241,10 @@ def infer(args):
         sing_quality=args.sing_quality,
     )
     collate_fn_svs = SVSCollator(
-        args.num_frames, args.char_max_len, args.use_asr_post, args.phone_size
+        args.num_frames,
+        args.char_max_len,
+        args.use_asr_post,
+        args.phone_size,
     )
     test_loader = torch.utils.data.DataLoader(
         dataset=test_set,
@@ -431,8 +435,11 @@ def infer(args):
                     args.prediction_path,
                     args,
                 )
-                out_log = "step {}:train_loss{:.4f};spec_loss{:.4f};mcd_value{:.4f};".format(
-                    step, losses.avg, spec_losses.avg, mcd_metric.avg
+                out_log = (
+                    "step {}:train_loss{:.4f};"
+                    "spec_loss{:.4f};mcd_value{:.4f};".format(
+                        step, losses.avg, spec_losses.avg, mcd_metric.avg
+                    )
                 )
                 if args.perceptual_loss > 0:
                     out_log += " pe_loss {:.4f}; ".format(pe_losses.avg)
@@ -443,7 +450,9 @@ def infer(args):
                             double_mel_losses.avg
                         )
                 end = time.time()
-                logging.info(f"{out_log} -- sum_time: {(end - start_t_test)}s")
+                logging.info(
+                    f"{out_log} -- sum_time: {(end - start_t_test)}s"
+                )
 
     end_t_test = time.time()
 
@@ -457,7 +466,14 @@ def infer(args):
     f0_corr = Metrics.compute_f0_corr(f0_ground_truth_all, f0_synthesis_all)
 
     out_log += "\n\t mcd_value {:.4f} dB ".format(mcd_metric.avg)
-    out_log += " f0_rmse_value {:.4f} Hz, vuv_error_value {:.4f} %, F0_CORR {:.4f}; ".format(
-        np.sqrt(f0_distortion_metric.avg), vuv_error_metric.avg * 100, f0_corr
+    out_log += (
+        " f0_rmse_value {:.4f} Hz, "
+        "vuv_error_value {:.4f} %, F0_CORR {:.4f}; ".format(
+            np.sqrt(f0_distortion_metric.avg),
+            vuv_error_metric.avg * 100,
+            f0_corr,
+        )
     )
-    logging.info("{} time: {:.2f}s".format(out_log, end_t_test - start_t_test))
+    logging.info(
+        "{} time: {:.2f}s".format(out_log, end_t_test - start_t_test)
+    )

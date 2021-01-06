@@ -34,9 +34,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def make_pad_mask(lengths, xs=None, length_dim=-1):
-    """
 
-    Make mask tensor containing indices of padded part.
+    """Make mask tensor containing indices of padded part.
     Args:
         lengths (LongTensor or List): Batch of lengths (B,).
         xs (Tensor, optional): The reference tensor.
@@ -145,9 +144,8 @@ def make_pad_mask(lengths, xs=None, length_dim=-1):
 
 
 def make_non_pad_mask(lengths, xs=None, length_dim=-1):
-    """
 
-    Make mask tensor containing indices of non-padded part.
+    """Make mask tensor containing indices of non-padded part.
     Args:
         lengths (LongTensor or List): Batch of lengths (B,).
         xs (Tensor, optional): The reference tensor.
@@ -261,6 +259,7 @@ class Encoder(nn.Module):
         self.fc_2 = nn.Linear(hidden_size, embed_size)
 
     def forward(self, text_phone, pos=None):
+
         """text_phone dim: [batch_size, text_phone_length]
         output dim : [batch_size, text_phone_length, embedded_dim]
 
@@ -421,8 +420,8 @@ class Encoder_Postnet(nn.Module):
         self.pos = module.PositionalEncoding(embed_size)
 
     def aligner(self, encoder_out, align_phone, text_phone):
-        """
-        align_phone = [batch_size, align_phone_length]
+
+        """align_phone = [batch_size, align_phone_length]
         text_phone = [batch_size, text_phone_length]
         align_phone_length( = frame_num) > text_phone_length
 
@@ -1369,6 +1368,7 @@ class ConformerSVS_FULL(nn.Module):
 
 
 class USTC_Prenet(nn.Module):
+
     """Singing Voice Synthesis Using Deep Autoregressive Neural Networks
        for Acoustic Modeling from USTC, adapted by GS
     - herf: https://arxiv.org/pdf/1906.08977.pdf
@@ -1505,9 +1505,12 @@ class USTC_Prenet(nn.Module):
 
 
 class USTC_SVS(nn.Module):
+
     """Singing Voice Synthesis Using Deep Autoregressive Neural Networks
     for Acoustic Modeling from USTC, adapted by GS
-    - herf: https://arxiv.org/pdf/1906.08977.pdf"""
+    - herf: https://arxiv.org/pdf/1906.08977.pdf
+
+    """
 
     def __init__(
         self,
