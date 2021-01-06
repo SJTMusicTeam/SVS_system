@@ -121,7 +121,8 @@ def infer(args):
             enc_concat_after=args.enc_concat_after,
             enc_positionwise_layer_type=args.enc_positionwise_layer_type,
             enc_positionwise_conv_kernel_size=(
-                args.enc_positionwise_conv_kernel_size),
+                args.enc_positionwise_conv_kernel_size
+            ),
             enc_macaron_style=args.enc_macaron_style,
             enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
             enc_selfattention_layer_type=args.enc_selfattention_layer_type,
@@ -156,7 +157,8 @@ def infer(args):
             enc_concat_after=args.enc_concat_after,
             enc_positionwise_layer_type=args.enc_positionwise_layer_type,
             enc_positionwise_conv_kernel_size=(
-                args.enc_positionwise_conv_kernel_size),
+                args.enc_positionwise_conv_kernel_size
+            ),
             enc_macaron_style=args.enc_macaron_style,
             enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
             enc_selfattention_layer_type=args.enc_selfattention_layer_type,
@@ -176,7 +178,8 @@ def infer(args):
             dec_concat_after=args.dec_concat_after,
             dec_positionwise_layer_type=args.dec_positionwise_layer_type,
             dec_positionwise_conv_kernel_size=(
-                args.dec_positionwise_conv_kernel_size),
+                args.dec_positionwise_conv_kernel_size
+            ),
             dec_macaron_style=args.dec_macaron_style,
             dec_pos_enc_layer_type=args.dec_pos_enc_layer_type,
             dec_selfattention_layer_type=args.dec_selfattention_layer_type,
