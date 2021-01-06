@@ -1,4 +1,4 @@
-"""Copyright [2020] [linhailan1]
+"""Copyright [2020] [linhailan1].
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -22,7 +21,7 @@ import os
 
 
 def DTW(template, sample, new_Map, name):
-    """Alignment using DTW algorithm
+    """Alignment using DTW algorithm.
 
     Return the record and distance of the shortest path
     """
@@ -87,7 +86,7 @@ def DTW(template, sample, new_Map, name):
 
 
 def text_to_matrix_HMM(Map, file):
-    """Used in HMM model
+    """Used in HMM model.
 
     Read the posterior probability matrix and save it in dictionary M
     """
@@ -163,7 +162,7 @@ def text_to_matrix_TDNN(Map, file):
 
 
 def index_to_phone(args):
-    """Establish the correspondence between phonemes and index,
+    """Establish the correspondence between phonemes and index.
 
     and save them in the Map dictionary, (key = index, value = phoneme name)
     """

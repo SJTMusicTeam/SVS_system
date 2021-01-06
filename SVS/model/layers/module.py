@@ -1,4 +1,4 @@
-"""Copyright [2020] [Jiatong Shi & Hailan Lin]
+"""Copyright [2020] [Jiatong Shi & Hailan Lin].
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -145,7 +145,7 @@ class PositionalEncoding(nn.Module):
         self.register_buffer("pe", pe)
 
     def forward(self, x):
-        """Inputs of forward function
+        """Input of forward function.
 
         Args:
             x: the sequence fed to the positional encoder model (required).
@@ -294,7 +294,7 @@ class Highwaynet(nn.Module):
     """Highway network."""
 
     def __init__(self, num_units, num_layers=4):
-
+        """init."""
         # :param num_units: dimension of hidden unit
         # :param num_layers: # of highway layers
 
@@ -418,7 +418,7 @@ class TransformerGLULayer(Module):
 
 
 class TransformerEncoder(Module):
-    """TransformerEncoder is a stack of N encoder layers
+    """TransformerEncoder is a stack of N encoder layers.
 
     Args:
         encoder_layer: an instance of the
@@ -463,7 +463,7 @@ class TransformerEncoder(Module):
 
 
 class Transformer(nn.Module):
-    """Transformer encoder based Singing Voice synthesis
+    """Transformer encoder based Singing Voice synthesis.
 
     Args:
         hidden_state:

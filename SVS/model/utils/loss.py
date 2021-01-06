@@ -1,4 +1,4 @@
-"""Copyright [2020] [Jiatong Shi]
+"""Copyright [2020] [Jiatong Shi].
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -65,7 +65,7 @@ def tq(f_bin, fs, fft_bins):
 
 
 def cband():
-    """a pre-defined idealized critical band filter bank
+    """A pre-defined idealized critical band filter bank.
 
     :return: idealized critical band filter bank
     """
@@ -102,7 +102,7 @@ def cband():
 
 
 def cal_psd2bark_dict(fs=16000, win_len=160):
-    """compute a map from bark_band to PSD component index list
+    """Compute a map from bark_band to PSD component index list.
 
     :param fs: sampling rate (int)
     :param win_len: window length (int)
@@ -136,7 +136,7 @@ def cal_psd2bark_dict(fs=16000, win_len=160):
 
 
 def cal_spread_function(bark_num):
-    """calculate spread function
+    """Calculate spread function.
 
     :param bark_num: point number used in analysis (int)
     :return: torch.Tensor()
@@ -157,7 +157,7 @@ def cal_spread_function(bark_num):
 
 
 def geomean(iterable):
-    """calculate geometric mean of a given iterable
+    """Calculate geometric mean of a given iterable.
 
     :param iterable: a torch.Tensor with one dimension
     :return: the geometric mean of a given iterable
@@ -170,7 +170,7 @@ def geomean(iterable):
 
 
 def arimean(iterable):
-    """calculate arithmetic mean of a given iterable
+    """Calculate arithmetic mean of a given iterable.
 
     :param iterable: a torch.Tensor with one dimension
     :return: the arithmetic mean of a given iterable

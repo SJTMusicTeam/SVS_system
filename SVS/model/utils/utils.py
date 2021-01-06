@@ -1,4 +1,4 @@
-"""Copyright [2020] [Jiatong Shi]
+"""Copyright [2020] [Jiatong Shi].
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -643,8 +643,9 @@ def record_info(train_info, dev_info, epoch, logger):
 
 
 def invert_spectrogram(spectrogram, win_length, hop_length):
-    """Applies inverse fft.
+    """Invert_spectrogram.
 
+    applies inverse fft.
     Args:
       spectrogram: [1+n_fft//2, t]
     """
@@ -654,7 +655,7 @@ def invert_spectrogram(spectrogram, win_length, hop_length):
 
 
 def griffin_lim(spectrogram, iter_vocoder, n_fft, hop_length, win_length):
-    """Applies Griffin-Lim's raw."""
+    """griffin_lim."""
     X_best = copy.deepcopy(spectrogram)
     for i in range(iter_vocoder):
         X_t = invert_spectrogram(X_best, win_length, hop_length)
@@ -669,7 +670,7 @@ def griffin_lim(spectrogram, iter_vocoder, n_fft, hop_length, win_length):
 def spectrogram2wav(
     mag, max_db, ref_db, preemphasis, power, sr, hop_length, win_length, n_fft
 ):
-    """Generate wave file from linear magnitude spectrogram
+    """Generate wave file from linear magnitude spectrogram.
 
     Args:
       mag: A numpy array of (T, 1+n_fft//2)

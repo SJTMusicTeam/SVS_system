@@ -1,4 +1,4 @@
-"""Copyright [2020] [Jiatong Shi]
+"""Copyright [2020] [Jiatong Shi].
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 from SVS.model.utils.nets_utils import make_pad_mask
 import torch
 import torch.nn as nn
@@ -64,7 +63,7 @@ def utterance_mvn(
     norm_vars: bool = False,
     eps: float = 1.0e-20,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Apply utterance mean and variance normalization
+    """Apply utterance mean and variance normalization.
 
     Args:
         x: (B, T, D), assumed zero padded

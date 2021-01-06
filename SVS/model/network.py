@@ -1,4 +1,4 @@
-"""Copyright [2020] [Jiatong Shi & Shuai Guo & Hailan Lin]
+"""Copyright [2020] [Jiatong Shi & Shuai Guo & Hailan Lin].
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -112,7 +112,6 @@ def make_pad_mask(lengths, xs=None, length_dim=-1):
                  [0, 0, 1, 1, 1, 1],
                  [0, 0, 1, 1, 1, 1]]], dtype=torch.uint8)
     """
-
     if length_dim == 0:
         raise ValueError("length_dim cannot be 0: {}".format(length_dim))
 
@@ -221,7 +220,6 @@ def make_non_pad_mask(lengths, xs=None, length_dim=-1):
                  [1, 1, 0, 0, 0, 0],
                  [1, 1, 0, 0, 0, 0]]], dtype=torch.uint8)
     """
-
     return ~make_pad_mask(lengths, xs, length_dim)
 
 
@@ -238,6 +236,7 @@ class Encoder(nn.Module):
         num_layers=1,
         glu_kernel=3,
     ):
+        """init."""
         # :param para: dictionary that contains all parameters
         super(Encoder, self).__init__()
 
@@ -296,6 +295,7 @@ class SA_Encoder(nn.Module):
         num_blocks=3,
         nheads=4,
     ):
+        """init."""
         super(SA_Encoder, self).__init__()
         self.layers = clones(Attention(hidden_size), int(num_blocks))
         self.ffns = clones(FFN(hidden_size), int(num_blocks))
@@ -410,6 +410,7 @@ class Encoder_Postnet(nn.Module):
     """Encoder Postnet."""
 
     def __init__(self, embed_size):
+        """init."""
         super(Encoder_Postnet, self).__init__()
 
         self.fc_pitch = nn.Linear(1, embed_size)
@@ -420,6 +421,7 @@ class Encoder_Postnet(nn.Module):
         self.pos = module.PositionalEncoding(embed_size)
 
     def aligner(self, encoder_out, align_phone, text_phone):
+        """aligner."""
         # align_phone = [batch_size, align_phone_length]
         # text_phone = [batch_size, text_phone_length]
         # align_phone_length( = frame_num) > text_phone_length
@@ -1377,7 +1379,6 @@ class ConformerSVS_FULL(nn.Module):
 
 
 class USTC_Prenet(nn.Module):
-
     """Singing Voice Synthesis Using Deep Autoregressive Neural Networks
 
        for Acoustic Modeling from USTC, adapted by GS
@@ -1516,7 +1517,6 @@ class USTC_Prenet(nn.Module):
 
 
 class USTC_SVS(nn.Module):
-
     """Singing Voice Synthesis Using Deep Autoregressive Neural Networks
 
     for Acoustic Modeling from USTC, adapted by GS

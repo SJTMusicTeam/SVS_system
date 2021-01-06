@@ -1,4 +1,4 @@
-"""Copyright [2020] [Source code for nnmnkwii.metrics]
+"""Copyright [2020] [Source code for nnmnkwii.metrics].
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -247,7 +247,7 @@ def lf0_mean_squared_error(
 
 
 def compute_vuv_error(src_vuv, tgt_vuv, lengths=None):
-    """Voice/unvoiced error rate computation
+    """Voice/unvoiced error rate computation.
 
     Args:
         src_vuv (ndarray): Input voiced/unvoiced flag array shape
@@ -318,7 +318,7 @@ def compute_f0_corr(ref_data, gen_data):
 
 
 def F0_VUV_distortion(reference_list, generation_list):
-    """Calculate F0-Vuv distortion
+    """Calculate F0-Vuv distortion.
 
     reference_list: ground_truth_list
     generation_list: synthesis_list
@@ -392,7 +392,7 @@ def F0_detection_wav(wav_path, signal, args):
 
 
 def invert_spectrogram(spectrogram, win_length, hop_length):
-    """Applies inverse fft.
+    """Apply inverse fft.
 
     Args:
       spectrogram: [1+n_fft//2, t]
@@ -403,7 +403,7 @@ def invert_spectrogram(spectrogram, win_length, hop_length):
 
 
 def griffin_lim(spectrogram, iter_vocoder, n_fft, hop_length, win_length):
-    """Applies Griffin-Lim's raw."""
+    """Apply Griffin-Lim's raw."""
     X_best = copy.deepcopy(spectrogram)
     for i in range(iter_vocoder):
         X_t = invert_spectrogram(X_best, win_length, hop_length)
@@ -418,7 +418,7 @@ def griffin_lim(spectrogram, iter_vocoder, n_fft, hop_length, win_length):
 def spectrogram2wav(
     mag, max_db, ref_db, preemphasis, power, sr, hop_length, win_length, n_fft
 ):
-    """# Generate wave file from linear magnitude spectrogram
+    """Generate wave file from linear magnitude spectrogram.
 
     Args:
       mag: A numpy array of (T, 1+n_fft//2)

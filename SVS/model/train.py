@@ -1,4 +1,4 @@
-"""Copyright [2020] [Jiatong Shi & Shuai Guo]
+"""Copyright [2020] [Jiatong Shi & Shuai Guo].
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -44,14 +44,10 @@ import sys
 import time
 import torch
 
-"""count_parameters."""
-
 
 def count_parameters(model):
+    """count_parameters."""
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
-
-
-"""Auto_save_model."""
 
 
 def Auto_save_model(
@@ -66,6 +62,7 @@ def Auto_save_model(
     epoch_to_save,
     save_loss_select="loss",
 ):
+    """Auto_save_model."""
     if counter < args.num_saved_model:
         counter += 1
         # if dev_info[save_loss_select] in epoch_to_save.keys():

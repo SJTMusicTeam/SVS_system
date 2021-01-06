@@ -1,4 +1,4 @@
-"""Copyright [2020] [Jiatong Shi & Shuai Guo]
+"""Copyright [2020] [Jiatong Shi & Shuai Guo].
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ def _get_spectrograms(
     ref_db,
     n_mels=80,
 ):
-    """Parse the wave file in `fpath` and
+    """Parse the wave file in `fpath` and.
 
     Returns normalized melspectrogram and linear spectrogram.
     Args:

@@ -1,4 +1,4 @@
-"""Copyright [2020] [Jiatong Shi]
+"""Copyright [2020] [Jiatong Shi].
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import numpy as np
 from pathlib import Path
 from SVS.model.utils.nets_utils import make_pad_mask
@@ -23,7 +22,7 @@ from typing import Union
 
 
 class GlobalMVN(nn.Module):
-    """Apply global mean and variance normalization
+    """Apply global mean and variance normalization.
 
     TODO(kamo): Make this class portable somehow
 
@@ -77,7 +76,7 @@ class GlobalMVN(nn.Module):
     def forward(
         self, x: torch.Tensor, ilens: torch.Tensor = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Forward function
+        """Forward function.
 
         Args:
             x: (B, L, ...)
