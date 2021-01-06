@@ -10,7 +10,8 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
-limitations under the License."""
+limitations under the License.
+"""
 # !/usr/bin/env python3
 
 
@@ -32,7 +33,6 @@ def _get_spectrograms(
     ref_db,
     n_mels=80,
 ):
-
     """Parse the wave file in `fpath` and
 
     Returns normalized melspectrogram and linear spectrogram.
@@ -42,7 +42,6 @@ def _get_spectrograms(
       mel: A 2d array of shape (T, n_mels) and dtype of float32.
       mag: A 2d array of shape (T, 1+n_fft/2) and dtype of float32.
     """
-
     # Loading sound file
     y, sr = librosa.load(fpath, sr=None)
     if sr != require_sr:
@@ -84,6 +83,7 @@ def _get_spectrograms(
 
 
 def _load_sing_quality(quality_file, standard=3):
+    """_load_sing_quality."""
     quality = []
     with open(quality_file, "r") as f:
         data = f.read().split("\n")[1:]
@@ -95,6 +95,7 @@ def _load_sing_quality(quality_file, standard=3):
 
 
 def _phone2char(phones, char_max_len):
+    """_phone2char."""
     ini = -1
     chars = []
     phones_index = 0
@@ -109,6 +110,8 @@ def _phone2char(phones, char_max_len):
 
 
 class SVSCollator(object):
+    """SVSCollator."""
+
     def __init__(
         self,
         max_len,
@@ -117,6 +120,7 @@ class SVSCollator(object):
         phone_size=68,
         n_mels=80,
     ):
+        """init."""
         self.max_len = max_len
         # plus 1 for aligner to consider padding char
         self.char_max_len = char_max_len + 1
@@ -125,6 +129,7 @@ class SVSCollator(object):
         self.n_mels = n_mels
 
     def __call__(self, batch):
+        """call."""
         # phone, beat, pitch, spectrogram, char, phase, mel
 
         batch_size = len(batch)
@@ -210,6 +215,8 @@ class SVSCollator(object):
 
 
 class SVSDataset(Dataset):
+    """SVSDataset."""
+
     def __init__(
         self,
         align_root_path,
@@ -229,7 +236,7 @@ class SVSDataset(Dataset):
         sing_quality="conf/sing_quality.csv",
         standard=3,
     ):
-
+        """init."""
         self.align_root_path = align_root_path
         self.pitch_beat_root_path = pitch_beat_root_path
         self.wav_root_path = wav_root_path
@@ -260,9 +267,11 @@ class SVSDataset(Dataset):
                 self.filename_list.remove(filename)
 
     def __len__(self):
+        """len."""
         return len(self.filename_list)
 
     def __getitem__(self, i):
+        """getitem."""
         path = os.path.join(self.align_root_path, self.filename_list[i])
         try:
             phone = np.load(path)

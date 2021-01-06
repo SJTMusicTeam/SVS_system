@@ -10,7 +10,8 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
-limitations under the License."""
+limitations under the License.
+"""
 # !/usr/bin/env python3
 
 import logging
@@ -34,10 +35,12 @@ import torch
 
 
 def count_parameters(model):
+    """count_parameters."""
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
 def infer(args):
+    """infer."""
     torch.cuda.set_device(args.gpu_id)
     logging.info(f"GPU {args.gpu_id} is used")
     torch.backends.cudnn.deterministic = True

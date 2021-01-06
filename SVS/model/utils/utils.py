@@ -10,7 +10,8 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
-limitations under the License."""
+limitations under the License.
+"""
 # !/usr/bin/env python3
 
 
@@ -35,6 +36,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def collect_stats(train_loader, args):
+    """collect_stats."""
     print("get in collect stats", flush=True)
     count, sum, sum_square = 0, 0, 0
     count_mel, sum_mel, sum_square_mel = 0, 0, 0
@@ -102,6 +104,7 @@ def train_one_epoch(
     epoch,
     args,
 ):
+    """train_one_epoch."""
     losses = AverageMeter()
     spec_losses = AverageMeter()
     if args.perceptual_loss > 0:
@@ -332,6 +335,7 @@ def train_one_epoch(
 def validate(
     dev_loader, model, device, criterion, perceptual_entropy, epoch, args
 ):
+    """validate."""
     losses = AverageMeter()
     spec_losses = AverageMeter()
     if args.perceptual_loss > 0:
@@ -563,18 +567,21 @@ def validate(
 
 
 class AverageMeter(object):
-    """Computes and stores the average and current value"""
+    """Computes and stores the average and current value."""
 
     def __init__(self):
+        """init."""
         self.reset()
 
     def reset(self):
+        """reset."""
         self.val = 0
         self.avg = 0
         self.sum = 0
         self.count = 0
 
     def update(self, val, n=1):
+        """update."""
         self.val = val
         self.sum += val * n
         self.count += n
@@ -582,6 +589,7 @@ class AverageMeter(object):
 
 
 def save_checkpoint(state, model_filename):
+    """save_checkpoint."""
     torch.save(state, model_filename)
     return 0
 
@@ -596,6 +604,7 @@ def save_model(
     logger,
     save_loss_select,
 ):
+    """save_model."""
     if args.optimizer == "noam":
         save_checkpoint(
             {
@@ -624,6 +633,7 @@ def save_model(
 
 
 def record_info(train_info, dev_info, epoch, logger):
+    """record_info."""
     loss_info = {
         "train_loss": train_info["loss"],
         "dev_loss": dev_info["loss"],
@@ -659,7 +669,6 @@ def griffin_lim(spectrogram, iter_vocoder, n_fft, hop_length, win_length):
 def spectrogram2wav(
     mag, max_db, ref_db, preemphasis, power, sr, hop_length, win_length, n_fft
 ):
-
     """Generate wave file from linear magnitude spectrogram
 
     Args:
@@ -667,7 +676,6 @@ def spectrogram2wav(
     Returns:
       wav: A 1-D numpy array.
     """
-
     hop_length = int(hop_length * sr)
     win_length = int(win_length * sr)
     n_fft = n_fft
@@ -694,6 +702,7 @@ def spectrogram2wav(
 
 
 def log_figure_mel(step, output, spec, att, length, save_dir, args):
+    """log_figure_mel."""
     # only get one sample from a batch
     # save wav and plot spectrogram
     output = output.cpu().detach().numpy()[0]
@@ -745,6 +754,7 @@ def log_figure_mel(step, output, spec, att, length, save_dir, args):
 
 
 def log_figure(step, output, spec, att, length, save_dir, args):
+    """log_figure."""
     # only get one sample from a batch
     # save wav and plot spectrogram
     output = output.cpu().detach().numpy()[0]
@@ -825,6 +835,7 @@ def log_figure(step, output, spec, att, length, save_dir, args):
 
 
 def Calculate_time(elapsed_time):
+    """Calculate_time."""
     elapsed_hours = int(elapsed_time / 3600)
     elapsed_mins = int((elapsed_time - (elapsed_hours * 3600)) / 60)
     elapsed_secs = int(
@@ -834,6 +845,7 @@ def Calculate_time(elapsed_time):
 
 
 def Calculate_time_path(path):
+    """Calculate_time_path."""
     num_list = os.listdir(path)
     total_time = 0
     for number in num_list:
@@ -851,6 +863,7 @@ def Calculate_time_path(path):
 
 
 def Calculate_dataset_duration(dataset_path):
+    """Calculate_dataset_duration."""
     train_path = os.path.join(dataset_path, "train")
     dev_path = os.path.join(dataset_path, "dev")
     test_path = os.path.join(dataset_path, "test")

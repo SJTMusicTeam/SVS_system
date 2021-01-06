@@ -10,7 +10,9 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
-limitations under the License."""
+limitations under the License.
+"""
+
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -20,12 +22,10 @@ import os
 
 
 def DTW(template, sample, new_Map, name):
-
     """Alignment using DTW algorithm
 
     Return the record and distance of the shortest path
     """
-
     Max = -math.log(1e-300, 2)
     T_len = len(template)
     S_len = len(sample)
@@ -87,12 +87,10 @@ def DTW(template, sample, new_Map, name):
 
 
 def text_to_matrix_HMM(Map, file):
-
     """Used in HMM model
 
     Read the posterior probability matrix and save it in dictionary M
     """
-
     Min = 1e-300
     M = dict()
     post = file.readlines()
@@ -125,6 +123,7 @@ def text_to_matrix_HMM(Map, file):
 
 
 def text_to_matrix_TDNN(Map, file):
+    """text_to_matrix_TDNN."""
     factor = 0.005
     Min = 1e-300
     M = dict()
@@ -164,12 +163,10 @@ def text_to_matrix_TDNN(Map, file):
 
 
 def index_to_phone(args):
-
     """Establish the correspondence between phonemes and index,
 
     and save them in the Map dictionary, (key = index, value = phoneme name)
     """
-
     file = open(args.phone_map_path, "r")
     lines = file.readlines()
     file.close()
@@ -199,7 +196,7 @@ def index_to_phone(args):
 
 
 def check_phones(Phone_table, text):
-    """Check whether the text corresponds to the phone table"""
+    """Check whether the text corresponds to the phone table."""
     Phone_set = set(Phone_table)
     # phone_text = Phone_set - text
     text_phone = text - Phone_set

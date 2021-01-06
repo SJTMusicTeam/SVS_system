@@ -10,7 +10,8 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
-limitations under the License."""
+limitations under the License.
+"""
 
 import numpy as np
 from pathlib import Path
@@ -40,6 +41,7 @@ class GlobalMVN(nn.Module):
         norm_vars: bool = False,
         eps: float = 1.0e-20,
     ):
+        """init."""
         super().__init__()
         self.norm_means = norm_means
         self.norm_vars = norm_vars
@@ -66,6 +68,7 @@ class GlobalMVN(nn.Module):
         self.register_buffer("std", torch.from_numpy(std))
 
     def extra_repr(self):
+        """extra_repr."""
         return (
             f"stats_file={self.stats_file}, "
             f"norm_means={self.norm_means}, norm_vars={self.norm_vars}"
@@ -109,6 +112,7 @@ class GlobalMVN(nn.Module):
     def inverse(
         self, x: torch.Tensor, ilens: torch.Tensor = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """inverse."""
         if ilens is None:
             ilens = x.new_full([x.size(0)], x.size(1))
         else:

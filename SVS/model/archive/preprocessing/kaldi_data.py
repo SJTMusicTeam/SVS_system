@@ -10,7 +10,9 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
-limitations under the License."""
+limitations under the License.
+"""
+
 # Copyright 2019 Hitachi, Ltd. (author: Yusuke Fujita)
 # Licensed under the MIT license.
 # This library provides utilities for kaldi-style data directory.
@@ -27,6 +29,7 @@ import sys
 
 
 def load_segments(segments_file):
+    """load_segments."""
     # load segments file as array
     if not os.path.exists(segments_file):
         return None
@@ -43,6 +46,7 @@ def load_segments(segments_file):
 
 
 def load_segments_hash(segments_file):
+    """load_segments_hash."""
     ret = {}
     if not os.path.exists(segments_file):
         return None
@@ -53,6 +57,7 @@ def load_segments_hash(segments_file):
 
 
 def load_segments_rechash(segments_file):
+    """load_segments_rechash."""
     ret = {}
     if not os.path.exists(segments_file):
         return None
@@ -65,6 +70,7 @@ def load_segments_rechash(segments_file):
 
 
 def load_wav_scp(wav_scp_file):
+    """load_wav_scp."""
     # return dictionary { rec: wav_rxfilename }
     lines = [line.strip().split(None, 1) for line in open(wav_scp_file)]
     return {x[0]: x[1] for x in lines}
@@ -72,7 +78,6 @@ def load_wav_scp(wav_scp_file):
 
 @lru_cache(maxsize=1)
 def load_wav(wav_rxfilename, start=0, end=None):
-
     """This function reads audio file and return data in numpy.float32 array.
 
     "lru_cache" holds recently loaded audio so that can be called
@@ -80,7 +85,6 @@ def load_wav(wav_rxfilename, start=0, end=None):
     OPTIMIZE: controls lru_cache size for random access,
     considering memory size
     """
-
     if wav_rxfilename.endswith("|"):
         # input piped command
         p = subprocess.Popen(
@@ -103,12 +107,14 @@ def load_wav(wav_rxfilename, start=0, end=None):
 
 
 def load_utt2spk(utt2spk_file):
+    """load_utt2spk."""
     # returns dictionary { uttid: spkid }
     lines = [line.strip().split(None, 1) for line in open(utt2spk_file)]
     return {x[0]: x[1] for x in lines}
 
 
 def load_spk2utt(spk2utt_file):
+    """load_spk2utt."""
     # returns dictionary { spkid: list of uttids }
     if not os.path.exists(spk2utt_file):
         return None
@@ -117,6 +123,7 @@ def load_spk2utt(spk2utt_file):
 
 
 def load_reco2dur(reco2dur_file):
+    """load_reco2dur."""
     # returns dictionary { recid: duration }
     if not os.path.exists(reco2dur_file):
         return None
@@ -125,7 +132,6 @@ def load_reco2dur(reco2dur_file):
 
 
 def process_wav(wav_rxfilename, process):
-
     """This function returns preprocessed wav_rxfilename
 
     Args:
@@ -145,7 +151,10 @@ def process_wav(wav_rxfilename, process):
 
 
 class KaldiData:
+    """KaldiData."""
+
     def __init__(self, data_dir):
+        """init."""
         self.data_dir = data_dir
         self.segments = load_segments_rechash(
             os.path.join(self.data_dir, "segments")
@@ -156,5 +165,6 @@ class KaldiData:
         self.spk2utt = load_spk2utt(os.path.join(self.data_dir, "spk2utt"))
 
     def load_wav(self, recid, start=0, end=None):
+        """load_wav."""
         data, rate = load_wav(self.wavs[recid], start, end)
         return data, rate

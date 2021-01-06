@@ -1,3 +1,17 @@
+"""Copyright [2020] [Source code for nnmnkwii.metrics]
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 # Copyright @Source code for nnmnkwii.metrics
 # https://r9y9.github.io/nnmnkwii/v0.0.16/_modules/nnmnkwii/metrics.html
 # Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
@@ -17,24 +31,28 @@ _logdb_const = 10.0 / np.log(10.0) * np.sqrt(2.0)
 
 # should work on torch and numpy arrays
 def _sqrt(x):
+    """_sqrt."""
     isnumpy = isinstance(x, np.ndarray)
     isscalar = np.isscalar(x)
     return np.sqrt(x) if isnumpy else math.sqrt(x) if isscalar else x.sqrt()
 
 
 def _exp(x):
+    """_exp."""
     isnumpy = isinstance(x, np.ndarray)
     isscalar = np.isscalar(x)
     return np.exp(x) if isnumpy else math.exp(x) if isscalar else x.exp()
 
 
 def _sum(x):
+    """_sum."""
     if isinstance(x, list) or isinstance(x, np.ndarray):
         return np.sum(x)
     return float(x.sum())
 
 
 def _linearSpec_2_mfcc(output, args):
+    """_linearSpec_2_mfcc."""
     magnitude_spectrum = np.abs(output)
     power_spectrum = np.square(magnitude_spectrum)
     mel_basis = librosa.filters.mel(
@@ -59,6 +77,7 @@ def _linearSpec_2_mfcc(output, args):
 
 
 def Calculate_melcd_fromLinearSpectrum(output, spec, length, args):
+    """Calculate_melcd_fromLinearSpectrum."""
     # output = [batch size, num frames, feat_dim]
     batch_size, num_frames, feat_dim = np.shape(output)
     output = output.cpu().detach().numpy()
@@ -91,7 +110,6 @@ def Calculate_melcd_fromLinearSpectrum(output, spec, length, args):
 
 
 def melcd(X, Y, lengths=None):
-
     """Mel-cepstrum distortion (MCD).
 
     The function computes MCD for time-aligned mel-cepstrum sequences.
@@ -142,7 +160,6 @@ def melcd(X, Y, lengths=None):
 
 
 def mean_squared_error(X, Y, lengths=None):
-
     """Mean squared error (MSE).
 
     Args:
@@ -180,7 +197,6 @@ def mean_squared_error(X, Y, lengths=None):
 def lf0_mean_squared_error(
     src_f0, src_vuv, tgt_f0, tgt_vuv, lengths=None, linear_domain=False
 ):
-
     """Mean squared error (MSE) for log-F0 sequences.
 
     MSE is computed for voiced segments.
@@ -204,7 +220,6 @@ def lf0_mean_squared_error(
     Returns:
         float: mean squared error.
     """
-
     if lengths is None:
         voiced_indices = (src_vuv + tgt_vuv) >= 2
         x = src_f0[voiced_indices]
@@ -232,7 +247,6 @@ def lf0_mean_squared_error(
 
 
 def compute_vuv_error(src_vuv, tgt_vuv, lengths=None):
-
     """Voice/unvoiced error rate computation
 
     Args:
@@ -246,7 +260,6 @@ def compute_vuv_error(src_vuv, tgt_vuv, lengths=None):
     Returns:
         float: voiced/unvoiced error rate (0 ~ 1).
     """
-
     if lengths is None:
         T = np.prod(src_vuv.shape)
         return float((src_vuv != tgt_vuv).sum()) / float(T)
@@ -260,6 +273,7 @@ def compute_vuv_error(src_vuv, tgt_vuv, lengths=None):
 
 
 def compute_f0_mse(ref_data, gen_data):
+    """compute_f0_mse."""
     ref_vuv_vector = np.zeros((ref_data.size, 1))
     gen_vuv_vector = np.zeros((ref_data.size, 1))
 
@@ -281,12 +295,14 @@ def compute_f0_mse(ref_data, gen_data):
 
 
 def compute_corr(ref_data, gen_data):
+    """compute_corr."""
     corr_coef = pearsonr(ref_data, gen_data)
 
     return corr_coef[0]
 
 
 def compute_f0_corr(ref_data, gen_data):
+    """compute_f0_corr."""
     ref_vuv_vector = np.zeros((ref_data.size, 1))
     gen_vuv_vector = np.zeros((ref_data.size, 1))
 
@@ -302,13 +318,11 @@ def compute_f0_corr(ref_data, gen_data):
 
 
 def F0_VUV_distortion(reference_list, generation_list):
-
     """Calculate F0-Vuv distortion
 
     reference_list: ground_truth_list
     generation_list: synthesis_list
     """
-
     number = len(reference_list)
     total_voiced_frame_number = 0
     vuv_error = 0
@@ -355,7 +369,7 @@ def F0_VUV_distortion(reference_list, generation_list):
 
 
 def F0_detection_wav(wav_path, signal, args):
-
+    """F0_detection_wav."""
     f0_max = 1100.0
     f0_min = 50.0
     frame_shift = 30 / 1000
@@ -378,22 +392,18 @@ def F0_detection_wav(wav_path, signal, args):
 
 
 def invert_spectrogram(spectrogram, win_length, hop_length):
-
     """Applies inverse fft.
 
     Args:
       spectrogram: [1+n_fft//2, t]
     """
-
     return librosa.istft(
         spectrogram, hop_length, win_length=win_length, window="hann"
     )
 
 
 def griffin_lim(spectrogram, iter_vocoder, n_fft, hop_length, win_length):
-
     """Applies Griffin-Lim's raw."""
-
     X_best = copy.deepcopy(spectrogram)
     for i in range(iter_vocoder):
         X_t = invert_spectrogram(X_best, win_length, hop_length)
@@ -408,7 +418,6 @@ def griffin_lim(spectrogram, iter_vocoder, n_fft, hop_length, win_length):
 def spectrogram2wav(
     mag, max_db, ref_db, preemphasis, power, sr, hop_length, win_length, n_fft
 ):
-
     """# Generate wave file from linear magnitude spectrogram
 
     Args:
@@ -416,7 +425,6 @@ def spectrogram2wav(
     Returns:
       wav: A 1-D numpy array.
     """
-
     hop_length = int(hop_length * sr)
     win_length = int(win_length * sr)
     n_fft = n_fft
@@ -443,6 +451,7 @@ def spectrogram2wav(
 
 
 def Calculate_f0RMSE_VUV_CORR_fromWav(output, spec, length, args, flag):
+    """Calculate_f0RMSE_VUV_CORR_fromWav."""
     # output = [batch size, num frames, feat_dim]
     batch_size, num_frames, feat_dim = np.shape(output)
     output = output.cpu().detach().numpy()

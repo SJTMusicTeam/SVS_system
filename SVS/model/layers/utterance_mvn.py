@@ -10,7 +10,8 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
-limitations under the License."""
+limitations under the License.
+"""
 
 from SVS.model.utils.nets_utils import make_pad_mask
 import torch
@@ -19,24 +20,27 @@ from typing import Tuple
 
 
 class UtteranceMVN(nn.Module):
+    """UtteranceMVN."""
+
     def __init__(
         self,
         norm_means: bool = True,
         norm_vars: bool = True,
         eps: float = 1.0e-20,
     ):
+        """init."""
         super().__init__()
         self.norm_means = norm_means
         self.norm_vars = norm_vars
         self.eps = eps
 
     def extra_repr(self):
+        """extra_repr."""
         return f"norm_means={self.norm_means}, norm_vars={self.norm_vars}"
 
     def forward(
         self, x: torch.Tensor, ilens: torch.Tensor = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-
         """Forward function
 
         Args:
@@ -44,7 +48,6 @@ class UtteranceMVN(nn.Module):
             ilens: (B,)
 
         """
-
         return utterance_mvn(
             x,
             ilens,
@@ -61,7 +64,6 @@ def utterance_mvn(
     norm_vars: bool = False,
     eps: float = 1.0e-20,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-
     """Apply utterance mean and variance normalization
 
     Args:
@@ -71,7 +73,6 @@ def utterance_mvn(
         norm_vars:
         eps:
     """
-
     if ilens is None:
         ilens = x.new_full([x.size(0)], x.size(1))
     else:
