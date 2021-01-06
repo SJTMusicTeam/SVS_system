@@ -17,4 +17,4 @@ echo "flake8-docstrings ready files coverage: ${n_ok} / ${n_all} = ${cov}%"
 flake8 --show-source --extend-ignore=D,E203,H102,W503,E501 utils ${flake8_black_list} SVS egs/*/*/local/*.py
 
 # white list of files that should support flake8-docstrings
-flake8 --ignore=E203,H102,W503,E501 --show-source SVS --exclude=${flake8_black_list//$'\n'/,}
+flake8 --extend-ignore=E203,H102,W503,E501 --show-source SVS --exclude=${flake8_black_list//$'\n'/,}
