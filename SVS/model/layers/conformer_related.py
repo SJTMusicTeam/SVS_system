@@ -156,11 +156,14 @@ class EncoderLayer(nn.Module):
         """Compute encoded features.
 
         Args:
-            x_input (Union[Tuple, torch.Tensor]): Input tensor w/ or w/o pos emb.
-                - w/ pos emb: Tuple of tensors [(#batch, time, size), (1, time, size)].
+            x_input (Union[Tuple, torch.Tensor]):
+                Input tensor w/ or w/o pos emb.
+                - w/ pos emb: Tuple of tensors
+                    [(#batch, time, size), (1, time, size)].
                 - w/o pos emb: Tensor (#batch, time, size).
             mask (torch.Tensor): Mask tensor for the input (#batch, time).
-            cache (torch.Tensor): Cache tensor of the input (#batch, time - 1, size).
+            cache (torch.Tensor): Cache tensor of
+                the input (#batch, time - 1, size).
         Returns:
             torch.Tensor: Output tensor (#batch, time, size).
             torch.Tensor: Mask tensor (#batch, time).
@@ -560,7 +563,8 @@ def _pre_hook(
 
     Note:
         We saved self.pe until v.0.5.2 but we have omitted it later.
-        Therefore, we remove the item "pe" from `state_dict` for backward compatibility.
+        Therefore, we remove the item "pe" from `state_dict`
+        for backward compatibility.
     """
     k = prefix + "pe"
     if k in state_dict:

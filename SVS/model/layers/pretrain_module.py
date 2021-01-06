@@ -104,7 +104,7 @@ class EncoderPrenet(nn.Module):
         """init."""
         super(EncoderPrenet, self).__init__()
         self.embedding_size = embedding_size
-        # self.embed = nn.Embedding(len(symbols), embedding_size, padding_idx=0)
+        # self.embed=nn.Embedding(len(symbols), embedding_size, padding_idx=0)
 
         self.conv1 = Conv(
             in_channels=embedding_size,

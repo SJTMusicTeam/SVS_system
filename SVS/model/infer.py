@@ -441,7 +441,10 @@ def infer(args):
                 out_log = (
                     "step {}:train_loss{:.4f};"
                     "spec_loss{:.4f};mcd_value{:.4f};".format(
-                        step, losses.avg, spec_losses.avg, mcd_metric.avg
+                        step,
+                        losses.avg,
+                        spec_losses.avg,
+                        mcd_metric.avg,
                     )
                 )
                 if args.perceptual_loss > 0:

@@ -106,7 +106,8 @@ def cal_psd2bark_dict(fs=16000, win_len=160):
 
     :param fs: sampling rate (int)
     :param win_len: window length (int)
-    :return: return (psd_list, bark_num) where psd_list is {bark_band_index: [spectrum_start, spectrum_end]} and bark
+    :return: return (psd_list, bark_num) where psd_list is
+        {bark_band_index: [spectrum_start, spectrum_end]} and bark
     number is the number of bark available corresponding to the sampling rate
     """
     # for current form, only less than 44100 sr can be processed
