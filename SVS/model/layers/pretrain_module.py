@@ -1,4 +1,4 @@
-"""Copyright [2020] [Jiatong Shi]
+"""Copyright [2020] [Jiatong Shi].
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -10,14 +10,14 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
-limitations under the License."""
-
+limitations under the License.
+"""
 from collections import OrderedDict
 import copy
 import math
 import numpy as np
-import torch as t
 from scipy.constants import hp
+import torch as t
 from torch.autograd import Variable
 import torch.nn as nn
 
@@ -25,17 +25,20 @@ import torch.nn as nn
 
 
 def clones(module, N):
+    """clones."""
     return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
 
 
 class Linear(nn.Module):
-    """Linear Module"""
+    """Linear Module."""
 
     def __init__(self, in_dim, out_dim, bias=True, w_init="linear"):
-        """:param in_dim: dimension of input
-        :param out_dim: dimension of output
-        :param bias: boolean. if True, bias is included.
-        :param w_init: str. weight inits with xavier initialization."""
+        """init."""
+        # :param in_dim: dimension of input
+        # :param out_dim: dimension of output
+        # :param bias: boolean. if True, bias is included.
+        # :param w_init: str. weight inits with xavier initialization.
+
         super(Linear, self).__init__()
         self.linear_layer = nn.Linear(in_dim, out_dim, bias=bias)
 
@@ -44,11 +47,12 @@ class Linear(nn.Module):
         )
 
     def forward(self, x):
+        """forward."""
         return self.linear_layer(x)
 
 
 class Conv(nn.Module):
-    """Convolution Module"""
+    """Convolution Module."""
 
     def __init__(
         self,
@@ -61,14 +65,16 @@ class Conv(nn.Module):
         bias=True,
         w_init="linear",
     ):
-        """:param in_channels: dimension of input
-        :param out_channels: dimension of output
-        :param kernel_size: size of kernel
-        :param stride: size of stride
-        :param padding: size of padding
-        :param dilation: dilation rate
-        :param bias: boolean. if True, bias is included.
-        :param w_init: str. weight inits with xavier initialization."""
+        """init."""
+        # :param in_channels: dimension of input
+        # :param out_channels: dimension of output
+        # :param kernel_size: size of kernel
+        # :param stride: size of stride
+        # :param padding: size of padding
+        # :param dilation: dilation rate
+        # :param bias: boolean. if True, bias is included.
+        # :param w_init: str. weight inits with xavier initialization.
+
         super(Conv, self).__init__()
 
         self.conv = nn.Conv1d(
@@ -86,6 +92,7 @@ class Conv(nn.Module):
         )
 
     def forward(self, x):
+        """forward."""
         x = self.conv(x)
         return x
 
@@ -94,9 +101,10 @@ class EncoderPrenet(nn.Module):
     """Pre-network for Encoder consists of convolution networks."""
 
     def __init__(self, embedding_size, num_hidden):
+        """init."""
         super(EncoderPrenet, self).__init__()
         self.embedding_size = embedding_size
-        self.embed = nn.Embedding(len(symbols), embedding_size, padding_idx=0)
+        # self.embed=nn.Embedding(len(symbols), embedding_size, padding_idx=0)
 
         self.conv1 = Conv(
             in_channels=embedding_size,
@@ -131,6 +139,7 @@ class EncoderPrenet(nn.Module):
         self.projection = Linear(num_hidden, num_hidden)
 
     def forward(self, input_):
+        """forward."""
         input_ = self.embed(input_)
         input_ = input_.transpose(1, 2)
         input_ = self.dropout1(t.relu(self.batch_norm1(self.conv1(input_))))
@@ -143,10 +152,10 @@ class EncoderPrenet(nn.Module):
 
 
 class FFN(nn.Module):
-    """Positionwise Feed-Forward Network"""
+    """Positionwise Feed-Forward Network."""
 
     def __init__(self, num_hidden):
-        """:param num_hidden: dimension of hidden"""
+        """:param num_hidden: dimension of hidden."""
         super(FFN, self).__init__()
         self.w_1 = Conv(
             num_hidden, num_hidden * 4, kernel_size=1, w_init="relu"
@@ -156,6 +165,7 @@ class FFN(nn.Module):
         self.layer_norm = nn.LayerNorm(num_hidden)
 
     def forward(self, input_):
+        """forward."""
         # FFN Network
         x = input_.transpose(1, 2)
         x = self.w_2(t.relu(self.w_1(x)))
@@ -174,10 +184,10 @@ class FFN(nn.Module):
 
 
 class PostConvNet(nn.Module):
-    """Post Convolutional Network (mel --> mel)"""
+    """Post Convolutional Network (mel --> mel)."""
 
     def __init__(self, num_hidden):
-        """:param num_hidden: dimension of hidden"""
+        """:param num_hidden: dimension of hidden."""
         super(PostConvNet, self).__init__()
         self.conv1 = Conv(
             in_channels=hp.num_mels * hp.outputs_per_step,
@@ -212,6 +222,7 @@ class PostConvNet(nn.Module):
         )
 
     def forward(self, input_, mask=None):
+        """forward."""
         # Causal Convolution (for auto-regressive)
         input_ = self.dropout1(
             t.tanh(self.pre_batchnorm(self.conv1(input_)[:, :, :-4]))
@@ -225,10 +236,10 @@ class PostConvNet(nn.Module):
 
 
 class MultiheadAttention(nn.Module):
-    """Multihead attention mechanism (dot attention)"""
+    """Multihead attention mechanism (dot attention)."""
 
     def __init__(self, num_hidden_k):
-        """:param num_hidden_k: dimension of hidden"""
+        """:param num_hidden_k: dimension of hidden."""
         super(MultiheadAttention, self).__init__()
 
         self.num_hidden_k = num_hidden_k
@@ -243,6 +254,7 @@ class MultiheadAttention(nn.Module):
         query_mask=None,
         gaussian_factor=None,
     ):
+        """forward."""
         # Get attention score
         attn = t.bmm(query, key.transpose(1, 2))
         attn = attn / math.sqrt(self.num_hidden_k)
@@ -270,11 +282,13 @@ class MultiheadAttention(nn.Module):
 
 
 class Attention(nn.Module):
-    """Attention Network"""
+    """Attention Network."""
 
     def __init__(self, num_hidden, h=4, local_gaussian=False):
-        """:param num_hidden: dimension of hidden
-        :param h: num of heads"""
+        """init."""
+        # :param num_hidden: dimension of hidden
+        # :param h: num of heads
+
         super(Attention, self).__init__()
 
         self.num_hidden = num_hidden
@@ -302,7 +316,7 @@ class Attention(nn.Module):
         self.layer_norm_1 = nn.LayerNorm(num_hidden)
 
     def forward(self, memory, decoder_input, mask=None, query_mask=None):
-
+        """forward."""
         batch_size = memory.size(0)
         seq_k = memory.size(1)
         seq_q = decoder_input.size(1)
@@ -402,12 +416,13 @@ class Attention(nn.Module):
 
 
 class Prenet(nn.Module):
-    """Prenet before passing through the network"""
+    """Prenet before passing through the network."""
 
     def __init__(self, input_size, hidden_size, output_size, p=0.5):
-        """:param input_size: dimension of input
-        :param hidden_size: dimension of hidden unit
-        :param output_size: dimension of output"""
+        # :param input_size: dimension of input
+        # :param hidden_size: dimension of hidden unit
+        # :param output_size: dimension of output
+        """init."""
         super(Prenet, self).__init__()
         self.input_size = input_size
         self.output_size = output_size
@@ -426,14 +441,14 @@ class Prenet(nn.Module):
         )
 
     def forward(self, input_):
-
+        """forward."""
         out = self.layer(input_)
 
         return out
 
 
 class CBHG(nn.Module):
-    """CBHG Module"""
+    """CBHG Module."""
 
     def __init__(
         self,
@@ -444,12 +459,14 @@ class CBHG(nn.Module):
         max_pool_kernel_size=2,
         is_post=False,
     ):
-        """:param hidden_size: dimension of hidden unit
-        :param K: # of convolution banks
-        :param projection_size: dimension of projection unit
-        :param num_gru_layers: # of layers of GRUcell
-        :param max_pool_kernel_size: max pooling kernel size
-        :param is_post: whether post processing or not"""
+        """init."""
+        # :param hidden_size: dimension of hidden unit
+        # :param K: # of convolution banks
+        # :param projection_size: dimension of projection unit
+        # :param num_gru_layers: # of layers of GRUcell
+        # :param max_pool_kernel_size: max pooling kernel size
+        # :param is_post: whether post processing or not
+
         super(CBHG, self).__init__()
         self.hidden_size = hidden_size
         self.projection_size = projection_size
@@ -506,13 +523,14 @@ class CBHG(nn.Module):
         )
 
     def _conv_fit_dim(self, x, kernel_size=3):
+        """_conv_fit_dim."""
         if kernel_size % 2 == 0:
             return x[:, :, :-1]
         else:
             return x
 
     def forward(self, input_):
-
+        """forward."""
         input_ = input_.contiguous()
         # batch_size = input_.size(0)
         # total_length = input_.size(-1)
@@ -564,11 +582,13 @@ class CBHG(nn.Module):
 
 
 class Highwaynet(nn.Module):
-    """Highway network"""
+    """Highway network."""
 
     def __init__(self, num_units, num_layers=4):
-        """:param num_units: dimension of hidden unit
-        :param num_layers: # of highway layers"""
+        """init."""
+        # :param num_units: dimension of hidden unit
+        # :param num_layers: # of highway layers
+
         super(Highwaynet, self).__init__()
         self.num_units = num_units
         self.num_layers = num_layers
@@ -579,7 +599,7 @@ class Highwaynet(nn.Module):
             self.gates.append(Linear(num_units, num_units))
 
     def forward(self, input_):
-
+        """forward."""
         out = input_
 
         # highway gated function

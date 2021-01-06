@@ -1,4 +1,4 @@
-"""Copyright [2020] [Jiatong Shi & Shuai Guo]
+"""Copyright [2020] [Jiatong Shi & Shuai Guo].
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -10,22 +10,23 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
-limitations under the License."""
-#!/usr/bin/env python3
+limitations under the License.
+"""
+# !/usr/bin/env python3
 
 import logging
 import numpy as np
 import os
 from SVS.model.layers.global_mvn import GlobalMVN
-from SVS.model.network import GLU_TransformerSVS
-from SVS.model.network import GRUSVS_gs
-from SVS.model.network import TransformerSVS
-from SVS.model.network import LSTMSVS
 from SVS.model.network import ConformerSVS
 from SVS.model.network import ConformerSVS_FULL
+from SVS.model.network import GLU_TransformerSVS
+from SVS.model.network import GRUSVS_gs
+from SVS.model.network import LSTMSVS
+from SVS.model.network import TransformerSVS
 from SVS.model.utils.loss import MaskedLoss
-from SVS.model.utils.SVSDataset import SVSDataset
 from SVS.model.utils.SVSDataset import SVSCollator
+from SVS.model.utils.SVSDataset import SVSDataset
 from SVS.model.utils.utils import AverageMeter
 from SVS.model.utils.utils import log_figure
 import SVS.tools.metrics as Metrics
@@ -34,10 +35,12 @@ import torch
 
 
 def count_parameters(model):
+    """count_parameters."""
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
 def infer(args):
+    """infer."""
     torch.cuda.set_device(args.gpu_id)
     logging.info(f"GPU {args.gpu_id} is used")
     torch.backends.cudnn.deterministic = True
@@ -210,7 +213,8 @@ def infer(args):
             para_list.append(k)
 
     logging.info(
-        f"Total {len(state_dict)} parameter sets, loaded {len(state_dict_new)} parameter set"
+        f"Total {len(state_dict)} parameter sets, "
+        f"loaded {len(state_dict_new)} parameter set"
     )
 
     if len(para_list) > 0:
@@ -240,7 +244,10 @@ def infer(args):
         sing_quality=args.sing_quality,
     )
     collate_fn_svs = SVSCollator(
-        args.num_frames, args.char_max_len, args.use_asr_post, args.phone_size
+        args.num_frames,
+        args.char_max_len,
+        args.use_asr_post,
+        args.phone_size,
     )
     test_loader = torch.utils.data.DataLoader(
         dataset=test_set,
@@ -431,8 +438,14 @@ def infer(args):
                     args.prediction_path,
                     args,
                 )
-                out_log = "step {}:train_loss{:.4f};spec_loss{:.4f};mcd_value{:.4f};".format(
-                    step, losses.avg, spec_losses.avg, mcd_metric.avg
+                out_log = (
+                    "step {}:train_loss{:.4f};"
+                    "spec_loss{:.4f};mcd_value{:.4f};".format(
+                        step,
+                        losses.avg,
+                        spec_losses.avg,
+                        mcd_metric.avg,
+                    )
                 )
                 if args.perceptual_loss > 0:
                     out_log += " pe_loss {:.4f}; ".format(pe_losses.avg)
@@ -457,7 +470,12 @@ def infer(args):
     f0_corr = Metrics.compute_f0_corr(f0_ground_truth_all, f0_synthesis_all)
 
     out_log += "\n\t mcd_value {:.4f} dB ".format(mcd_metric.avg)
-    out_log += " f0_rmse_value {:.4f} Hz, vuv_error_value {:.4f} %, F0_CORR {:.4f}; ".format(
-        np.sqrt(f0_distortion_metric.avg), vuv_error_metric.avg * 100, f0_corr
+    out_log += (
+        " f0_rmse_value {:.4f} Hz, "
+        "vuv_error_value {:.4f} %, F0_CORR {:.4f}; ".format(
+            np.sqrt(f0_distortion_metric.avg),
+            vuv_error_metric.avg * 100,
+            f0_corr,
+        )
     )
     logging.info("{} time: {:.2f}s".format(out_log, end_t_test - start_t_test))
