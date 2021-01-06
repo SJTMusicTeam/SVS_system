@@ -12,31 +12,34 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License."""
 
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 
 import logging
 import numpy as np
 import os
-import sys
-from SVS.model.utils.gpu_util import use_single_gpu
-from SVS.model.utils.SVSDataset import SVSDataset
-from SVS.model.utils.SVSDataset import SVSCollator
-from SVS.model.network import GLU_TransformerSVS
-from SVS.model.network import LSTMSVS
-from SVS.model.network import GRUSVS_gs
-from SVS.model.network import TransformerSVS
 from SVS.model.network import ConformerSVS
 from SVS.model.network import ConformerSVS_FULL
+from SVS.model.network import GLU_TransformerSVS
+from SVS.model.network import GRUSVS_gs
+from SVS.model.network import LSTMSVS
+from SVS.model.network import TransformerSVS
 from SVS.model.network import USTC_SVS
-from SVS.model.utils.transformer_optim import ScheduledOptim
-from SVS.model.utils.loss import MaskedLoss
+
+from SVS.model.utils.gpu_util import use_single_gpu
 from SVS.model.utils.loss import cal_spread_function
 from SVS.model.utils.loss import cal_psd2bark_dict
+from SVS.model.utils.loss import MaskedLoss
 from SVS.model.utils.loss import PerceptualEntropy
-from SVS.model.utils.utils import train_one_epoch
-from SVS.model.utils.utils import validate
+from SVS.model.utils.SVSDataset import SVSCollator
+from SVS.model.utils.SVSDataset import SVSDataset
+from SVS.model.utils.transformer_optim import ScheduledOptim
+
 from SVS.model.utils.utils import collect_stats
 from SVS.model.utils.utils import save_model
+from SVS.model.utils.utils import train_one_epoch
+from SVS.model.utils.utils import validate
+
+import sys
 import time
 import torch
 
@@ -148,7 +151,7 @@ def train(args):
         # torch.backends.cudnn.enabled = False
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    elif torch.cuda.is_available() and args.auto_select_gpu == False:
+    elif torch.cuda.is_available() and args.auto_select_gpu is False:
         torch.cuda.set_device(args.gpu_id)
         logging.info(f"GPU {args.gpu_id} is used")
         torch.backends.cudnn.deterministic = True
@@ -158,7 +161,7 @@ def train(args):
 
     else:
         device = torch.device("cpu")
-        logging.info(f"Warning: CPU is used")
+        logging.info("Warning: CPU is used")
 
     train_set = SVSDataset(
         align_root_path=args.train_align,
@@ -227,7 +230,7 @@ def train(args):
 
     if args.collect_stats:
         collect_stats(train_loader, args)
-        logging.info(f"collect_stats finished !")
+        logging.info("collect_stats finished !")
         quit()
     # prepare model
     if args.model_type == "GLU_Transformer":
@@ -300,7 +303,8 @@ def train(args):
             enc_normalize_before=args.enc_normalize_before,
             enc_concat_after=args.enc_concat_after,
             enc_positionwise_layer_type=args.enc_positionwise_layer_type,
-            enc_positionwise_conv_kernel_size=args.enc_positionwise_conv_kernel_size,
+            enc_positionwise_conv_kernel_size= \
+                args.enc_positionwise_conv_kernel_size,
             enc_macaron_style=args.enc_macaron_style,
             enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
             enc_selfattention_layer_type=args.enc_selfattention_layer_type,
@@ -334,7 +338,8 @@ def train(args):
             enc_normalize_before=args.enc_normalize_before,
             enc_concat_after=args.enc_concat_after,
             enc_positionwise_layer_type=args.enc_positionwise_layer_type,
-            enc_positionwise_conv_kernel_size=args.enc_positionwise_conv_kernel_size,
+            enc_positionwise_conv_kernel_size= \
+                args.enc_positionwise_conv_kernel_size,
             enc_macaron_style=args.enc_macaron_style,
             enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
             enc_selfattention_layer_type=args.enc_selfattention_layer_type,
@@ -353,7 +358,8 @@ def train(args):
             dec_normalize_before=args.dec_normalize_before,
             dec_concat_after=args.dec_concat_after,
             dec_positionwise_layer_type=args.dec_positionwise_layer_type,
-            dec_positionwise_conv_kernel_size=args.dec_positionwise_conv_kernel_size,
+            dec_positionwise_conv_kernel_size= \
+                args.dec_positionwise_conv_kernel_size,
             dec_macaron_style=args.dec_macaron_style,
             dec_pos_enc_layer_type=args.dec_pos_enc_layer_type,
             dec_selfattention_layer_type=args.dec_selfattention_layer_type,
@@ -468,7 +474,8 @@ def train(args):
             else:
                 para_list.append(k)
         logging.info(
-            f"Total {len(loading_dict)} parameter sets, Loaded {len(state_dict_new)} parameter sets"
+            f"Total {len(loading_dict)} parameter sets, "
+            f"Loaded {len(state_dict_new)} parameter sets"
         )
         if len(para_list) > 0:
             logging.warning(
