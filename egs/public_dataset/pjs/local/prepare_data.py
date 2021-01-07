@@ -1,12 +1,7 @@
 #!/usr/bin/env python3
-# Copyright 2021 Columbia University (author: Xun Lin)
-# Update on Jan 3rd, 2021
 
-# cd egs/public_dataset/oniku_kurumi_utagoe_db
-# os.getcwd()
-
-# The unit of time notation for phoneme labels is 100ns for this dataset
-# "python3 prepare_data.py ONIKU_KURUMI_UTAGOE_DB ONIKU_KURUMI_UTAGOE_DB ONIKU_KURUMI_UTAGOE_DB_data --label_type ns"
+# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
+# Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
 import argparse
 import librosa
@@ -127,6 +122,7 @@ def load_label(label_file, s_type="s", sr=48000, frame_shift=0.03, sil="pau"):
 
 
 def process(args):
+
     f0_max = 1100.0
     f0_min = 50.0
 
@@ -137,14 +133,16 @@ def process(args):
 
     hop_length = int(args.sr * frame_shift)
 
-    # lab_list = os.listdir(args.labdir)
-    lab_list = [
-        os.path.join(name, name + ".lab")
-        for name in os.listdir("ONIKU_KURUMI_UTAGOE_DB")
-        if os.path.isdir(os.path.join("ONIKU_KURUMI_UTAGOE_DB", name))
-    ]
-
-    lab_list.sort()
+    data_list = os.listdir(args.datadir)
+    lab_list = []
+    for data_dir in data_list:
+        if data_dir[:3] == "pjs":
+            data = os.listdir(os.path.join(args.datadir, data_dir))
+            for file in data:
+                if file[-4:] == ".lab":
+                    lab_list.append(
+                        os.path.join(args.datadir, data_dir + "/" + file)
+                    )
 
     phone_set = []
     idscp = {}
@@ -154,7 +152,7 @@ def process(args):
         idscp[lab_id] = index
 
         segments, phone = load_label(
-            os.path.join(args.labdir, lab),
+            os.path.join(lab),
             s_type=args.label_type,
             sr=args.sr,
             frame_shift=frame_shift,
@@ -165,7 +163,7 @@ def process(args):
             if p not in phone_set:
                 phone_set.append(p)
 
-        wav_path = os.path.join(args.wavdir, lab_id + "." + args.wav_extention)
+        wav_path = os.path.join(lab_id + "_song." + args.wav_extention)
         if args.wav_extention == "raw":
             signal, osr = sf.read(
                 wav_path,
@@ -249,8 +247,7 @@ def process(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("wavdir", type=str, help="wav data directory")
-    parser.add_argument("labdir", type=str, help="label data directory")
+    parser.add_argument("datadir", type=str, help="data directory")
     parser.add_argument("outdir", type=str, help="output directory")
     parser.add_argument("--model", type=str, default="TDNN", help="model type")
     parser.add_argument("--sr", type=int, default=48000)
@@ -258,7 +255,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--label_type",
         type=str,
-        default="s",
+        default="ms",
         help="label resolution - sample based or second based",
     )
     parser.add_argument("--label_extention", type=str, default=".txt")

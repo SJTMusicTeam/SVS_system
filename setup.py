@@ -3,7 +3,7 @@ import os
 from setuptools import find_packages
 from setuptools import setup
 
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 from distutils.version import LooseVersion
 import os
 from setuptools import find_packages

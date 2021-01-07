@@ -1,4 +1,4 @@
-"""Copyright [2020] [Jiatong Shi]
+"""Copyright [2020] [Jiatong Shi].
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -10,8 +10,9 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
-limitations under the License."""
-#!/usr/bin/env python3
+limitations under the License.
+"""
+# !/usr/bin/env python3
 
 # Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
@@ -22,12 +23,16 @@ from torch import nn
 
 
 class MaskedLoss(torch.nn.Module):
+    """MaskedLoss."""
+
     def __init__(self, loss, mask_free=False):
+        """init."""
         super(MaskedLoss, self).__init__()
         self.loss = loss
         self.mask_free = mask_free
 
     def forward(self, output, target, length):
+        """forward."""
         if self.mask_free:
             if self.loss == "mse":
                 return torch.mean((output - target) ** 2.0)
@@ -45,6 +50,7 @@ class MaskedLoss(torch.nn.Module):
 
 
 def tq(f_bin, fs, fft_bins):
+    """tq."""
     f = (np.array(f_bin) + 1) * fs / fft_bins
     # p1 = 3.64 * ((f / 1000) ** -0.8)
     # p2 = 6.5 * np.exp(-0.6 * ((f / 1000 - 3.3) ** 2))
@@ -59,8 +65,10 @@ def tq(f_bin, fs, fft_bins):
 
 
 def cband():
-    """a pre-defined idealized critical band filter bank
-    :return: idealized critical band filter bank"""
+    """Pre-define idealized critical band filter bank.
+
+    :return: idealized critical band filter bank
+    """
     return np.array(
         [
             0,
@@ -94,11 +102,14 @@ def cband():
 
 
 def cal_psd2bark_dict(fs=16000, win_len=160):
-    """compute a map from bark_band to PSD component index list
+    """Compute a map from bark_band to PSD component index list.
+
     :param fs: sampling rate (int)
     :param win_len: window length (int)
-    :return: return (psd_list, bark_num) where psd_list is {bark_band_index: [spectrum_start, spectrum_end]} and bark
-    number is the number of bark available corresponding to the sampling rate"""
+    :return: return (psd_list, bark_num) where psd_list is
+        {bark_band_index: [spectrum_start, spectrum_end]} and bark
+    number is the number of bark available corresponding to the sampling rate
+    """
     # for current form, only less than 44100 sr can be processed
     assert fs <= 44100
     unit = fs // win_len
@@ -126,9 +137,11 @@ def cal_psd2bark_dict(fs=16000, win_len=160):
 
 
 def cal_spread_function(bark_num):
-    """calculate spread function
+    """Calculate spread function.
+
     :param bark_num: point number used in analysis (int)
-    :return: torch.Tensor()"""
+    :return: torch.Tensor()
+    """
     bark_use = bark_num - 1
     sf = np.zeros((bark_use, bark_use))
     for i in range(bark_use):
@@ -145,9 +158,11 @@ def cal_spread_function(bark_num):
 
 
 def geomean(iterable):
-    """calculate geometric mean of a given iterable
+    """Calculate geometric mean of a given iterable.
+
     :param iterable: a torch.Tensor with one dimension
-    :return: the geometric mean of a given iterable"""
+    :return: the geometric mean of a given iterable
+    """
     # sign = torch.sign(iterable)
     temp = torch.sum(torch.log10(torch.add(torch.abs(iterable), 1e-30)), -1)
     temp = torch.mul(temp, 1 / iterable.size()[-1])
@@ -156,14 +171,19 @@ def geomean(iterable):
 
 
 def arimean(iterable):
-    """calculate arithmetic mean of a given iterable
+    """Calculate arithmetic mean of a given iterable.
+
     :param iterable: a torch.Tensor with one dimension
-    :return: the arithmetic mean of a given iterable"""
+    :return: the arithmetic mean of a given iterable
+    """
     return torch.mean(abs(iterable), -1)
 
 
 class PerceptualEntropy(nn.Module):
+    """PerceptualEntropy."""
+
     def __init__(self, bark_num, spread_function, fs, win_len, psd_dict):
+        """init."""
         super(PerceptualEntropy, self).__init__()
         self.bark_num = bark_num
         if torch.cuda.is_available():
@@ -187,6 +207,7 @@ class PerceptualEntropy(nn.Module):
         self.cutoff = 1
 
     def forward(self, log_magnitude, real, imag):
+        """forward."""
         # in case for initial turbulance, may use clamp to clip extreme value
         spectrum = torch.clamp(log_magnitude, -1000, 10)
         spectrum = torch.exp(spectrum)
@@ -327,6 +348,7 @@ class PerceptualEntropy(nn.Module):
 
 
 def _test_perceptual_entropy(filename):
+    """_test_perceptual_entropy."""
     fs = 16000
     win_len = 320
 
