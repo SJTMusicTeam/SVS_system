@@ -5,7 +5,7 @@
 .\#*
 *DS_Store
 out.txt
-espnet.egg-info/
+SVS.egg-info/
 doc/_build
 slurm-*.out
 tmp*
