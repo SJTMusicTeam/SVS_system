@@ -31,7 +31,7 @@ requirements = {
         "h5py>=2.10.0",
         "kaldiio>=2.17.0",
         "pyworld>=0.2.10",
-        # ASR frontend related
+        # frontend related
         "torch_complex",
     ],
     "recipe": [

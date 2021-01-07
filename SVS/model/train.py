@@ -512,7 +512,7 @@ def train(args):
                 optimizer,
                 "min",
                 verbose=True,
-                patience=50,
+                patience=10,
                 factor=0.5,
             )
         elif args.scheduler == "ExponentialLR":
