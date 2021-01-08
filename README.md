@@ -1,31 +1,22 @@
 # SVS_system
-A system works on singing voice synthesis
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Github Actions](https://github.com/SJTMusicTeam/SVS_system/workflows/CI/badge.svg)](https://github.com/SJTMusicTeam/SVS_system/actions)
+
+
+An open-source system that works on singing voice synthesis
 
 ## Environment Install
 
-`cd tools` \
-`make KALDI=your_kaldi_dir`
-and then install torch by conda
-
-For usage: \
-`. tools/env.sh`
-
-Followings are my sample environment: \
-python version: 3.7.3 (default, Mar 27 2019, 22:11:17)  [GCC 7.3.0] \
-pytorch version: 1.1.0 \
-cupy version: 7.3.0 \
-cuda version: 9000 \
-cudnn version: 7501
+Please see "[Installation Instructions](https://github.com/SJTMusicTeam/SVS_system/wiki/Installation-Instructions)" for installation instructions.
 
 ## Running Instruction
 
 For example: \
     `cd egs/public_dataset/kiritan`  \
-    `sh train.sh` 
+    `./run.sh` 
 
-- For CLSP User, using clsp_wrapper to use qsub.
-- For other user, using train.sh or infer.sh to run.
 
-Please refer to configuration file (e.g. train.yaml) for parameter.
+Please refer to configuration file (e.g. train.yaml) for parameters.
 
 

@@ -1,15 +1,28 @@
+"""Copyright [2020] [Jiatong Shi].
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+import numpy as np
 from pathlib import Path
+from SVS.model.utils.nets_utils import make_pad_mask
+import torch
+import torch.nn as nn
 from typing import Tuple
 from typing import Union
 
-import numpy as np
-import torch
-import torch.nn as nn
-from SVS.model.utils.nets_utils import make_pad_mask
-
 
 class GlobalMVN(nn.Module):
-    """Apply global mean and variance normalization
+    """Apply global mean and variance normalization.
 
     TODO(kamo): Make this class portable somehow
 
@@ -27,6 +40,7 @@ class GlobalMVN(nn.Module):
         norm_vars: bool = False,
         eps: float = 1.0e-20,
     ):
+        """init."""
         super().__init__()
         self.norm_means = norm_means
         self.norm_vars = norm_vars
@@ -53,6 +67,7 @@ class GlobalMVN(nn.Module):
         self.register_buffer("std", torch.from_numpy(std))
 
     def extra_repr(self):
+        """extra_repr."""
         return (
             f"stats_file={self.stats_file}, "
             f"norm_means={self.norm_means}, norm_vars={self.norm_vars}"
@@ -61,7 +76,7 @@ class GlobalMVN(nn.Module):
     def forward(
         self, x: torch.Tensor, ilens: torch.Tensor = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Forward function
+        """Forward function.
 
         Args:
             x: (B, L, ...)
@@ -70,7 +85,7 @@ class GlobalMVN(nn.Module):
         if ilens is None:
             ilens = x.new_full([x.size(0)], x.size(1))
         else:
-            ilens,_ = ilens.max(1)
+            ilens, _ = ilens.max(1)
         norm_means = self.norm_means
         norm_vars = self.norm_vars
         self.mean = self.mean.to(x.device, x.dtype)
@@ -96,10 +111,11 @@ class GlobalMVN(nn.Module):
     def inverse(
         self, x: torch.Tensor, ilens: torch.Tensor = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """inverse."""
         if ilens is None:
             ilens = x.new_full([x.size(0)], x.size(1))
         else:
-            ilens,_ = ilens.max(1)
+            ilens, _ = ilens.max(1)
         norm_means = self.norm_means
         norm_vars = self.norm_vars
         self.mean = self.mean.to(x.device, x.dtype)
