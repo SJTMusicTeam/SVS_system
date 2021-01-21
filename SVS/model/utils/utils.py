@@ -42,18 +42,7 @@ def collect_stats(train_loader, args):
     count_mel, sum_mel, sum_square_mel = 0, 0, 0
     for (
         step,
-        (
-            phone,
-            beat,
-            pitch,
-            spec,
-            real,
-            imag,
-            length,
-            chars,
-            char_len_list,
-            mel,
-        ),
+        (phone, beat, pitch, spec, real, imag, length, chars, char_len_list, mel),
     ) in enumerate(train_loader, 1):
         # print(f"spec.shape: {spec.shape},length.shape:
         # {length.shape}, mel.shape: {mel.shape}")
@@ -73,31 +62,18 @@ def collect_stats(train_loader, args):
             sum_square_mel += (seq ** 2).sum(0)
             count_mel += len(seq)
     assert count_mel == count
-    dirnames = [
-        os.path.dirname(args.stats_file),
-        os.path.dirname(args.stats_mel_file),
-    ]
+    dirnames = [os.path.dirname(args.stats_file), os.path.dirname(args.stats_mel_file)]
     for name in dirnames:
         if not os.path.exists(name):
             os.makedirs(name)
     np.savez(args.stats_file, count=count, sum=sum, sum_square=sum_square)
     np.savez(
-        args.stats_mel_file,
-        count=count_mel,
-        sum=sum_mel,
-        sum_square=sum_square_mel,
+        args.stats_mel_file, count=count_mel, sum=sum_mel, sum_square=sum_square_mel
     )
 
 
 def train_one_epoch(
-    train_loader,
-    model,
-    device,
-    optimizer,
-    criterion,
-    perceptual_entropy,
-    epoch,
-    args,
+    train_loader, model, device, optimizer, criterion, perceptual_entropy, epoch, args
 ):
     """train_one_epoch."""
     losses = AverageMeter()
@@ -126,18 +102,7 @@ def train_one_epoch(
 
     for (
         step,
-        (
-            phone,
-            beat,
-            pitch,
-            spec,
-            real,
-            imag,
-            length,
-            chars,
-            char_len_list,
-            mel,
-        ),
+        (phone, beat, pitch, spec, real, imag, length, chars, char_len_list, mel),
     ) in enumerate(train_loader, 1):
         phone = phone.to(device)
         beat = beat.to(device)
@@ -166,49 +131,27 @@ def train_one_epoch(
         # output_mel = [batch size, num frames, n_mels dimension]
         if args.model_type == "GLU_Transformer":
             output, att, output_mel, output_mel2 = model(
-                chars,
-                phone,
-                pitch,
-                beat,
-                pos_char=char_len_list,
-                pos_spec=length,
+                chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
             )
         elif args.model_type == "LSTM":
             output, hidden, output_mel, output_mel2 = model(phone, pitch, beat)
             att = None
         elif args.model_type == "GRU_gs":
-            output, att, output_mel = model(
-                spec, phone, pitch, beat, length, args
-            )
+            output, att, output_mel = model(spec, phone, pitch, beat, length, args)
             att = None
         elif args.model_type == "PureTransformer":
             output, att, output_mel, output_mel2 = model(
-                chars,
-                phone,
-                pitch,
-                beat,
-                pos_char=char_len_list,
-                pos_spec=length,
+                chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
             )
         elif args.model_type == "Conformer":
             # print(f"chars: {np.shape(chars)}, phone:
             # {np.shape(phone)}, length: {np.shape(length)}")
             output, att, output_mel, output_mel2 = model(
-                chars,
-                phone,
-                pitch,
-                beat,
-                pos_char=char_len_list,
-                pos_spec=length,
+                chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
             )
         elif args.model_type == "Comformer_full":
             output, att, output_mel, output_mel2 = model(
-                chars,
-                phone,
-                pitch,
-                beat,
-                pos_char=char_len_list,
-                pos_spec=length,
+                chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
             )
         elif args.model_type == "USTC_DAR":
             output_mel = model(
@@ -244,8 +187,7 @@ def train_one_epoch(
         if args.perceptual_loss > 0:
             pe_loss = perceptual_entropy(output, real, imag)
             final_loss = (
-                args.perceptual_loss * pe_loss
-                + (1 - args.perceptual_loss) * train_loss
+                args.perceptual_loss * pe_loss + (1 - args.perceptual_loss) * train_loss
             )
         else:
             final_loss = train_loss
@@ -283,13 +225,7 @@ def train_one_epoch(
                 if args.normalize and args.stats_file:
                     output_mel, _ = mel_normalizer.inverse(output_mel, length)
                 log_figure_mel(
-                    step,
-                    output_mel,
-                    mel_origin,
-                    att,
-                    length,
-                    log_save_dir,
-                    args,
+                    step, output_mel, mel_origin, att, length, log_save_dir, args
                 )
                 out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
                     step, losses.avg, spec_losses.avg
@@ -298,9 +234,7 @@ def train_one_epoch(
                 # normalize inverse 只在infer的时候用，因为log过程需要转换成wav,和计算mcd等指标
                 if args.normalize and args.stats_file:
                     output, _ = sepc_normalizer.inverse(output, length)
-                log_figure(
-                    step, output, spec_origin, att, length, log_save_dir, args
-                )
+                log_figure(step, output, spec_origin, att, length, log_save_dir, args)
                 out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
                     step, losses.avg, spec_losses.avg
                 )
@@ -310,9 +244,7 @@ def train_one_epoch(
             if args.n_mels > 0:
                 out_log += "mel_loss {:.4f}; ".format(mel_losses.avg)
                 if args.double_mel_loss:
-                    out_log += "dmel_loss {:.4f}; ".format(
-                        double_mel_losses.avg
-                    )
+                    out_log += "dmel_loss {:.4f}; ".format(double_mel_losses.avg)
             print("{} -- sum_time: {:.2f}s".format(out_log, (end - start)))
 
     info = {"loss": losses.avg, "spec_loss": spec_losses.avg}
@@ -323,9 +255,7 @@ def train_one_epoch(
     return info
 
 
-def validate(
-    dev_loader, model, device, criterion, perceptual_entropy, epoch, args
-):
+def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, args):
     """validate."""
     losses = AverageMeter()
     spec_losses = AverageMeter()
@@ -349,18 +279,7 @@ def validate(
     with torch.no_grad():
         for (
             step,
-            (
-                phone,
-                beat,
-                pitch,
-                spec,
-                real,
-                imag,
-                length,
-                chars,
-                char_len_list,
-                mel,
-            ),
+            (phone, beat, pitch, spec, real, imag, length, chars, char_len_list, mel),
         ) in enumerate(dev_loader, 1):
             phone = phone.to(device)
             beat = beat.to(device)
@@ -372,9 +291,7 @@ def validate(
             imag = imag.to(device).float()
             length_mask = length.unsqueeze(2)
             if mel is not None:
-                length_mel_mask = length_mask.repeat(
-                    1, 1, mel.shape[2]
-                ).float()
+                length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
                 length_mel_mask = length_mel_mask.to(device)
             length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
             length_mask = length_mask.to(device)
@@ -388,49 +305,25 @@ def validate(
 
             if args.model_type == "GLU_Transformer":
                 output, att, output_mel, output_mel2 = model(
-                    chars,
-                    phone,
-                    pitch,
-                    beat,
-                    pos_char=char_len_list,
-                    pos_spec=length,
+                    chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
                 )
             elif args.model_type == "LSTM":
-                output, hidden, output_mel, output_mel2 = model(
-                    phone, pitch, beat
-                )
+                output, hidden, output_mel, output_mel2 = model(phone, pitch, beat)
                 att = None
             elif args.model_type == "GRU_gs":
-                output, att, output_mel = model(
-                    spec, phone, pitch, beat, length, args
-                )
+                output, att, output_mel = model(spec, phone, pitch, beat, length, args)
                 att = None
             elif args.model_type == "PureTransformer":
                 output, att, output_mel, output_mel2 = model(
-                    chars,
-                    phone,
-                    pitch,
-                    beat,
-                    pos_char=char_len_list,
-                    pos_spec=length,
+                    chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
                 )
             elif args.model_type == "Conformer":
                 output, att, output_mel, output_mel2 = model(
-                    chars,
-                    phone,
-                    pitch,
-                    beat,
-                    pos_char=char_len_list,
-                    pos_spec=length,
+                    chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
                 )
             elif args.model_type == "Comformer_full":
                 output, att, output_mel, output_mel2 = model(
-                    chars,
-                    phone,
-                    pitch,
-                    beat,
-                    pos_char=char_len_list,
-                    pos_spec=length,
+                    chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
                 )
             elif args.model_type == "USTC_DAR":
                 output_mel = model(phone, pitch, beat, length, args)
@@ -453,9 +346,7 @@ def validate(
                 mel_loss = criterion(output_mel, mel, length_mel_mask)
 
                 if args.double_mel_loss:
-                    double_mel_loss = criterion(
-                        output_mel2, mel, length_mel_mask
-                    )
+                    double_mel_loss = criterion(output_mel2, mel, length_mel_mask)
                 else:
                     double_mel_loss = 0
             else:
@@ -483,9 +374,7 @@ def validate(
             if args.n_mels > 0:
                 mel_losses.update(mel_loss.item(), phone.size(0))
                 if args.double_mel_loss:
-                    double_mel_losses.update(
-                        double_mel_loss.item(), phone.size(0)
-                    )
+                    double_mel_losses.update(double_mel_loss.item(), phone.size(0))
 
             if args.model_type == "USTC_DAR":
                 # normalize inverse stage
@@ -499,10 +388,7 @@ def validate(
                 # normalize inverse stage
                 if args.normalize and args.stats_file:
                     output, _ = sepc_normalizer.inverse(output, length)
-                (
-                    mcd_value,
-                    length_sum,
-                ) = Metrics.Calculate_melcd_fromLinearSpectrum(
+                (mcd_value, length_sum) = Metrics.Calculate_melcd_fromLinearSpectrum(
                     output, spec_origin, length, args
                 )
             mcd_metric.update(mcd_value, length_sum)
@@ -510,23 +396,11 @@ def validate(
             if step % args.dev_step_log == 0:
                 if args.model_type == "USTC_DAR":
                     log_figure_mel(
-                        step,
-                        output_mel,
-                        mel_origin,
-                        att,
-                        length,
-                        log_save_dir,
-                        args,
+                        step, output_mel, mel_origin, att, length, log_save_dir, args
                     )
                 else:
                     log_figure(
-                        step,
-                        output,
-                        spec_origin,
-                        att,
-                        length,
-                        log_save_dir,
-                        args,
+                        step, output, spec_origin, att, length, log_save_dir, args
                     )
                 out_log = (
                     "step {}: train_loss {:.4f}; "
@@ -539,9 +413,7 @@ def validate(
                 if args.n_mels > 0:
                     out_log += "mel_loss {:.4f}; ".format(mel_losses.avg)
                     if args.double_mel_loss:
-                        out_log += "dmel_loss {:.4f}; ".format(
-                            double_mel_losses.avg
-                        )
+                        out_log += "dmel_loss {:.4f}; ".format(double_mel_losses.avg)
                 end = time.time()
                 print("{} -- sum_time: {}s".format(out_log, (end - start)))
 
@@ -586,14 +458,7 @@ def save_checkpoint(state, model_filename):
 
 
 def save_model(
-    args,
-    epoch,
-    model,
-    optimizer,
-    train_info,
-    dev_info,
-    logger,
-    save_loss_select,
+    args, epoch, model, optimizer, train_info, dev_info, logger, save_loss_select
 ):
     """save_model."""
     if args.optimizer == "noam":
@@ -622,10 +487,7 @@ def save_model(
 
 def record_info(train_info, dev_info, epoch, logger):
     """record_info."""
-    loss_info = {
-        "train_loss": train_info["loss"],
-        "dev_loss": dev_info["loss"],
-    }
+    loss_info = {"train_loss": train_info["loss"], "dev_loss": dev_info["loss"]}
     logger.add_scalars("losses", loss_info, epoch)
     return 0
 
@@ -637,9 +499,7 @@ def invert_spectrogram(spectrogram, win_length, hop_length):
     Args:
       spectrogram: [1+n_fft//2, t]
     """
-    return librosa.istft(
-        spectrogram, hop_length, win_length=win_length, window="hann"
-    )
+    return librosa.istft(spectrogram, hop_length, win_length=win_length, window="hann")
 
 
 def griffin_lim(spectrogram, iter_vocoder, n_fft, hop_length, win_length):
@@ -776,9 +636,7 @@ def log_figure(step, output, spec, att, length, save_dir, args):
 
     if librosa.__version__ < "0.8.0":
         librosa.output.write_wav(
-            os.path.join(save_dir, "{}.wav".format(step)),
-            wav,
-            args.sampling_rate,
+            os.path.join(save_dir, "{}.wav".format(step)), wav, args.sampling_rate
         )
         librosa.output.write_wav(
             os.path.join(save_dir, "{}_true.wav".format(step)),
@@ -849,9 +707,7 @@ def log_mel(step, output_mel, spec, att, length, save_dir, args, voc_model):
 
     if librosa.__version__ < "0.8.0":
         librosa.output.write_wav(
-            os.path.join(save_dir, "{}.wav".format(step)),
-            wav,
-            args.sampling_rate,
+            os.path.join(save_dir, "{}.wav".format(step)), wav, args.sampling_rate
         )
         librosa.output.write_wav(
             os.path.join(save_dir, "{}_true.wav".format(step)),
@@ -900,9 +756,7 @@ def Calculate_time(elapsed_time):
     """Calculate_time."""
     elapsed_hours = int(elapsed_time / 3600)
     elapsed_mins = int((elapsed_time - (elapsed_hours * 3600)) / 60)
-    elapsed_secs = int(
-        elapsed_time - (elapsed_hours * 3600) - (elapsed_mins * 60)
-    )
+    elapsed_secs = int(elapsed_time - (elapsed_hours * 3600) - (elapsed_mins * 60))
     return elapsed_hours, elapsed_mins, elapsed_secs
 
 
@@ -942,8 +796,6 @@ def Calculate_dataset_duration(dataset_path):
 if __name__ == "__main__":
     # path = "/data5/jiatong/SVS_system/SVS/data/
     # public_dataset/kiritan_data/wav_info"
-    path = (
-        "/data5/jiatong/SVS_system/SVS/data/public_dataset/hts_data/wav_info"
-    )
+    path = "/data5/jiatong/SVS_system/SVS/data/public_dataset/hts_data/wav_info"
 
     Calculate_dataset_duration(path)

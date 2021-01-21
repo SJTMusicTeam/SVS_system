@@ -94,9 +94,7 @@ def Auto_save_model(
 
             if os.path.exists(
                 "{}/epoch_{}_{}.pth.tar".format(
-                    args.model_save_dir,
-                    save_loss_select,
-                    epoch_to_save[select_loss],
+                    args.model_save_dir, save_loss_select, epoch_to_save[select_loss]
                 )
             ):
                 os.remove(
@@ -107,9 +105,7 @@ def Auto_save_model(
                     )
                 )
                 logging.info(
-                    "model of epoch:{} deleted".format(
-                        epoch_to_save[select_loss]
-                    )
+                    "model of epoch:{} deleted".format(epoch_to_save[select_loss])
                 )
 
             logging.info(
@@ -302,9 +298,7 @@ def train(args):
             enc_normalize_before=args.enc_normalize_before,
             enc_concat_after=args.enc_concat_after,
             enc_positionwise_layer_type=args.enc_positionwise_layer_type,
-            enc_positionwise_conv_kernel_size=(
-                args.enc_positionwise_conv_kernel_size
-            ),
+            enc_positionwise_conv_kernel_size=(args.enc_positionwise_conv_kernel_size),
             enc_macaron_style=args.enc_macaron_style,
             enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
             enc_selfattention_layer_type=args.enc_selfattention_layer_type,
@@ -338,9 +332,7 @@ def train(args):
             enc_normalize_before=args.enc_normalize_before,
             enc_concat_after=args.enc_concat_after,
             enc_positionwise_layer_type=args.enc_positionwise_layer_type,
-            enc_positionwise_conv_kernel_size=(
-                args.enc_positionwise_conv_kernel_size
-            ),
+            enc_positionwise_conv_kernel_size=(args.enc_positionwise_conv_kernel_size),
             enc_macaron_style=args.enc_macaron_style,
             enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
             enc_selfattention_layer_type=args.enc_selfattention_layer_type,
@@ -359,9 +351,7 @@ def train(args):
             dec_normalize_before=args.dec_normalize_before,
             dec_concat_after=args.dec_concat_after,
             dec_positionwise_layer_type=args.dec_positionwise_layer_type,
-            dec_positionwise_conv_kernel_size=(
-                args.dec_positionwise_conv_kernel_size
-            ),
+            dec_positionwise_conv_kernel_size=(args.dec_positionwise_conv_kernel_size),
             dec_macaron_style=args.dec_macaron_style,
             dec_pos_enc_layer_type=args.dec_pos_enc_layer_type,
             dec_selfattention_layer_type=args.dec_selfattention_layer_type,
@@ -396,9 +386,7 @@ def train(args):
         raise ValueError("Not Support Model Type %s" % args.model_type)
     logging.info(f"{model}")
     model = model.to(device)
-    logging.info(
-        f"The model has {count_parameters(model):,} trainable parameters"
-    )
+    logging.info(f"The model has {count_parameters(model):,} trainable parameters")
 
     model_load_dir = ""
     pretrain_encoder_dir = ""
@@ -478,9 +466,7 @@ def train(args):
         )
         if len(para_list) > 0:
             logging.warning(
-                "Not loading {} because of different sizes".format(
-                    ", ".join(para_list)
-                )
+                "Not loading {} because of different sizes".format(", ".join(para_list))
             )
         model_dict.update(state_dict_new)
         model.load_state_dict(model_dict)
@@ -571,9 +557,7 @@ def train(args):
 
         out_log = "Train epoch: {:04d}, ".format(epoch)
         if args.optimizer == "noam":
-            out_log += "lr: {:.6f}, ".format(
-                optimizer._optimizer.param_groups[0]["lr"]
-            )
+            out_log += "lr: {:.6f}, ".format(optimizer._optimizer.param_groups[0]["lr"])
         elif args.optimizer == "adam":
             out_log += "lr: {:.6f}, ".format(optimizer.param_groups[0]["lr"])
         out_log += "loss: {:.4f}, spec_loss: {:.4f} ".format(
@@ -584,22 +568,14 @@ def train(args):
             out_log += "mel_loss: {:.4f}, ".format(train_info["mel_loss"])
         if args.perceptual_loss > 0:
             out_log += "pe_loss: {:.4f}, ".format(train_info["pe_loss"])
-        logging.info(
-            "{} time: {:.2f}s".format(out_log, end_t_train - start_t_train)
-        )
+        logging.info("{} time: {:.2f}s".format(out_log, end_t_train - start_t_train))
 
         """Dev Stage"""
         torch.backends.cudnn.enabled = False  # 莫名的bug，关掉才可以跑
 
         # start_t_dev = time.time()
         dev_info = validate(
-            dev_loader,
-            model,
-            device,
-            loss,
-            loss_perceptual_entropy,
-            epoch,
-            args,
+            dev_loader, model, device, loss, loss_perceptual_entropy, epoch, args
         )
         end_t_dev = time.time()
 
@@ -611,9 +587,7 @@ def train(args):
             dev_log += "mel_loss: {:.4f}, ".format(dev_info["mel_loss"])
         if args.perceptual_loss > 0:
             dev_log += "pe_loss: {:.4f}, ".format(dev_info["pe_loss"])
-        logging.info(
-            "{} time: {:.2f}s".format(dev_log, end_t_dev - start_t_train)
-        )
+        logging.info("{} time: {:.2f}s".format(dev_log, end_t_dev - start_t_train))
 
         sys.stdout.flush()
 
