@@ -252,10 +252,7 @@ def infer(args):
         sing_quality=args.sing_quality,
     )
     collate_fn_svs = SVSCollator(
-        args.num_frames,
-        args.char_max_len,
-        args.use_asr_post,
-        args.phone_size,
+        args.num_frames, args.char_max_len, args.use_asr_post, args.phone_size
     )
     test_loader = torch.utils.data.DataLoader(
         dataset=test_set,
@@ -297,20 +294,28 @@ def infer(args):
 
     # vocoder
     if args.vocoder_category == "wavernn":
-        voc_model = WaveRNN(rnn_dims=512,
-                            fc_dims=512,
-                            bits=9,      # bit depth of signal
-                            pad=2,       # this will pad the input so that the resnet can 'see' wider than input length
-                            upsample_factors=(5, 5, 11),   # NB - this needs to correctly factorise hop_length
-                            feat_dims=80,
-                            compute_dims=128,
-                            res_out_dims=128,
-                            res_blocks=10,
-                            hop_length=275,                    # 12.5ms - in line with Tacotron 2 paper
-                            sample_rate=22050,
-                            mode='MOL').to(device)
+        voc_model = WaveRNN(
+            rnn_dims=512,
+            fc_dims=512,
+            bits=9,  # bit depth of signal
+            pad=2,  # this will pad the input so that the resnet can 'see' wider than input length
+            upsample_factors=(
+                5,
+                5,
+                11,
+            ),  # NB - this needs to correctly factorise hop_length
+            feat_dims=80,
+            compute_dims=128,
+            res_out_dims=128,
+            res_blocks=10,
+            hop_length=275,  # 12.5ms - in line with Tacotron 2 paper
+            sample_rate=22050,
+            mode="MOL",
+        ).to(device)
 
-        voc_model.load('./model_weights/wavernn_voc_weights/latest_weights.pyt')
+        voc_model.load(
+            "./model_weights/wavernn_voc_weights/latest_weights.pyt"
+        )
 
     with torch.no_grad():
         for (
@@ -473,15 +478,12 @@ def infer(args):
                         length,
                         args.prediction_path,
                         args,
-                        voc_model
+                        voc_model,
                     )
                 out_log = (
                     "step {}:train_loss{:.4f};"
                     "spec_loss{:.4f};mcd_value{:.4f};".format(
-                        step,
-                        losses.avg,
-                        spec_losses.avg,
-                        mcd_metric.avg,
+                        step, losses.avg, spec_losses.avg, mcd_metric.avg
                     )
                 )
                 if args.perceptual_loss > 0:

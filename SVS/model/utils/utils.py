@@ -80,12 +80,7 @@ def collect_stats(train_loader, args):
     for name in dirnames:
         if not os.path.exists(name):
             os.makedirs(name)
-    np.savez(
-        args.stats_file,
-        count=count,
-        sum=sum,
-        sum_square=sum_square,
-    )
+    np.savez(args.stats_file, count=count, sum=sum, sum_square=sum_square)
     np.savez(
         args.stats_mel_file,
         count=count_mel,
@@ -296,10 +291,8 @@ def train_one_epoch(
                     log_save_dir,
                     args,
                 )
-                out_log = (
-                    "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
-                        step, losses.avg, spec_losses.avg
-                    )
+                out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
+                    step, losses.avg, spec_losses.avg
                 )
             else:
                 # normalize inverse 只在infer的时候用，因为log过程需要转换成wav,和计算mcd等指标
@@ -308,10 +301,8 @@ def train_one_epoch(
                 log_figure(
                     step, output, spec_origin, att, length, log_save_dir, args
                 )
-                out_log = (
-                    "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
-                        step, losses.avg, spec_losses.avg
-                    )
+                out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
+                    step, losses.avg, spec_losses.avg
                 )
 
             if args.perceptual_loss > 0:
@@ -618,10 +609,7 @@ def save_model(
         )
     else:
         save_checkpoint(
-            {
-                "epoch": epoch,
-                "state_dict": model.state_dict(),
-            },
+            {"epoch": epoch, "state_dict": model.state_dict()},
             "{}/epoch_{}_{}.pth.tar".format(
                 args.model_save_dir, save_loss_select, epoch
             ),
