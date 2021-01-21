@@ -33,7 +33,7 @@ phone_size: 68
 seed: 777
 gpu_id: -1
 
-normalize: False # for utterence normalize
+normalize: True # for utterence normalize
 # collect_stats: True
 stats_file: exp/rnn/feats_stats.npz
 stats_mel_file: exp/rnn/feats_mel_stats.npz
