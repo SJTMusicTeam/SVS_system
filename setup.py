@@ -34,11 +34,7 @@ requirements = {
         # ASR frontend related
         "torch_complex",
     ],
-    "recipe": [
-        "resampy",
-        "museval>=0.2.1",
-        "mir-eval>=0.6",
-    ],
+    "recipe": ["resampy", "museval>=0.2.1", "mir-eval>=0.6"],
     "setup": ["numpy", "pytest-runner"],
     "test": [
         "pytest>=3.3.0",
@@ -100,9 +96,7 @@ setup(
     author="Jiatong Shi",
     author_email="ftshijt@gmail.com",
     description="Singing Voice Synthesis System (SVS_system)",
-    long_description=open(
-        os.path.join(dirname, "README.md"), encoding="utf-8"
-    ).read(),
+    long_description=open(os.path.join(dirname, "README.md"), encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     license="Apache Software License",
     packages=find_packages(include=["SVS*"]),

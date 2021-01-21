@@ -111,7 +111,5 @@ for folder_name in folder_all:
             continue
 
     audio_all = np.array(audio_all)
-    librosa.output.write_wav(
-        dest_path + folder_name + "_all.wav", audio_all, 48000
-    )
+    librosa.output.write_wav(dest_path + folder_name + "_all.wav", audio_all, 48000)
     print("Finish" + folder_name)
