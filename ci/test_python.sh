@@ -7,7 +7,7 @@ set -euo pipefail
 modules="SVS utils setup.py egs/*/*/local"
 
 # black
-if ! black --check --line-length 79 ${modules}; then
+if ! black --check ${modules}; then
     printf 'Please apply:\n    $ black %s\n' "${modules}"
     exit 1
 fi
