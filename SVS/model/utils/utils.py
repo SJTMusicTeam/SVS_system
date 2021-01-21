@@ -182,9 +182,7 @@ def train_one_epoch(
             output, hidden, output_mel, output_mel2 = model(phone, pitch, beat)
             att = None
         elif args.model_type == "GRU_gs":
-            output, att, output_mel = model(
-                spec, phone, pitch, beat, length, args
-            )
+            output, att, output_mel = model(spec, phone, pitch, beat, length, args)
             att = None
         elif args.model_type == "PureTransformer":
             output, att, output_mel, output_mel2 = model(
@@ -249,8 +247,7 @@ def train_one_epoch(
         if args.perceptual_loss > 0:
             pe_loss = perceptual_entropy(output, real, imag)
             final_loss = (
-                args.perceptual_loss * pe_loss
-                + (1 - args.perceptual_loss) * train_loss
+                args.perceptual_loss * pe_loss + (1 - args.perceptual_loss) * train_loss
             )
         else:
             final_loss = train_loss
@@ -296,22 +293,16 @@ def train_one_epoch(
                     log_save_dir,
                     args,
                 )
-                out_log = (
-                    "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
-                        step, losses.avg, spec_losses.avg
-                    )
+                out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
+                    step, losses.avg, spec_losses.avg
                 )
             else:
                 # normalize inverse 只在infer的时候用，因为log过程需要转换成wav,和计算mcd等指标
                 if args.normalize and args.stats_file:
                     output, _ = sepc_normalizer.inverse(output, length)
-                log_figure(
-                    step, output, spec_origin, att, length, log_save_dir, args
-                )
-                out_log = (
-                    "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
-                        step, losses.avg, spec_losses.avg
-                    )
+                log_figure(step, output, spec_origin, att, length, log_save_dir, args)
+                out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
+                    step, losses.avg, spec_losses.avg
                 )
 
             if args.perceptual_loss > 0:
@@ -319,9 +310,7 @@ def train_one_epoch(
             if args.n_mels > 0:
                 out_log += "mel_loss {:.4f}; ".format(mel_losses.avg)
                 if args.double_mel_loss:
-                    out_log += "dmel_loss {:.4f}; ".format(
-                        double_mel_losses.avg
-                    )
+                    out_log += "dmel_loss {:.4f}; ".format(double_mel_losses.avg)
             print("{} -- sum_time: {:.2f}s".format(out_log, (end - start)))
 
     info = {"loss": losses.avg, "spec_loss": spec_losses.avg}
@@ -332,9 +321,7 @@ def train_one_epoch(
     return info
 
 
-def validate(
-    dev_loader, model, device, criterion, perceptual_entropy, epoch, args
-):
+def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, args):
     """validate."""
     losses = AverageMeter()
     spec_losses = AverageMeter()
@@ -381,9 +368,7 @@ def validate(
             imag = imag.to(device).float()
             length_mask = length.unsqueeze(2)
             if mel is not None:
-                length_mel_mask = length_mask.repeat(
-                    1, 1, mel.shape[2]
-                ).float()
+                length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
                 length_mel_mask = length_mel_mask.to(device)
             length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
             length_mask = length_mask.to(device)
@@ -405,14 +390,10 @@ def validate(
                     pos_spec=length,
                 )
             elif args.model_type == "LSTM":
-                output, hidden, output_mel, output_mel2 = model(
-                    phone, pitch, beat
-                )
+                output, hidden, output_mel, output_mel2 = model(phone, pitch, beat)
                 att = None
             elif args.model_type == "GRU_gs":
-                output, att, output_mel = model(
-                    spec, phone, pitch, beat, length, args
-                )
+                output, att, output_mel = model(spec, phone, pitch, beat, length, args)
                 att = None
             elif args.model_type == "PureTransformer":
                 output, att, output_mel, output_mel2 = model(
@@ -462,9 +443,7 @@ def validate(
                 mel_loss = criterion(output_mel, mel, length_mel_mask)
 
                 if args.double_mel_loss:
-                    double_mel_loss = criterion(
-                        output_mel2, mel, length_mel_mask
-                    )
+                    double_mel_loss = criterion(output_mel2, mel, length_mel_mask)
                 else:
                     double_mel_loss = 0
             else:
@@ -492,9 +471,7 @@ def validate(
             if args.n_mels > 0:
                 mel_losses.update(mel_loss.item(), phone.size(0))
                 if args.double_mel_loss:
-                    double_mel_losses.update(
-                        double_mel_loss.item(), phone.size(0)
-                    )
+                    double_mel_losses.update(double_mel_loss.item(), phone.size(0))
 
             if args.model_type == "USTC_DAR":
                 # normalize inverse stage
@@ -508,10 +485,7 @@ def validate(
                 # normalize inverse stage
                 if args.normalize and args.stats_file:
                     output, _ = sepc_normalizer.inverse(output, length)
-                (
-                    mcd_value,
-                    length_sum,
-                ) = Metrics.Calculate_melcd_fromLinearSpectrum(
+                (mcd_value, length_sum,) = Metrics.Calculate_melcd_fromLinearSpectrum(
                     output, spec_origin, length, args
                 )
             mcd_metric.update(mcd_value, length_sum)
@@ -548,9 +522,7 @@ def validate(
                 if args.n_mels > 0:
                     out_log += "mel_loss {:.4f}; ".format(mel_losses.avg)
                     if args.double_mel_loss:
-                        out_log += "dmel_loss {:.4f}; ".format(
-                            double_mel_losses.avg
-                        )
+                        out_log += "dmel_loss {:.4f}; ".format(double_mel_losses.avg)
                 end = time.time()
                 print("{} -- sum_time: {}s".format(out_log, (end - start)))
 
@@ -649,9 +621,7 @@ def invert_spectrogram(spectrogram, win_length, hop_length):
     Args:
       spectrogram: [1+n_fft//2, t]
     """
-    return librosa.istft(
-        spectrogram, hop_length, win_length=win_length, window="hann"
-    )
+    return librosa.istft(spectrogram, hop_length, win_length=win_length, window="hann")
 
 
 def griffin_lim(spectrogram, iter_vocoder, n_fft, hop_length, win_length):
@@ -839,9 +809,7 @@ def Calculate_time(elapsed_time):
     """Calculate_time."""
     elapsed_hours = int(elapsed_time / 3600)
     elapsed_mins = int((elapsed_time - (elapsed_hours * 3600)) / 60)
-    elapsed_secs = int(
-        elapsed_time - (elapsed_hours * 3600) - (elapsed_mins * 60)
-    )
+    elapsed_secs = int(elapsed_time - (elapsed_hours * 3600) - (elapsed_mins * 60))
     return elapsed_hours, elapsed_mins, elapsed_secs
 
 
@@ -881,8 +849,6 @@ def Calculate_dataset_duration(dataset_path):
 if __name__ == "__main__":
     # path = "/data5/jiatong/SVS_system/SVS/data/
     # public_dataset/kiritan_data/wav_info"
-    path = (
-        "/data5/jiatong/SVS_system/SVS/data/public_dataset/hts_data/wav_info"
-    )
+    path = "/data5/jiatong/SVS_system/SVS/data/public_dataset/hts_data/wav_info"
 
     Calculate_dataset_duration(path)

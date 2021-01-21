@@ -44,9 +44,7 @@ class MaskedLoss(torch.nn.Module):
             if self.loss == "mse":
                 return torch.sum((output - target) ** 2.0) / torch.sum(length)
             elif self.loss == "l1":
-                return torch.sum(torch.abs(output - target)) / torch.sum(
-                    length
-                )
+                return torch.sum(torch.abs(output - target)) / torch.sum(length)
 
 
 def tq(f_bin, fs, fft_bins):
@@ -195,9 +193,7 @@ class PerceptualEntropy(nn.Module):
         self.spread_function = spread_function
         self.psd_dict = psd_dict
         self.log_term = 1e-8
-        self.Tq = tq(
-            f_bin=np.array(range(win_len // 2)), fs=fs, fft_bins=win_len
-        )
+        self.Tq = tq(f_bin=np.array(range(win_len // 2)), fs=fs, fft_bins=win_len)
         self.renormalize = None
         # for BWE, a cutoff should be used,
         # since we only predict the high band signal
@@ -228,9 +224,7 @@ class PerceptualEntropy(nn.Module):
 
             for i in range(1, self.bark_num):
                 k_test = self.psd_dict[i][1] - self.psd_dict[i][0] + 1
-                specific_band_test = spectrum.narrow(
-                    2, self.psd_dict[i][0] - 1, k_test
-                )
+                specific_band_test = spectrum.narrow(2, self.psd_dict[i][0] - 1, k_test)
                 geo_test = geomean(specific_band_test)
                 ari_test = arimean(specific_band_test)
                 spectral_flatness_measure_test = torch.mul(
@@ -241,9 +235,7 @@ class PerceptualEntropy(nn.Module):
                 )
                 alpha_test = torch.min(
                     torch.div(spectral_flatness_measure_test, -60),
-                    (torch.ones(spectral_flatness_measure_test.shape)).to(
-                        self.device
-                    ),
+                    (torch.ones(spectral_flatness_measure_test.shape)).to(self.device),
                 )
                 offset_test = torch.add(
                     torch.mul(alpha_test, 14.5 + i),
@@ -251,9 +243,7 @@ class PerceptualEntropy(nn.Module):
                 )
                 t_test = torch.div(torch.neg(offset_test), 10)
                 t_test = torch.unsqueeze(t_test, -1)
-                t_test = torch.pow(
-                    10, torch.add(c_test.narrow(2, i - 1, 1), t_test)
-                )
+                t_test = torch.pow(10, torch.add(c_test.narrow(2, i - 1, 1), t_test))
                 renormalize[i] = t_test.repeat((1, 1, k_test))
 
         bark_scale_band = torch.Tensor().to(self.device)
@@ -290,16 +280,10 @@ class PerceptualEntropy(nn.Module):
             t = torch.unsqueeze(t, -1)
             t = torch.pow(10, torch.add(c.narrow(2, i - 1, 1), t))
 
-            specific_real_band = real_parts.narrow(
-                2, self.psd_dict[i][0] - 1, k
-            )
-            specific_imag_band = imag_parts.narrow(
-                2, self.psd_dict[i][0] - 1, k
-            )
+            specific_real_band = real_parts.narrow(2, self.psd_dict[i][0] - 1, k)
+            specific_imag_band = imag_parts.narrow(2, self.psd_dict[i][0] - 1, k)
             t = t.repeat((1, 1, k))
-            bound = self.Tq[
-                self.psd_dict[i][0] - 1 : self.psd_dict[i][0] + k - 1
-            ]
+            bound = self.Tq[self.psd_dict[i][0] - 1 : self.psd_dict[i][0] + k - 1]
             bound = bound[np.newaxis, np.newaxis, :]
             bound = torch.Tensor(bound).repeat(t.shape[0], t.shape[1], 1)
             bound = bound.to(self.device)
@@ -369,9 +353,7 @@ def _test_perceptual_entropy(filename):
     # initial perceptual entropy
     psd_dict, bark_num = cal_psd2bark_dict(fs=fs, win_len=win_len)
     sf = cal_spread_function(bark_num)
-    loss_perceptual_entropy = PerceptualEntropy(
-        bark_num, sf, fs, win_len, psd_dict
-    )
+    loss_perceptual_entropy = PerceptualEntropy(bark_num, sf, fs, win_len, psd_dict)
 
     # the perceptual entropy is computed batch-wise
     log_magnitude = torch.unsqueeze(torch.Tensor(log_magnitude.T), 0)

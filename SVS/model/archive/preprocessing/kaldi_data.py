@@ -87,12 +87,8 @@ def load_wav(wav_rxfilename, start=0, end=None):
     """
     if wav_rxfilename.endswith("|"):
         # input piped command
-        p = subprocess.Popen(
-            wav_rxfilename[:-1], shell=True, stdout=subprocess.PIPE
-        )
-        data, samplerate = sf.read(
-            io.BytesIO(p.stdout.read()), dtype="float32"
-        )
+        p = subprocess.Popen(wav_rxfilename[:-1], shell=True, stdout=subprocess.PIPE)
+        data, samplerate = sf.read(io.BytesIO(p.stdout.read()), dtype="float32")
         # cannot seek
         data = data[start:end]
     elif wav_rxfilename == "-":
@@ -155,9 +151,7 @@ class KaldiData:
     def __init__(self, data_dir):
         """init."""
         self.data_dir = data_dir
-        self.segments = load_segments_rechash(
-            os.path.join(self.data_dir, "segments")
-        )
+        self.segments = load_segments_rechash(os.path.join(self.data_dir, "segments"))
         self.utt2spk = load_utt2spk(os.path.join(self.data_dir, "utt2spk"))
         self.wavs = load_wav_scp(os.path.join(self.data_dir, "wav.scp"))
         self.reco2dur = load_reco2dur(os.path.join(self.data_dir, "reco2dur"))

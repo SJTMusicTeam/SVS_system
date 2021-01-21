@@ -94,9 +94,7 @@ def Calculate_melcd_fromLinearSpectrum(output, spec, length, args):
         mfcc_predict[i][: length[i]] = _linearSpec_2_mfcc(
             output_nopadding, args
         )  # # dim = [n_frames, 25]
-        mfcc_ground_truth[i][: length[i]] = _linearSpec_2_mfcc(
-            spec_nopadding, args
-        )
+        mfcc_ground_truth[i][: length[i]] = _linearSpec_2_mfcc(spec_nopadding, args)
 
         mcd_average = melcd(
             _linearSpec_2_mfcc(output_nopadding, args),
@@ -230,9 +228,7 @@ def lf0_mean_squared_error(
 
     T = 0
     s = 0.0
-    for x, x_vuv, y, y_vuv, length in zip(
-        src_f0, src_vuv, tgt_f0, tgt_vuv, lengths
-    ):
+    for x, x_vuv, y, y_vuv, length in zip(src_f0, src_vuv, tgt_f0, tgt_vuv, lengths):
         x, x_vuv = x[:length], x_vuv[:length]
         y, y_vuv = y[:length], y_vuv[:length]
         voiced_indices = (x_vuv + y_vuv) >= 2
@@ -347,12 +343,8 @@ def F0_VUV_distortion(reference_list, generation_list):
         distortion += temp_distortion
         total_frame_number += length
 
-        ref_all_files_data = np.concatenate(
-            (ref_all_files_data, f0_ref), axis=0
-        )
-        gen_all_files_data = np.concatenate(
-            (gen_all_files_data, f0_gen), axis=0
-        )
+        ref_all_files_data = np.concatenate((ref_all_files_data, f0_ref), axis=0)
+        gen_all_files_data = np.concatenate((gen_all_files_data, f0_gen), axis=0)
 
     distortion /= float(total_voiced_frame_number)
     # f0_rmse = np.sqrt(distortion)
@@ -397,9 +389,7 @@ def invert_spectrogram(spectrogram, win_length, hop_length):
     Args:
       spectrogram: [1+n_fft//2, t]
     """
-    return librosa.istft(
-        spectrogram, hop_length, win_length=win_length, window="hann"
-    )
+    return librosa.istft(spectrogram, hop_length, win_length=win_length, window="hann")
 
 
 def griffin_lim(spectrogram, iter_vocoder, n_fft, hop_length, win_length):
@@ -532,9 +522,7 @@ if __name__ == "__main__":
 
     log_mel_spectrogram = librosa.core.power_to_db(mel_spectrogram)
 
-    melCepstrum1 = scipy.fftpack.dct(
-        log_mel_spectrogram, axis=0, type=2, norm="ortho"
-    )
+    melCepstrum1 = scipy.fftpack.dct(log_mel_spectrogram, axis=0, type=2, norm="ortho")
 
     y = np.random.random((30,))
     # print(y, np.shape(y))
@@ -543,18 +531,14 @@ if __name__ == "__main__":
     # print(y_mfcc, np.shape(y_mfcc))
 
     mel_spectrogram = librosa.feature.melspectrogram(y=y)
-    print(
-        mel_spectrogram, np.shape(mel_spectrogram)
-    )  # dim = [n_mels, n_frames]
+    print(mel_spectrogram, np.shape(mel_spectrogram))  # dim = [n_mels, n_frames]
 
     log_mel_spectrogram = librosa.core.power_to_db(mel_spectrogram)
     print(
         log_mel_spectrogram, np.shape(log_mel_spectrogram)
     )  # dim = [n_mels, n_frames]
 
-    melCepstrum2 = scipy.fftpack.dct(
-        log_mel_spectrogram, axis=0, type=2, norm="ortho"
-    )
+    melCepstrum2 = scipy.fftpack.dct(log_mel_spectrogram, axis=0, type=2, norm="ortho")
     print(melCepstrum2, np.shape(melCepstrum2))  # dim = [n_mels, n_frames]
 
     res = melcd(melCepstrum1.transpose(1, 0), melCepstrum2.transpose(1, 0))
@@ -567,9 +551,7 @@ if __name__ == "__main__":
 
     f0_synthesis = F0_detection_wav(path_synthesis)
 
-    f0_rmse, vuv_error, f0_corr = F0_VUV_distortion(
-        [f0_ground_truth], [f0_synthesis]
-    )
+    f0_rmse, vuv_error, f0_corr = F0_VUV_distortion([f0_ground_truth], [f0_synthesis])
     print("with raw_f0:")
     print(
         "F0:- RMSE: {:.4f} Hz; CORR:{:.4f}; VUV: {:.4f}%".format(
