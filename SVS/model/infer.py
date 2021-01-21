@@ -122,9 +122,7 @@ def infer(args):
             enc_normalize_before=args.enc_normalize_before,
             enc_concat_after=args.enc_concat_after,
             enc_positionwise_layer_type=args.enc_positionwise_layer_type,
-            enc_positionwise_conv_kernel_size=(
-                args.enc_positionwise_conv_kernel_size
-            ),
+            enc_positionwise_conv_kernel_size=(args.enc_positionwise_conv_kernel_size),
             enc_macaron_style=args.enc_macaron_style,
             enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
             enc_selfattention_layer_type=args.enc_selfattention_layer_type,
@@ -158,9 +156,7 @@ def infer(args):
             enc_normalize_before=args.enc_normalize_before,
             enc_concat_after=args.enc_concat_after,
             enc_positionwise_layer_type=args.enc_positionwise_layer_type,
-            enc_positionwise_conv_kernel_size=(
-                args.enc_positionwise_conv_kernel_size
-            ),
+            enc_positionwise_conv_kernel_size=(args.enc_positionwise_conv_kernel_size),
             enc_macaron_style=args.enc_macaron_style,
             enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
             enc_selfattention_layer_type=args.enc_selfattention_layer_type,
@@ -179,9 +175,7 @@ def infer(args):
             dec_normalize_before=args.dec_normalize_before,
             dec_concat_after=args.dec_concat_after,
             dec_positionwise_layer_type=args.dec_positionwise_layer_type,
-            dec_positionwise_conv_kernel_size=(
-                args.dec_positionwise_conv_kernel_size
-            ),
+            dec_positionwise_conv_kernel_size=(args.dec_positionwise_conv_kernel_size),
             dec_macaron_style=args.dec_macaron_style,
             dec_pos_enc_layer_type=args.dec_pos_enc_layer_type,
             dec_selfattention_layer_type=args.dec_selfattention_layer_type,
@@ -194,9 +188,7 @@ def infer(args):
     else:
         raise ValueError("Not Support Model Type %s" % args.model_type)
     logging.info(f"{model}")
-    logging.info(
-        f"The model has {count_parameters(model):,} trainable parameters"
-    )
+    logging.info(f"The model has {count_parameters(model):,} trainable parameters")
 
     # Load model weights
     logging.info(f"Loading pretrained weights from {args.model_file}")
@@ -277,10 +269,7 @@ def infer(args):
     if args.n_mels > 0:
         mel_losses = AverageMeter()
         mcd_metric = AverageMeter()
-        f0_distortion_metric, vuv_error_metric = (
-            AverageMeter(),
-            AverageMeter(),
-        )
+        f0_distortion_metric, vuv_error_metric = (AverageMeter(), AverageMeter())
         if args.double_mel_loss:
             double_mel_losses = AverageMeter()
     model.eval()
@@ -313,25 +302,12 @@ def infer(args):
             mode="MOL",
         ).to(device)
 
-        voc_model.load(
-            "./model_weights/wavernn_voc_weights/latest_weights.pyt"
-        )
+        voc_model.load("./model_weights/wavernn_voc_weights/latest_weights.pyt")
 
     with torch.no_grad():
         for (
             step,
-            (
-                phone,
-                beat,
-                pitch,
-                spec,
-                real,
-                imag,
-                length,
-                chars,
-                char_len_list,
-                mel,
-            ),
+            (phone, beat, pitch, spec, real, imag, length, chars, char_len_list, mel),
         ) in enumerate(test_loader, 1):
             # if step >= args.decode_sample:
             #     break
@@ -358,49 +334,25 @@ def infer(args):
 
             if args.model_type == "GLU_Transformer":
                 output, att, output_mel, output_mel2 = model(
-                    chars,
-                    phone,
-                    pitch,
-                    beat,
-                    pos_char=char_len_list,
-                    pos_spec=length,
+                    chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
                 )
             elif args.model_type == "LSTM":
-                output, hidden, output_mel, output_mel2 = model(
-                    phone, pitch, beat
-                )
+                output, hidden, output_mel, output_mel2 = model(phone, pitch, beat)
                 att = None
             elif args.model_type == "GRU_gs":
-                output, att, output_mel = model(
-                    spec, phone, pitch, beat, length, args
-                )
+                output, att, output_mel = model(spec, phone, pitch, beat, length, args)
                 att = None
             elif args.model_type == "PureTransformer":
                 output, att, output_mel, output_mel2 = model(
-                    chars,
-                    phone,
-                    pitch,
-                    beat,
-                    pos_char=char_len_list,
-                    pos_spec=length,
+                    chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
                 )
             elif args.model_type == "Conformer":
                 output, att, output_mel, output_mel2 = model(
-                    chars,
-                    phone,
-                    pitch,
-                    beat,
-                    pos_char=char_len_list,
-                    pos_spec=length,
+                    chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
                 )
             elif args.model_type == "Comformer_full":
                 output, att, output_mel, output_mel2 = model(
-                    chars,
-                    phone,
-                    pitch,
-                    beat,
-                    pos_char=char_len_list,
-                    pos_spec=length,
+                    chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
                 )
 
             spec_origin = spec.clone()
@@ -429,10 +381,7 @@ def infer(args):
                 output, _ = sepc_normalizer.inverse(output, length)
                 # spec,_ = sepc_normalizer.inverse(spec,length)
 
-            (
-                mcd_value,
-                length_sum,
-            ) = Metrics.Calculate_melcd_fromLinearSpectrum(
+            (mcd_value, length_sum) = Metrics.Calculate_melcd_fromLinearSpectrum(
                 output, spec_origin, length, args
             )
             (
@@ -453,9 +402,7 @@ def infer(args):
             )
 
             mcd_metric.update(mcd_value, length_sum)
-            f0_distortion_metric.update(
-                f0_distortion_value, voiced_frame_number_step
-            )
+            f0_distortion_metric.update(f0_distortion_value, voiced_frame_number_step)
             vuv_error_metric.update(vuv_error_value, frame_number_step)
 
             if step % 1 == 0:
@@ -491,9 +438,7 @@ def infer(args):
                 if args.n_mels > 0:
                     out_log += " mel_loss {:.4f}; ".format(mel_losses.avg)
                     if args.double_mel_loss:
-                        out_log += " dmel_loss {:.4f}; ".format(
-                            double_mel_losses.avg
-                        )
+                        out_log += " dmel_loss {:.4f}; ".format(double_mel_losses.avg)
                 end = time.time()
                 logging.info(f"{out_log} -- sum_time: {(end - start_t_test)}s")
 
@@ -512,9 +457,7 @@ def infer(args):
     out_log += (
         " f0_rmse_value {:.4f} Hz, "
         "vuv_error_value {:.4f} %, F0_CORR {:.4f}; ".format(
-            np.sqrt(f0_distortion_metric.avg),
-            vuv_error_metric.avg * 100,
-            f0_corr,
+            np.sqrt(f0_distortion_metric.avg), vuv_error_metric.avg * 100, f0_corr
         )
     )
     logging.info("{} time: {:.2f}s".format(out_log, end_t_test - start_t_test))

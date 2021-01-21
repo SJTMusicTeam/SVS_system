@@ -55,9 +55,7 @@ def DTW(template, sample, new_Map, name):
             if j >= 2 and template[j] != "sil":
                 if before[j] < before[j - 1] and before[j] < before[j - 2]:
                     delta = 0
-                elif (
-                    before[j - 1] < before[j] and before[j - 1] < before[j - 2]
-                ):
+                elif before[j - 1] < before[j] and before[j - 1] < before[j - 2]:
                     delta = 1
                 else:
                     delta = 2

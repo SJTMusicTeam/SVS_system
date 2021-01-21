@@ -34,12 +34,7 @@ class ConvolutionModule(nn.Module):
         assert (kernel_size - 1) % 2 == 0
 
         self.pointwise_conv1 = nn.Conv1d(
-            channels,
-            2 * channels,
-            kernel_size=1,
-            stride=1,
-            padding=0,
-            bias=bias,
+            channels, 2 * channels, kernel_size=1, stride=1, padding=0, bias=bias
         )
         self.depthwise_conv = nn.Conv1d(
             channels,
@@ -137,9 +132,7 @@ class EncoderLayer(nn.Module):
             self.ff_scale = 1.0
         if self.conv_module is not None:
             self.norm_conv = LayerNorm(size)  # for the CNN module
-            self.norm_final = LayerNorm(
-                size
-            )  # for the final output of the block
+            self.norm_final = LayerNorm(size)  # for the final output of the block
         self.dropout = nn.Dropout(dropout_rate)
         self.size = size
         self.normalize_before = normalize_before
@@ -175,9 +168,7 @@ class EncoderLayer(nn.Module):
             residual = x
             if self.normalize_before:
                 x = self.norm_ff_macaron(x)
-            x = residual + self.ff_scale * self.dropout(
-                self.feed_forward_macaron(x)
-            )
+            x = residual + self.ff_scale * self.dropout(self.feed_forward_macaron(x))
             if not self.normalize_before:
                 x = self.norm_ff_macaron(x)
 
@@ -400,9 +391,7 @@ class MultiHeadedAttention(nn.Module):
             # print(f"mask: {numpy.shape(mask)}")
             mask = mask.unsqueeze(1).eq(0)  # (batch, 1, *, time2)
             min_value = float(
-                numpy.finfo(
-                    torch.tensor(0, dtype=scores.dtype).numpy().dtype
-                ).min
+                numpy.finfo(torch.tensor(0, dtype=scores.dtype).numpy().dtype).min
             )
 
             # print(f"scores: {numpy.shape(scores)},
@@ -413,9 +402,7 @@ class MultiHeadedAttention(nn.Module):
                 mask, 0.0
             )  # (batch, head, time1, time2)
         else:
-            self.attn = torch.softmax(
-                scores, dim=-1
-            )  # (batch, head, time1, time2)
+            self.attn = torch.softmax(scores, dim=-1)  # (batch, head, time1, time2)
 
         p_attn = self.dropout(self.attn)
         x = torch.matmul(p_attn, value)  # (batch, head, time1, d_k)
@@ -486,9 +473,7 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         Returns:
             torch.Tensor: Output tensor.
         """
-        zero_pad = torch.zeros(
-            (*x.size()[:3], 1), device=x.device, dtype=x.dtype
-        )
+        zero_pad = torch.zeros((*x.size()[:3], 1), device=x.device, dtype=x.dtype)
         x_padded = torch.cat([zero_pad, x], dim=-1)
 
         x_padded = x_padded.view(*x.size()[:2], x.size(3) + 1, x.size(2))
@@ -600,9 +585,7 @@ class PositionalEncoding(torch.nn.Module):
                 x.size(1) - 1, -1, -1.0, dtype=torch.float32
             ).unsqueeze(1)
         else:
-            position = torch.arange(
-                0, x.size(1), dtype=torch.float32
-            ).unsqueeze(1)
+            position = torch.arange(0, x.size(1), dtype=torch.float32).unsqueeze(1)
         div_term = torch.exp(
             torch.arange(0, self.d_model, 2, dtype=torch.float32)
             * -(math.log(10000.0) / self.d_model)
@@ -637,9 +620,7 @@ class ScaledPositionalEncoding(PositionalEncoding):
 
     def __init__(self, d_model, dropout_rate, max_len=5000):
         """Initialize class."""
-        super().__init__(
-            d_model=d_model, dropout_rate=dropout_rate, max_len=max_len
-        )
+        super().__init__(d_model=d_model, dropout_rate=dropout_rate, max_len=max_len)
         self.alpha = torch.nn.Parameter(torch.tensor(1.0))
 
     def reset_parameters(self):
@@ -711,9 +692,7 @@ class LayerNorm(torch.nn.LayerNorm):
         """
         if self.dim == -1:
             return super(LayerNorm, self).forward(x)
-        return (
-            super(LayerNorm, self).forward(x.transpose(1, -1)).transpose(1, -1)
-        )
+        return super(LayerNorm, self).forward(x.transpose(1, -1)).transpose(1, -1)
 
 
 class MultiLayeredConv1d(torch.nn.Module):
@@ -813,9 +792,7 @@ class PositionwiseFeedForward(torch.nn.Module):
         dropout_rate (float): Dropout rate.
     """
 
-    def __init__(
-        self, idim, hidden_units, dropout_rate, activation=torch.nn.ReLU()
-    ):
+    def __init__(self, idim, hidden_units, dropout_rate, activation=torch.nn.ReLU()):
         """Construct an PositionwiseFeedForward object."""
         super(PositionwiseFeedForward, self).__init__()
         self.w_1 = torch.nn.Linear(idim, hidden_units)
@@ -871,9 +848,7 @@ class Conv2dSubsampling(torch.nn.Module):
         )
         self.out = torch.nn.Sequential(
             torch.nn.Linear(odim * (((idim - 1) // 2 - 1) // 2), odim),
-            pos_enc
-            if pos_enc is not None
-            else PositionalEncoding(odim, dropout_rate),
+            pos_enc if pos_enc is not None else PositionalEncoding(odim, dropout_rate),
         )
 
     def forward(self, x, x_mask):
@@ -903,9 +878,7 @@ class Conv2dSubsampling(torch.nn.Module):
             return the positioning encoding.
         """
         if key != -1:
-            raise NotImplementedError(
-                "Support only `-1` (for `reset_parameters`)."
-            )
+            raise NotImplementedError("Support only `-1` (for `reset_parameters`).")
         return self.out[key]
 
 
@@ -999,15 +972,12 @@ class Conformer_block(torch.nn.Module):
             self.embed = VGG2L(idim, attention_dim)
         elif input_layer == "embed":
             self.embed = torch.nn.Sequential(
-                torch.nn.Embedding(
-                    idim, attention_dim, padding_idx=padding_idx
-                ),
+                torch.nn.Embedding(idim, attention_dim, padding_idx=padding_idx),
                 pos_enc_class(attention_dim, positional_dropout_rate),
             )
         elif isinstance(input_layer, torch.nn.Module):
             self.embed = torch.nn.Sequential(
-                input_layer,
-                pos_enc_class(attention_dim, positional_dropout_rate),
+                input_layer, pos_enc_class(attention_dim, positional_dropout_rate)
             )
         elif input_layer is None:
             self.embed = torch.nn.Sequential(
@@ -1035,9 +1005,7 @@ class Conformer_block(torch.nn.Module):
                 attention_dropout_rate,
             )
         else:
-            raise ValueError(
-                "unknown encoder_attn_layer: " + selfattention_layer_type
-            )
+            raise ValueError("unknown encoder_attn_layer: " + selfattention_layer_type)
 
         # feed-forward module definition
         if positionwise_layer_type == "linear":
@@ -1077,12 +1045,8 @@ class Conformer_block(torch.nn.Module):
                 attention_dim,
                 encoder_selfattn_layer(*encoder_selfattn_layer_args),
                 positionwise_layer(*positionwise_layer_args),
-                positionwise_layer(*positionwise_layer_args)
-                if macaron_style
-                else None,
-                convolution_layer(*convolution_layer_args)
-                if use_cnn_module
-                else None,
+                positionwise_layer(*positionwise_layer_args) if macaron_style else None,
+                convolution_layer(*convolution_layer_args) if use_cnn_module else None,
                 dropout_rate,
                 normalize_before,
                 concat_after,

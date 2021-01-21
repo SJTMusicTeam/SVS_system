@@ -28,11 +28,7 @@ def get_free_gpus():
         sorted list of GPUs which have no running process.
     """
     p = subprocess.Popen(
-        [
-            "nvidia-smi",
-            "--query-gpu=index,gpu_bus_id",
-            "--format=csv,noheader",
-        ],
+        ["nvidia-smi", "--query-gpu=index,gpu_bus_id", "--format=csv,noheader"],
         stdout=subprocess.PIPE,
     )
     stdout, stderr = p.communicate()
@@ -44,11 +40,7 @@ def get_free_gpus():
         gpus[busid] = int(idx)
     # print(gpus)
     p = subprocess.Popen(
-        [
-            "nvidia-smi",
-            "--query-compute-apps=pid,gpu_bus_id",
-            "--format=csv,noheader",
-        ],
+        ["nvidia-smi", "--query-compute-apps=pid,gpu_bus_id", "--format=csv,noheader"],
         stdout=subprocess.PIPE,
     )
     stdout, stderr = p.communicate()

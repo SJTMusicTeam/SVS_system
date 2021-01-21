@@ -23,14 +23,9 @@ from SVS.model.infer import infer
 
 parser = jsonargparse.ArgumentParser(description="SVS training")
 parser.add_argument(
-    "-c",
-    "--config",
-    help="config file path",
-    action=jsonargparse.ActionConfigFile,
+    "-c", "--config", help="config file path", action=jsonargparse.ActionConfigFile
 )
-parser.add_argument(
-    "--test_align", help="alignment data dir used for validation."
-)
+parser.add_argument("--test_align", help="alignment data dir used for validation.")
 parser.add_argument("--test_pitch", help="pitch data dir used for validation.")
 parser.add_argument("--test_wav", help="wave data dir used for validation")
 parser.add_argument("--model_file", help="model file for prediction.")
@@ -43,20 +38,13 @@ parser.add_argument(
     help="Type of model (New_Transformer or GLU_Transformer or LSTM)",
 )
 parser.add_argument(
-    "--num_frames",
-    default=500,
-    type=int,
-    help="number of frames in one utterance",
+    "--num_frames", default=500, type=int, help="number of frames in one utterance"
 )
 parser.add_argument(
     "--char_max_len", default=100, type=int, help="max length for character"
 )
-parser.add_argument(
-    "--num_workers", default=4, type=int, help="number of cpu workers"
-)
-parser.add_argument(
-    "--decode_sample", default=-1, type=int, help="samples to decode"
-)
+parser.add_argument("--num_workers", default=4, type=int, help="number of cpu workers")
+parser.add_argument("--decode_sample", default=-1, type=int, help="samples to decode")
 parser.add_argument("--frame_length", default=0.06, type=float)
 parser.add_argument("--frame_shift", default=0.03, type=float)
 parser.add_argument("--sampling_rate", default=44100, type=int)
@@ -80,19 +68,14 @@ parser.add_argument("--dec_nhead", default=4, type=int)
 parser.add_argument("--local_gaussian", default=False, type=bool)
 parser.add_argument("--seed", default=666, type=int)
 parser.add_argument(
-    "--use_tfb",
-    dest="use_tfboard",
-    help="whether use tensorboard",
-    action="store_true",
+    "--use_tfb", dest="use_tfboard", help="whether use tensorboard", action="store_true"
 )
 parser.add_argument("--loss", default="l1", type=str)
 parser.add_argument("--perceptual_loss", default=-1, type=float)
 parser.add_argument("--use_pos_enc", default=0, type=int)
 parser.add_argument("--gradient_accumulation_steps", default=1, type=int)
 parser.add_argument("--use_asr_post", default=False, type=bool)
-parser.add_argument(
-    "--sing_quality", default="conf/sing_quality.csv", type=str
-)
+parser.add_argument("--sing_quality", default="conf/sing_quality.csv", type=str)
 parser.add_argument("--standard", default=-1, type=int)
 
 parser.add_argument("--stats_file", default="", type=str)
@@ -115,15 +98,11 @@ parser.add_argument("--enc_attention_dropout_rate", default=0.0, type=float)
 parser.add_argument("--enc_input_layer", default="conv2d", type=str)
 parser.add_argument("--enc_normalize_before", default=True, type=bool)
 parser.add_argument("--enc_concat_after", default=False, type=bool)
-parser.add_argument(
-    "--enc_positionwise_layer_type", default="linear", type=str
-)
+parser.add_argument("--enc_positionwise_layer_type", default="linear", type=str)
 parser.add_argument("--enc_positionwise_conv_kernel_size", default=1, type=int)
 parser.add_argument("--enc_macaron_style", default=False, type=bool)
 parser.add_argument("--enc_pos_enc_layer_type", default="abs_pos", type=str)
-parser.add_argument(
-    "--enc_selfattention_layer_type", default="selfattn", type=str
-)
+parser.add_argument("--enc_selfattention_layer_type", default="selfattn", type=str)
 parser.add_argument("--enc_activation_type", default="swish", type=str)
 parser.add_argument("--enc_use_cnn_module", default=False, type=bool)
 parser.add_argument("--enc_cnn_module_kernel", default=31, type=int)

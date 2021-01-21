@@ -22,10 +22,7 @@ class UtteranceMVN(nn.Module):
     """UtteranceMVN."""
 
     def __init__(
-        self,
-        norm_means: bool = True,
-        norm_vars: bool = True,
-        eps: float = 1.0e-20,
+        self, norm_means: bool = True, norm_vars: bool = True, eps: float = 1.0e-20
     ):
         """init."""
         super().__init__()
@@ -48,11 +45,7 @@ class UtteranceMVN(nn.Module):
 
         """
         return utterance_mvn(
-            x,
-            ilens,
-            norm_means=self.norm_means,
-            norm_vars=self.norm_vars,
-            eps=self.eps,
+            x, ilens, norm_means=self.norm_means, norm_vars=self.norm_vars, eps=self.eps
         )
 
 
@@ -76,9 +69,7 @@ def utterance_mvn(
         ilens = x.new_full([x.size(0)], x.size(1))
     else:
         ilens, _ = ilens.max(1)
-    ilens_ = ilens.to(x.device, x.dtype).view(
-        -1, *[1 for _ in range(x.dim() - 1)]
-    )
+    ilens_ = ilens.to(x.device, x.dtype).view(-1, *[1 for _ in range(x.dim() - 1)])
     # Zero padding
     if x.is_leaf and x.requires_grad:
         x = x.masked_fill(make_pad_mask(ilens, x, 1), 0.0)
