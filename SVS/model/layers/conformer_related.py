@@ -52,12 +52,7 @@ class ConvolutionModule(nn.Module):
         )
         self.norm = nn.BatchNorm1d(channels)
         self.pointwise_conv2 = nn.Conv1d(
-            channels,
-            channels,
-            kernel_size=1,
-            stride=1,
-            padding=0,
-            bias=bias,
+            channels, channels, kernel_size=1, stride=1, padding=0, bias=bias
         )
         self.activation = activation
 
@@ -1074,11 +1069,7 @@ class Conformer_block(torch.nn.Module):
 
         # convolution module definition
         convolution_layer = ConvolutionModule
-        convolution_layer_args = (
-            attention_dim,
-            cnn_module_kernel,
-            activation,
-        )
+        convolution_layer_args = (attention_dim, cnn_module_kernel, activation)
 
         self.encoders = repeat(
             num_blocks,

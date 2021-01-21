@@ -316,10 +316,7 @@ class SVSDataset(Dataset):
             print(
                 "spectrum_size: {}, alignment_size: {}, "
                 "pitch_size: {}, beat_size: {}".format(
-                    np.shape(spectrogram)[0],
-                    len(phone),
-                    len(pitch),
-                    len(beat),
+                    np.shape(spectrogram)[0], len(phone), len(pitch), len(beat)
                 )
             )
         assert np.abs(len(phone) - np.shape(spectrogram)[0]) < 5

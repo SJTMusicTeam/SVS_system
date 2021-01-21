@@ -57,10 +57,7 @@ if __name__ == "__main__":
         default="",
         help="Initialize the model from given file",
     )
-    parser.add_argument(
-        "--pretrain_encoder",
-        default="",
-    )
+    parser.add_argument("--pretrain_encoder", default="")
     parser.add_argument(
         "--resume",
         type=bool,
