@@ -6,8 +6,8 @@
 . ./cmd.sh || exit 1;
 
 
-stage=2
-stop_stage=2
+stage=0
+stop_stage=100
 ngpu=0
 raw_data_dir=downloads
 expdir=exp/rnn
