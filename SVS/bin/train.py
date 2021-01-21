@@ -28,19 +28,11 @@ if __name__ == "__main__":
         help="config file path",
         action=jsonargparse.ActionConfigFile,
     )
-    parser.add_argument(
-        "--train_align", help="alignment data dir used for training."
-    )
-    parser.add_argument(
-        "--train_pitch", help="pitch data dir used for training."
-    )
+    parser.add_argument("--train_align", help="alignment data dir used for training.")
+    parser.add_argument("--train_pitch", help="pitch data dir used for training.")
     parser.add_argument("--train_wav", help="wave data dir used for training")
-    parser.add_argument(
-        "--val_align", help="alignment data dir used for validation."
-    )
-    parser.add_argument(
-        "--val_pitch", help="pitch data dir used for validation."
-    )
+    parser.add_argument("--val_align", help="alignment data dir used for validation.")
+    parser.add_argument("--val_pitch", help="pitch data dir used for validation.")
     parser.add_argument("--val_wav", help="wave data dir used for validation")
     parser.add_argument(
         "--model_save_dir",
@@ -143,9 +135,7 @@ if __name__ == "__main__":
     parser.add_argument("--gradient_accumulation_steps", default=1, type=int)
     parser.add_argument("--mask_free", default=False, type=bool)
     parser.add_argument("--use_asr_post", default=False, type=bool)
-    parser.add_argument(
-        "--sing_quality", default="conf/sing_quality.csv", type=str
-    )
+    parser.add_argument("--sing_quality", default="conf/sing_quality.csv", type=str)
     parser.add_argument("--standard", default=-1, type=int)
     parser.add_argument("--train_step_log", default=20, type=int)
     parser.add_argument("--dev_step_log", default=2, type=int)
@@ -171,28 +161,16 @@ if __name__ == "__main__":
     parser.add_argument("--enc_linear_units", default=2048, type=int)
     parser.add_argument("--enc_num_blocks", default=6, type=int)
     parser.add_argument("--enc_dropout_rate", default=0.1, type=float)
-    parser.add_argument(
-        "--enc_positional_dropout_rate", default=0.1, type=float
-    )
-    parser.add_argument(
-        "--enc_attention_dropout_rate", default=0.0, type=float
-    )
+    parser.add_argument("--enc_positional_dropout_rate", default=0.1, type=float)
+    parser.add_argument("--enc_attention_dropout_rate", default=0.0, type=float)
     parser.add_argument("--enc_input_layer", default="conv2d", type=str)
     parser.add_argument("--enc_normalize_before", default=True, type=bool)
     parser.add_argument("--enc_concat_after", default=False, type=bool)
-    parser.add_argument(
-        "--enc_positionwise_layer_type", default="linear", type=str
-    )
-    parser.add_argument(
-        "--enc_positionwise_conv_kernel_size", default=1, type=int
-    )
+    parser.add_argument("--enc_positionwise_layer_type", default="linear", type=str)
+    parser.add_argument("--enc_positionwise_conv_kernel_size", default=1, type=int)
     parser.add_argument("--enc_macaron_style", default=False, type=bool)
-    parser.add_argument(
-        "--enc_pos_enc_layer_type", default="abs_pos", type=str
-    )
-    parser.add_argument(
-        "--enc_selfattention_layer_type", default="selfattn", type=str
-    )
+    parser.add_argument("--enc_pos_enc_layer_type", default="abs_pos", type=str)
+    parser.add_argument("--enc_selfattention_layer_type", default="selfattn", type=str)
     parser.add_argument("--enc_activation_type", default="swish", type=str)
     parser.add_argument("--enc_use_cnn_module", default=False, type=bool)
     parser.add_argument("--enc_cnn_module_kernel", default=31, type=int)
@@ -203,28 +181,16 @@ if __name__ == "__main__":
     parser.add_argument("--dec_linear_units", default=2048, type=int)
     parser.add_argument("--dec_num_blocks", default=6, type=int)
     parser.add_argument("--dec_dropout_rate", default=0.1, type=float)
-    parser.add_argument(
-        "--dec_positional_dropout_rate", default=0.1, type=float
-    )
-    parser.add_argument(
-        "--dec_attention_dropout_rate", default=0.0, type=float
-    )
+    parser.add_argument("--dec_positional_dropout_rate", default=0.1, type=float)
+    parser.add_argument("--dec_attention_dropout_rate", default=0.0, type=float)
     parser.add_argument("--dec_input_layer", default="conv2d", type=str)
     parser.add_argument("--dec_normalize_before", default=True, type=bool)
     parser.add_argument("--dec_concat_after", default=False, type=bool)
-    parser.add_argument(
-        "--dec_positionwise_layer_type", default="linear", type=str
-    )
-    parser.add_argument(
-        "--dec_positionwise_conv_kernel_size", default=1, type=int
-    )
+    parser.add_argument("--dec_positionwise_layer_type", default="linear", type=str)
+    parser.add_argument("--dec_positionwise_conv_kernel_size", default=1, type=int)
     parser.add_argument("--dec_macaron_style", default=False, type=bool)
-    parser.add_argument(
-        "--dec_pos_enc_layer_type", default="abs_pos", type=str
-    )
-    parser.add_argument(
-        "--dec_selfattention_layer_type", default="selfattn", type=str
-    )
+    parser.add_argument("--dec_pos_enc_layer_type", default="abs_pos", type=str)
+    parser.add_argument("--dec_selfattention_layer_type", default="selfattn", type=str)
     parser.add_argument("--dec_activation_type", default="swish", type=str)
     parser.add_argument("--dec_use_cnn_module", default=False, type=bool)
     parser.add_argument("--dec_cnn_module_kernel", default=31, type=int)

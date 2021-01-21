@@ -61,9 +61,7 @@ for root, dirs, files in os.walk(args.datadir):
             # for beat in beats:
             #    file.write(str(beat)+' ')
             # file.close()
-            np.save(
-                (os.path.join(args.outdir, name)) + "_beats", np.array(beats)
-            )
+            np.save((os.path.join(args.outdir, name)) + "_beats", np.array(beats))
 
             """extract pitches"""
             pitches, magnitudes = librosa.piptrack(
