@@ -10,7 +10,7 @@ stage=2
 stop_stage=2
 ngpu=1
 raw_data_dir=downloads
-expdir=exp/rnn
+expdir=exp/rnn_norm_perp
 
 # Set bash to 'debug' mode, it will exit on :
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
@@ -26,8 +26,8 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
   echo " Stage0: download data "
   echo =======================
   mkdir -p ${raw_data_dir}
-  # download kiritan dataset from https://zunko.jp/kiridev/login.php, requires a Facebook account due to licensing issues
-  # put "kiritan_singing.zip" under ${raw_data_dir}
+  echo "please download kiritan dataset from https://zunko.jp/kiridev/login.php, requires a Facebook account due to licensing issues"
+  echo "put "kiritan_singing.zip" under ${raw_data_dir}"
   unzip -o ${raw_data_dir}/kiritan_singing.zip -d ${raw_data_dir}
 fi
 
@@ -49,7 +49,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 
   ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
   train.py \
-    -c conf/train_rnn.yaml \
+    -c conf/train_rnn_norm_perp.yaml \
     --collect_stats True \
     --model_save_dir ${expdir} \
     --stats_file ${expdir}/feats_stats.npz \
@@ -63,9 +63,9 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   echo " Stage3: train "
   echo ===============
 
-  ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_train.log \
+  ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
   train.py \
-    -c conf/train_rnn.yaml \
+    -c conf/train_rnn_norm_perp.yaml \
     --model_save_dir ${expdir} \
     --stats_file ${expdir}/feats_stats.npz \
     --stats_mel_file ${expdir}/feats_mel_stats.npz

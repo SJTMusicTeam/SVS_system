@@ -29,7 +29,7 @@ mkdir -p ${data}/pitch_beat_extraction/${test}
 mkdir -p ${data}/pitch_beat_extraction/${train}
 mv ${data}/pitch_beat_extraction/30 ${data}/pitch_beat_extraction/${dev}/
 mv ${data}/pitch_beat_extraction/31 ${data}/pitch_beat_extraction/${test}/
-mv ${data}/pitch_beat_extraction/{1..29} ${data}/pitch_beat_extraction/${train}/
+mv ${data}/pitch_beat_extraction/{1..50} ${data}/pitch_beat_extraction/${train}/
 
 # process wav split
 mkdir -p ${data}/wav_info/${dev}
@@ -37,4 +37,4 @@ mkdir -p ${data}/wav_info/${test}
 mkdir -p ${data}/wav_info/${train}
 mv ${data}/wav_info/30 ${data}/wav_info/${dev}/
 mv ${data}/wav_info/31 ${data}/wav_info/${test}/
-mv ${data}/wav_info/{1..29} ${data}/wav_info/${train}/
+mv ${data}/wav_info/{1..50} ${data}/wav_info/${train}/
