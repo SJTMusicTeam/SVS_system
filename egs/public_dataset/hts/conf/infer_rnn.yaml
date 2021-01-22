@@ -15,8 +15,8 @@ frame_shift: 0.03
 model_type: LSTM
 hidden_size: 512
 embedding_size: 512
-num_rnn_layers: 2
+num_rnn_layers: 3
 num_frames: 500
-char_max_len: 80
+char_max_len: 100
 phone_size: 68
 seed: 777
