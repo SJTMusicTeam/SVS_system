@@ -9,6 +9,7 @@
 stage=0
 stop_stage=100
 ngpu=1
+expdir=exp/rnn
 
 # Set bash to 'debug' mode, it will exit on :
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
@@ -42,8 +43,14 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   echo =======================
   echo " Stage2: collect_stats "
   echo =======================
-
-  ${train_cmd} train.py --collect_stats=True -c conf/train_rnn.yaml
+  
+  ${train_cmd} --gpu ${ngpu} ${expdir}/stats.log \
+  train.py \
+    -c conf/train_rnn.yaml \
+    --collect_stats True \
+    --model_save_dir ${expdir} \
+    --stats_file ${expdir}/feats_stats.npz \
+    --stats_mel_file ${expdir}/feats_mel_stats.npz 
   
 fi
 
@@ -53,7 +60,12 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   echo " Stage3: train "
   echo ===============
 
-  ${cuda_cmd} -gpu ${ngpu} train.py -c conf/train_rnn.yaml
+  ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_train.log \
+  train.py \
+    -c conf/train_rnn.yaml \
+    --model_save_dir ${expdir} \
+    --stats_file ${expdir}/feats_stats.npz \
+    --stats_mel_file ${expdir}/feats_mel_stats.npz
 
 fi
 
