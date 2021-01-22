@@ -79,7 +79,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   echo ===============
 
   ${cuda_cmd} -gpu ${ngpu} ${expdir}/svs_infer.log \
-  infer.py -c conf/infer.yaml
+  infer.py -c conf/infer_rnn.yaml
 
 fi
 
