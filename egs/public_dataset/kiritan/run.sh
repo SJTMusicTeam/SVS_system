@@ -6,8 +6,8 @@
 . ./cmd.sh || exit 1;
 
 
-stage=2
-stop_stage=2
+stage=0
+stop_stage=100
 ngpu=1
 raw_data_dir=downloads
 expdir=exp/rnn_norm_perp
@@ -16,9 +16,9 @@ expdir=exp/rnn_norm_perp
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
 set -e
 set -u
-set -o pipefail
+# set -o pipefail
 
-./utils/parse_options.sh || exit 1;
+# ./utils/parse_options.sh || exit 1;
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then 
   # Stage0: download data
@@ -27,7 +27,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
   echo =======================
   mkdir -p ${raw_data_dir}
   echo "please download kiritan dataset from https://zunko.jp/kiridev/login.php, requires a Facebook account due to licensing issues"
-  echo "put "kiritan_singing.zip" under ${raw_data_dir}"
+  echo "put kiritan_singing.zip under ${raw_data_dir}"
   unzip -o ${raw_data_dir}/kiritan_singing.zip -d ${raw_data_dir}
 fi
 

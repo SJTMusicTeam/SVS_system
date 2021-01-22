@@ -1,17 +1,17 @@
 # public kiritan data
-test_align: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/alignment/dev
-test_pitch: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/pitch_beat_extraction/dev
-test_wav: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info/dev
+test_align: downloads/kiritan_data/alignment/test
+test_pitch: downloads/kiritan_data/pitch_beat_extraction/test
+test_wav: downloads/kiritan_data/wav_info/test
 
 # model_file: exp/10_6_rnn_norm/epoch_91.pth.tar
 # stats_file: exp/10_6_rnn_norm/feats_stats.npz
 # stats_mel_file: exp/10_6_rnn_norm/feats_mel_stats.npz
 
-model_file: /data1/gs/jiatong/SVS_system/egs/public_dataset/kiritan/exp/10_6_rnn_norm/epoch_107.pth.tar
-stats_file: /data1/gs/jiatong/SVS_system/egs/public_dataset/kiritan/exp/10_6_rnn_norm/feats_stats.npz
-stats_mel_file: /data1/gs/jiatong/SVS_system/egs/public_dataset/kiritan/exp/10_6_rnn_norm/feats_mel_stats.npz
+model_file: exp/10_6_rnn_norm/epoch_107.pth.tar
+stats_file: exp/10_6_rnn_norm/feats_stats.npz
+stats_mel_file: exp/10_6_rnn_norm/feats_mel_stats.npz
 
-prediction_path: /data1/gs/jiatong/SVS_system/egs/public_dataset/kiritan/exp/10_6_rnn_norm/result_cbhg_epoch_107
+prediction_path: exp/10_6_rnn_norm/result_cbhg_epoch_107
 
 # gpu related
 auto_select_gpu: False
