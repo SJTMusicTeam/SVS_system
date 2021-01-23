@@ -18,7 +18,7 @@ set -e
 set -u
 set -o pipefail
 
-./utils/parse_options.sh || exit 1;
+# ./utils/parse_options.sh || exit 1;
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then 
   # Stage0: download data
