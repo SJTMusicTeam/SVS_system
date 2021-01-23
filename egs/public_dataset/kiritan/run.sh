@@ -16,9 +16,9 @@ expdir=exp/rnn_norm_perp
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
 set -e
 set -u
-# set -o pipefail
+set -o pipefail
 
-# ./utils/parse_options.sh || exit 1;
+./utils/parse_options.sh || exit 1;
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then 
   # Stage0: download data
