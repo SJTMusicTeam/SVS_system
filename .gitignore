@@ -25,6 +25,8 @@ check_shellcheck*
 *.vim
 *.swp
 *.log
+*.ark
+*.npy
 
 # recipe related
 egs*/*/*/data*

@@ -18,7 +18,7 @@ set -e
 set -u
 set -o pipefail
 
-# ./utils/parse_options.sh || exit 1;
+./utils/parse_options.sh || exit 1;
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then 
   # Stage0: download data
@@ -78,6 +78,8 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   echo " Stage3: infer "
   echo ===============
 
-  ${cuda_cmd} -gpu ${ngpu} infer.py -c conf/infer.yaml
+  ${cuda_cmd} -gpu ${ngpu} ${expdir}/svs_infer.log \
+  infer.py -c conf/infer.yaml
+
 
 fi

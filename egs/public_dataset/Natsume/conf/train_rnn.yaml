@@ -34,6 +34,6 @@ seed: 777
 gpu_id: -1
 
 normalize: True # for utterence normalize
-# collect_stats: True
+collect_stats: True
 stats_file: exp/rnn/feats_stats.npz
 stats_mel_file: exp/rnn/feats_mel_stats.npz

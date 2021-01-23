@@ -104,8 +104,9 @@ def load_label(label_file, s_type="s", sr=48000, frame_shift=0.03, sil="pau"):
     label_data = open(label_file, "r")
     label_data = label_data.read().split("\n")
     quantized_align = []
+    # print('-------',label_data)
     for label in label_data:
-        label = label.split(" ")
+        label = label.split("\t")
         if len(label) < 3:
             continue
         if s_type == "s":

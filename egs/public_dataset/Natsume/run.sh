@@ -6,9 +6,9 @@
 . ./cmd.sh || exit 1;
 
 
-stage=2
-stop_stage=2
-ngpu=1
+stage=0
+stop_stage=100
+ngpu=0
 raw_data_dir=downloads
 expdir=exp/rnn
 
@@ -28,7 +28,8 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
   echo " Stage0: download data "
   echo =======================
   mkdir -p ${raw_data_dir}
-  ./local/download_and_untar.sh ${raw_data_dir}  http://hts.sp.nitech.ac.jp/archives/2.3/HTS-demo_NIT-SONG070-F001.tar.bz2 HTS-demo_NIT-SONG070-F001.tar.bz2
+  echo "Due to the copyright issue,"
+  echo "Please mannually download the data from https://amanokei.hatenablog.com/entry/2020/04/30/230003"
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then 
@@ -37,8 +38,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   echo " Stage1: data preprocessing "
   echo ============================
 
-  python local/prepare_data.py ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/raw ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/labels/mono data \
-    --label_type r --wav_extention raw
+  python3 local/prepare_data.py ${raw_data_dir}/Natsume_Singing_DB/wav ${raw_data_dir}/Natsume_Singing_DB/mono_label data --label_type s --wav_extention wav
   ./local/train_dev_test_split.sh data train dev test
 fi
 
@@ -79,7 +79,8 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   echo ===============
 
   ${cuda_cmd} -gpu ${ngpu} ${expdir}/svs_infer.log \
-  infer.py -c conf/infer_rnn.yaml
+  infer.py -c conf/infer.yaml
+
 
 fi
 

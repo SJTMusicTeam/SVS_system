@@ -89,9 +89,7 @@ def text_refactor(text):
             units[i] = "uuui"
         elif "w" == units[i][0]:
             units[i] = "uuu" + units[i][1:]
-        elif len(units[i]) > 1 and (
-            "yu" == units[i][:2] or "yv" == units[i][:2]
-        ):
+        elif len(units[i]) > 1 and ("yu" == units[i][:2] or "yv" == units[i][:2]):
             units[i] = "vvv" + units[i][2:]
         elif "y" == units[i][0]:
             units[i] = "iii" + units[i][1:]
@@ -133,9 +131,7 @@ for root, dirs, files in os.walk(args.datadir):
     piece_info = add_zero(root.split("/")[-1], 4)
     for f in files:
         if f.startswith("yll"):
-            os.system(
-                "mv %s %s" % (os.path.join(root, f), os.path.join(root, f[4:]))
-            )
+            os.system("mv %s %s" % (os.path.join(root, f), os.path.join(root, f[4:])))
             f = f[4:]
         name, suffix = f.split(".")
         if suffix == "wav":
@@ -149,9 +145,7 @@ for root, dirs, files in os.walk(args.datadir):
                     break
                 line = line.strip()
                 if len(line) > 0:
-                    text_storing[
-                        piece_info + add_zero(count, 4)
-                    ] = text_refactor(line)
+                    text_storing[piece_info + add_zero(count, 4)] = text_refactor(line)
                 count += 1
 
     for key in text_storing.keys():

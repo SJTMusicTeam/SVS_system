@@ -31,7 +31,7 @@ requirements = {
         "h5py>=2.10.0",
         "kaldiio>=2.17.0",
         "pyworld>=0.2.10",
-        # ASR frontend related
+        # frontend related
         "torch_complex",
     ],
     "recipe": [
@@ -100,9 +100,7 @@ setup(
     author="Jiatong Shi",
     author_email="ftshijt@gmail.com",
     description="Singing Voice Synthesis System (SVS_system)",
-    long_description=open(
-        os.path.join(dirname, "README.md"), encoding="utf-8"
-    ).read(),
+    long_description=open(os.path.join(dirname, "README.md"), encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     license="Apache Software License",
     packages=find_packages(include=["SVS*"]),

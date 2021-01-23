@@ -327,9 +327,7 @@ class SVSDataset(Dataset):
         if len(phone.shape) > 1:
             char, trimed_length = None, len(phone)
         else:
-            char, trimed_length = _phone2char(
-                phone[: self.max_len], self.char_max_len
-            )
+            char, trimed_length = _phone2char(phone[: self.max_len], self.char_max_len)
         min_length = min(
             len(phone),
             np.shape(spectrogram)[0],

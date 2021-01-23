@@ -70,18 +70,14 @@ class GatedConv(nn.Module):
 class StackedCNN(nn.Module):
     """Stacked CNN class."""
 
-    def __init__(
-        self, num_layers, input_size, cnn_kernel_width=3, dropout=0.2
-    ):
+    def __init__(self, num_layers, input_size, cnn_kernel_width=3, dropout=0.2):
         """init."""
         super(StackedCNN, self).__init__()
         self.dropout = dropout
         self.num_layers = num_layers
         self.layers = nn.ModuleList()
         for _ in range(num_layers):
-            self.layers.append(
-                GatedConv(input_size, cnn_kernel_width, dropout)
-            )
+            self.layers.append(GatedConv(input_size, cnn_kernel_width, dropout))
 
     def forward(self, x):
         """forward."""
@@ -94,15 +90,11 @@ class StackedCNN(nn.Module):
 class GLU(nn.Module):
     """GLU."""
 
-    def __init__(
-        self, num_layers, hidden_size, cnn_kernel_width, dropout, input_size
-    ):
+    def __init__(self, num_layers, hidden_size, cnn_kernel_width, dropout, input_size):
         """init."""
         super(GLU, self).__init__()
         self.linear = nn.Linear(input_size, hidden_size)
-        self.cnn = StackedCNN(
-            num_layers, hidden_size, cnn_kernel_width, dropout
-        )
+        self.cnn = StackedCNN(num_layers, hidden_size, cnn_kernel_width, dropout)
 
     def forward(self, emb):
         """forward."""
@@ -136,8 +128,7 @@ class PositionalEncoding(nn.Module):
         pe = pe.to(device)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(
-            torch.arange(0, d_model, 2).float()
-            * (-math.log(10000.0) / d_model)
+            torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model)
         )
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
@@ -252,11 +243,7 @@ class CBHG(nn.Module):
             zip(self.convbank_list, self.batchnorm_list)
         ):
             convbank_input = torch.relu(
-                batchnorm(
-                    self._conv_fit_dim(
-                        conv(convbank_input), k + 1
-                    ).contiguous()
-                )
+                batchnorm(self._conv_fit_dim(conv(convbank_input), k + 1).contiguous())
             )
             convbank_list.append(convbank_input)
 
@@ -268,9 +255,7 @@ class CBHG(nn.Module):
 
         # Projection
         conv_projection = torch.relu(
-            self.batchnorm_proj_1(
-                self._conv_fit_dim(self.conv_projection_1(conv_cat))
-            )
+            self.batchnorm_proj_1(self._conv_fit_dim(self.conv_projection_1(conv_cat)))
         )
         conv_projection = (
             self.batchnorm_proj_2(
@@ -357,9 +342,7 @@ class Transformer_noGLULayer(Module):
     def forward(self, src, mask=None, query_mask=None):
         """forward."""
         src1 = self.norm1(src)
-        src2, att_weight = self.self_attn(
-            src1, src1, mask=mask, query_mask=query_mask
-        )
+        src2, att_weight = self.self_attn(src1, src1, mask=mask, query_mask=query_mask)
         src3 = src + self.dropout1(src2)
         src3 = src3 * SCALE_WEIGHT
         # src4 = self.norm2(src3)
@@ -404,9 +387,7 @@ class TransformerGLULayer(Module):
     def forward(self, src, mask=None, query_mask=None):
         """forward."""
         src1 = self.norm1(src)
-        src2, att_weight = self.self_attn(
-            src1, src1, mask=mask, query_mask=query_mask
-        )
+        src2, att_weight = self.self_attn(src1, src1, mask=mask, query_mask=query_mask)
         src3 = src + self.dropout1(src2)
         src3 = src3 * SCALE_WEIGHT
         src4 = self.norm2(src3)
@@ -493,14 +474,10 @@ class Transformer(nn.Module):
         self.pos_encoder = PositionalEncoding(hidden_state, dropout)
         # define a single transformer encoder layer
 
-        encoder_layer = TransformerEncoderLayer(
-            hidden_state, nhead, fc_dim, dropout
-        )
+        encoder_layer = TransformerEncoderLayer(hidden_state, nhead, fc_dim, dropout)
         self.input_norm = LayerNorm(hidden_state)
         encoder_norm = LayerNorm(hidden_state)
-        self.encoder = TransformerEncoder(
-            encoder_layer, num_block, encoder_norm
-        )
+        self.encoder = TransformerEncoder(encoder_layer, num_block, encoder_norm)
         self.postnet = PostNet(hidden_state, output_dim, hidden_state)
         self.hidden_state = hidden_state
         self.pos_enc = pos_enc
@@ -575,9 +552,7 @@ def _get_activation_fn(activation):
     elif activation == "gelu":
         return F.gelu
     else:
-        raise RuntimeError(
-            "activation should be relu/gelu, not %s." % activation
-        )
+        raise RuntimeError("activation should be relu/gelu, not %s." % activation)
 
 
 def _get_clones(module, N):
@@ -629,15 +604,9 @@ class MultiHeadAttentionLayer(nn.Module):
         # K = [batch size, key len, hid dim]
         # V = [batch size, value len, hid dim]
 
-        Q = Q.view(batch_size, -1, self.n_heads, self.head_dim).permute(
-            0, 2, 1, 3
-        )
-        K = K.view(batch_size, -1, self.n_heads, self.head_dim).permute(
-            0, 2, 1, 3
-        )
-        V = V.view(batch_size, -1, self.n_heads, self.head_dim).permute(
-            0, 2, 1, 3
-        )
+        Q = Q.view(batch_size, -1, self.n_heads, self.head_dim).permute(0, 2, 1, 3)
+        K = K.view(batch_size, -1, self.n_heads, self.head_dim).permute(0, 2, 1, 3)
+        V = V.view(batch_size, -1, self.n_heads, self.head_dim).permute(0, 2, 1, 3)
 
         # Q = [batch size, n heads, query len, head dim]
         # K = [batch size, n heads, key len, head dim]

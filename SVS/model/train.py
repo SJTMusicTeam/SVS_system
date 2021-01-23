@@ -109,9 +109,7 @@ def Auto_save_model(
                     )
                 )
                 logging.info(
-                    "model of epoch:{} deleted".format(
-                        epoch_to_save[select_loss]
-                    )
+                    "model of epoch:{} deleted".format(epoch_to_save[select_loss])
                 )
 
             logging.info(
@@ -306,9 +304,7 @@ def train(args):
             enc_normalize_before=args.enc_normalize_before,
             enc_concat_after=args.enc_concat_after,
             enc_positionwise_layer_type=args.enc_positionwise_layer_type,
-            enc_positionwise_conv_kernel_size=(
-                args.enc_positionwise_conv_kernel_size
-            ),
+            enc_positionwise_conv_kernel_size=(args.enc_positionwise_conv_kernel_size),
             enc_macaron_style=args.enc_macaron_style,
             enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
             enc_selfattention_layer_type=args.enc_selfattention_layer_type,
@@ -342,9 +338,7 @@ def train(args):
             enc_normalize_before=args.enc_normalize_before,
             enc_concat_after=args.enc_concat_after,
             enc_positionwise_layer_type=args.enc_positionwise_layer_type,
-            enc_positionwise_conv_kernel_size=(
-                args.enc_positionwise_conv_kernel_size
-            ),
+            enc_positionwise_conv_kernel_size=(args.enc_positionwise_conv_kernel_size),
             enc_macaron_style=args.enc_macaron_style,
             enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
             enc_selfattention_layer_type=args.enc_selfattention_layer_type,
@@ -363,9 +357,7 @@ def train(args):
             dec_normalize_before=args.dec_normalize_before,
             dec_concat_after=args.dec_concat_after,
             dec_positionwise_layer_type=args.dec_positionwise_layer_type,
-            dec_positionwise_conv_kernel_size=(
-                args.dec_positionwise_conv_kernel_size
-            ),
+            dec_positionwise_conv_kernel_size=(args.dec_positionwise_conv_kernel_size),
             dec_macaron_style=args.dec_macaron_style,
             dec_pos_enc_layer_type=args.dec_pos_enc_layer_type,
             dec_selfattention_layer_type=args.dec_selfattention_layer_type,
@@ -400,9 +392,7 @@ def train(args):
         raise ValueError("Not Support Model Type %s" % args.model_type)
     logging.info(f"{model}")
     model = model.to(device)
-    logging.info(
-        f"The model has {count_parameters(model):,} trainable parameters"
-    )
+    logging.info(f"The model has {count_parameters(model):,} trainable parameters")
 
     model_load_dir = ""
     pretrain_encoder_dir = ""
@@ -485,9 +475,7 @@ def train(args):
         )
         if len(para_list) > 0:
             logging.warning(
-                "Not loading {} because of different sizes".format(
-                    ", ".join(para_list)
-                )
+                "Not loading {} because of different sizes".format(", ".join(para_list))
             )
         model_dict.update(state_dict_new)
         model.load_state_dict(model_dict)
@@ -525,7 +513,7 @@ def train(args):
                 optimizer,
                 "min",
                 verbose=True,
-                patience=50,
+                patience=10,
                 factor=0.5,
             )
         elif args.scheduler == "ExponentialLR":
@@ -595,9 +583,7 @@ def train(args):
 
         out_log = "Train epoch: {:04d}, ".format(epoch)
         if args.optimizer == "noam":
-            out_log += "lr: {:.6f}, ".format(
-                optimizer._optimizer.param_groups[0]["lr"]
-            )
+            out_log += "lr: {:.6f}, ".format(optimizer._optimizer.param_groups[0]["lr"])
         elif args.optimizer == "adam":
             out_log += "lr: {:.6f}, ".format(optimizer.param_groups[0]["lr"])
         out_log += "loss: {:.4f}, spec_loss: {:.4f} ".format(
@@ -631,21 +617,17 @@ def train(args):
         )
         end_t_dev = time.time()
 
-        dev_log = (
-            "Dev epoch: {:04d}, loss: {:.4f}, spec_loss: {:.4f}, ".format(
-                epoch,
-                dev_info["loss"],
-                dev_info["spec_loss"],
-            )
+        dev_log = "Dev epoch: {:04d}, loss: {:.4f}, spec_loss: {:.4f}, ".format(
+            epoch,
+            dev_info["loss"],
+            dev_info["spec_loss"],
         )
         dev_log += "mcd_value: {:.4f}, ".format(dev_info["mcd_value"])
         if args.n_mels > 0:
             dev_log += "mel_loss: {:.4f}, ".format(dev_info["mel_loss"])
         if args.perceptual_loss > 0:
             dev_log += "pe_loss: {:.4f}, ".format(dev_info["pe_loss"])
-        logging.info(
-            "{} time: {:.2f}s".format(dev_log, end_t_dev - start_t_train)
-        )
+        logging.info("{} time: {:.2f}s".format(dev_log, end_t_dev - start_t_train))
 
         sys.stdout.flush()
 
