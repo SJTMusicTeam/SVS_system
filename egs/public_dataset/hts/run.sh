@@ -6,8 +6,8 @@
 . ./cmd.sh || exit 1;
 
 
-stage=2
-stop_stage=2
+stage=3
+stop_stage=3
 ngpu=1
 raw_data_dir=downloads
 expdir=exp/rnn
@@ -66,6 +66,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_train.log \
   train.py \
     -c conf/train_rnn.yaml \
+    --gpu_id 0 \
     --model_save_dir ${expdir} \
     --stats_file ${expdir}/feats_stats.npz \
     --stats_mel_file ${expdir}/feats_mel_stats.npz
@@ -78,7 +79,9 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   echo " Stage3: infer "
   echo ===============
 
-  ${cuda_cmd} -gpu ${ngpu} infer.py -c conf/infer.yaml
+  ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_infer.log \
+  infer.py \
+    -c conf/infer.yaml
 
 fi
 
