@@ -229,7 +229,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--window_size", type=int, default=60, help="window size in miliseconds"
     )
-    praser.add_argument(
+    parser.add_argument(
         "--shift_size", type=int, default=30, help="shift size in miliseconds"
     )
     parser.add_argument("--sr", type=int, default=48000)
