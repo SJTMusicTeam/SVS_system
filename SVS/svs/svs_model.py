@@ -52,7 +52,7 @@ class SVSModel(AbsSVSModel):
         beat: Optional[torch.Tensor],
         alignment: Optional[torch.Tensor],
     ) -> Dict[str, torch.Tensor]:
-        """ Frontend + Encoder + Decoder -> Result 
+        """Frontend + Encoder + Decoder -> Result
 
         Args:
             pitch: (Batch, Length, ...)
@@ -68,17 +68,19 @@ class SVSModel(AbsSVSModel):
         assert phone_length.dim() == 1, phone_length.shape
 
         # check that batch_size is unified
-        assert (
-        	sing_length.shape[0],
-        	== phone.shape[0],
-        	== phone_length.shape[0]
-        ), (sing_length.shape, phone.shape, phone_length.shape)
+        assert sing_length.shape[0] == phone.shape[0] == phone_length.shape[0], (
+            sing_length.shape,
+            phone.shape,
+            phone_length.shape,
+        )
         batch_size = phone.shape[0]
 
-        return self.svs(pitch, sing_length, phone, phone_length, singer, beat, alignment)
+        return self.svs(
+            pitch, sing_length, phone, phone_length, singer, beat, alignment
+        )
 
     def inference(
-    	self,
+        self,
         pitch: torch.Tensor,
         sing_length: torch.Tensor,
         phone: torch.Tensor,
@@ -88,7 +90,7 @@ class SVSModel(AbsSVSModel):
         alignment: Optional[torch.Tensor],
         ground_truth: Optional[torch.Tensor],
     ) -> Dict[str, torch.Tensor]:
-         kwargs = {}
+        kwargs = {}
         if decode_config["use_teacher_forcing"]:
             if ground_truth is None:
                 raise RuntimeError("missing required argument: 'ground_truth'")
@@ -100,12 +102,20 @@ class SVSModel(AbsSVSModel):
                 feats = self.normalize(feats[None])[0][0]
             kwargs["ground_truth"] = feats
 
-        outs, att_ws = self.svs.inference(pitch, sing_length, phone, phone_length, singer, beat, alignment, ground_truth)
+        outs, att_ws = self.svs.inference(
+            pitch,
+            sing_length,
+            phone,
+            phone_length,
+            singer,
+            beat,
+            alignment,
+            ground_truth,
+        )
 
         if self.normalize is not None:
-        	# NOTE: normalize.inverse is in-place operation
-        	outs_denorm = self.normalize.inverse(outs.clone()[None])[0][0]
+            # NOTE: normalize.inverse is in-place operation
+            outs_denorm = self.normalize.inverse(outs.clone()[None])[0][0]
         else:
-        	outs_denorm = outs
+            outs_denorm = outs
         return outs, outs_denorm
-
