@@ -122,10 +122,7 @@ def process(args):
     f0_max = 1100.0
     f0_min = 50.0
 
-    if args.model == "HMM":
-        frame_shift = 10 / 1000
-    elif args.model == "TDNN":
-        frame_shift = 30 / 1000
+    frame_shift = args.shift_size / 1000
 
     hop_length = int(args.sr * frame_shift)
 
@@ -230,7 +227,12 @@ if __name__ == "__main__":
     parser.add_argument("wavdir", type=str, help="wav data directory")
     parser.add_argument("labdir", type=str, help="label data directory")
     parser.add_argument("outdir", type=str, help="output directory")
-    parser.add_argument("--model", type=str, default="TDNN", help="model type")
+    parser.add_argument(
+        "--window_size", type=int, default=60, help="window size in miliseconds"
+    )
+    praser.add_argument(
+        "--shift_size", type=int, default=30, help="shift size in miliseconds"
+    )
     parser.add_argument("--sr", type=int, default=48000)
     parser.add_argument("--sil", type=str, default="pau")
     parser.add_argument(
