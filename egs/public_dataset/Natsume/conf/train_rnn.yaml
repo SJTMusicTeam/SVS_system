@@ -1,0 +1,39 @@
+# public hts data path
+train_align: data/alignment/train
+train_pitch: data/pitch_beat_extraction/train
+train_wav: data/wav_info/train
+val_align: data/alignment/dev
+val_pitch: data/pitch_beat_extraction/dev
+val_wav: data/wav_info/dev
+
+
+model_save_dir: exp/rnn
+
+resume: True
+mask_free: False
+use_asr_post: False
+sampling_rate: 22050
+nfft: 2048
+feat_dim: 1025
+
+frame_length: 0.06
+frame_shift: 0.03
+model_type: LSTM
+max_epochs: 200
+batchsize: 4
+num_workers: 10
+hidden_size: 512
+embedding_size: 512
+num_rnn_layers: 3
+num_frames: 500
+char_max_len: 100
+optimizer: adam
+lr: 0.001
+phone_size: 68
+seed: 777
+gpu_id: -1
+
+normalize: True # for utterence normalize
+collect_stats: True
+stats_file: exp/rnn/feats_stats.npz
+stats_mel_file: exp/rnn/feats_mel_stats.npz

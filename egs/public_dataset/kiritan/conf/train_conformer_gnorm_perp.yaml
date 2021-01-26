@@ -1,10 +1,10 @@
 # public kiritan data
-train_align: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/alignment/train
-train_pitch: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/pitch_beat_extraction/train
-train_wav: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info/train
-val_align: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/alignment/test
-val_pitch: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/pitch_beat_extraction/test
-val_wav: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info/test
+train_align: downloads/kiritan_data/alignment/train
+train_pitch: downloads/kiritan_data/pitch_beat_extraction/train
+train_wav: downloads/kiritan_data/wav_info/train
+val_align: downloads/kiritan_data/alignment/dev
+val_pitch: downloads/kiritan_data/pitch_beat_extraction/dev
+val_wav: downloads/kiritan_data/wav_info/dev
 
 # standard: 4
 # sing_quality: conf/sing_quality.csv
@@ -19,14 +19,14 @@ frame_length: 0.06
 frame_shift: 0.03
 
 # model related
-model_save_dir: /data7/gs/SVS_model/kiritan/10_16_Conformer_gnorm_perp0005_useCNN_kernal7_linearUnits1024_numblock10/model                       # change
+model_save_dir: exp/10_16_Conformer_gnorm_perp0005_useCNN_kernal7_linearUnits1024_numblock10/model                       # change
 model_type: Conformer
 normalize: True
 # double_mel_loss: True
 perceptual_loss: 0.005
 
-stats_file: /data7/gs/SVS_model/kiritan/10_16_Conformer_gnorm_perp0005_useCNN_kernal7_linearUnits1024_numblock10/model/feats_stats.npz           # change
-stats_mel_file: /data7/gs/SVS_model/kiritan/10_16_Conformer_gnorm_perp0005_useCNN_kernal7_linearUnits1024_numblock10/model/feats_mel_stats.npz   # change
+stats_file: exp/10_16_Conformer_gnorm_perp0005_useCNN_kernal7_linearUnits1024_numblock10/model/feats_stats.npz           # change
+stats_mel_file: exp/10_16_Conformer_gnorm_perp0005_useCNN_kernal7_linearUnits1024_numblock10/model/feats_mel_stats.npz   # change
 
 enc_attention_dim: 256
 enc_attention_heads: 4

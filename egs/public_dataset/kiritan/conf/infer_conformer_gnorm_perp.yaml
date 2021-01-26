@@ -1,7 +1,7 @@
 # public kiritan data
-test_align: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/alignment/dev
-test_pitch: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/pitch_beat_extraction/dev
-test_wav: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info/dev
+test_align: downloads/kiritan_data/alignment/test
+test_pitch: downloads/kiritan_data/pitch_beat_extraction/test
+test_wav: downloads/kiritan_data/wav_info/test
 
 # model_file: /data7/gs/SVS_model/kiritan/10_16_Conformer_gnorm_perp002_useCNN_kernal7_linearUnits1024_numblock10/model/epoch_loss_242.pth.tar                       # change
 # prediction_path: /data7/gs/SVS_model/kiritan/10_16_Conformer_gnorm_perp002_useCNN_kernal7_linearUnits1024_numblock10/result_cbhg_epoch_242
@@ -10,7 +10,7 @@ test_wav: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_inf
 # stats_mel_file: /data7/gs/SVS_model/kiritan/10_16_Conformer_gnorm_perp002_useCNN_kernal7_linearUnits1024_numblock10/model/feats_mel_stats.npz   # change
 
 model_file: exp/10_12_Conformer_gnorm_perp_OneCycleLR_Gaussian_False/model/epoch_297.pth.tar                       # change
-prediction_path: /data7/gs/SVS_model/kiritan/10_12_Conformer_gnorm_perp_OneCycleLR_Gaussian_False/result_cbhg_epoch_297
+prediction_path: exp/10_12_Conformer_gnorm_perp_OneCycleLR_Gaussian_False/result_cbhg_epoch_297
 
 stats_file: exp/10_12_Conformer_gnorm_perp_OneCycleLR_Gaussian_False/model/feats_stats.npz           # change
 stats_mel_file: exp/10_12_Conformer_gnorm_perp_OneCycleLR_Gaussian_False/model/feats_mel_stats.npz   # change
