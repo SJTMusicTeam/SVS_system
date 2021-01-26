@@ -1,13 +1,13 @@
 # public kiritan data
-test_align: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/alignment/dev
-test_pitch: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/pitch_beat_extraction/dev
-test_wav: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info/dev
+test_align: downloads/kiritan_data/alignment/test
+test_pitch: downloads/kiritan_data/pitch_beat_extraction/test
+test_wav: downloads/kiritan_data/wav_info/test
 
-model_file: /data7/gs/SVS_model/kiritan/10_15_GLU_perp_gnorm/model/epoch_loss_276.pth.tar
-prediction_path: /data7/gs/SVS_model/kiritan/10_15_GLU_perp_gnorm/result_cbhg_epoch_276
+model_file: exp/10_15_GLU_perp_gnorm/model/epoch_loss_276.pth.tar
+prediction_path: exp/10_15_GLU_perp_gnorm/result_cbhg_epoch_276
 
-stats_file: /data7/gs/SVS_model/kiritan/10_15_GLU_perp_gnorm/model/feats_stats.npz
-stats_mel_file: /data7/gs/SVS_model/kiritan/10_15_GLU_perp_gnorm/model/feats_mel_stats.npz
+stats_file: exp/10_15_GLU_perp_gnorm/model/feats_stats.npz
+stats_mel_file: exp/10_15_GLU_perp_gnorm/model/feats_mel_stats.npz
 
 # gpu related
 auto_select_gpu: False

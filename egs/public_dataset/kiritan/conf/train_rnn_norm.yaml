@@ -1,18 +1,18 @@
 # public kiritan data
-train_align: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/alignment/train
-train_pitch: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/pitch_beat_extraction/train
-train_wav: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info/train
-val_align: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/alignment/test
-val_pitch: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/pitch_beat_extraction/test
-val_wav: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info/test
+train_align: downloads/kiritan_data/alignment/train
+train_pitch: downloads/kiritan_data/pitch_beat_extraction/train
+train_wav: downloads/kiritan_data/wav_info/train
+val_align: downloads/kiritan_data/alignment/dev
+val_pitch: downloads/kiritan_data/pitch_beat_extraction/dev
+val_wav: downloads/kiritan_data/wav_info/dev
 
 # standard: 4
 # sing_quality: conf/sing_quality.csv
 
 model_type: LSTM
-model_save_dir: /data7/gs/SVS_model/10_12_rnn_norm/model
-stats_file: /data7/gs/SVS_model/10_12_rnn_norm/model/feats_stats.npz
-stats_mel_file: /data7/gs/SVS_model/10_12_rnn_norm/model/feats_mel_stats.npz
+model_save_dir: exp/10_12_rnn_norm/model
+stats_file: exp/10_12_rnn_norm/model/feats_stats.npz
+stats_mel_file: exp/10_12_rnn_norm/model/feats_mel_stats.npz
 
 normalize: True
 double_mel_loss: False

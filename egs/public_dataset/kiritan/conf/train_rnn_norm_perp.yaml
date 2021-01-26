@@ -1,18 +1,18 @@
 # public kiritan data
-train_align: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/alignment/train
-train_pitch: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/pitch_beat_extraction/train
-train_wav: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info/train
-val_align: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/alignment/test
-val_pitch: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/pitch_beat_extraction/test
-val_wav: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info/test
+train_align: downloads/kiritan_data/alignment/train
+train_pitch: downloads/kiritan_data/pitch_beat_extraction/train
+train_wav: downloads/kiritan_data/wav_info/train
+val_align: downloads/kiritan_data/alignment/dev
+val_pitch: downloads/kiritan_data/pitch_beat_extraction/dev
+val_wav: downloads/kiritan_data/wav_info/dev
 
 # standard: 4
 # sing_quality: conf/sing_quality.csv
 
 model_type: LSTM
-model_save_dir: /data7/gs/SVS_model/10_12_rnn_norm_perp/model
-stats_file: /data7/gs/SVS_model/10_12_rnn_norm_perp/model/feats_stats.npz
-stats_mel_file: /data7/gs/SVS_model/10_12_rnn_norm_perp/model/feats_mel_stats.npz
+model_save_dir: exp/2020_1_21_rnn_norm_perp/model
+stats_file: exp/2020_1_21_rnn_norm_perp/model/feats_stats.npz
+stats_mel_file: exp/2020_1_21_rnn_norm_perp/model/feats_mel_stats.npz
 
 normalize: True
 double_mel_loss: False
@@ -20,12 +20,12 @@ perceptual_loss: 0.01
 
 accumulation_steps: 1
 auto_select_gpu: False
-gpu_id: 7
+gpu_id: 0
 
 max_epochs: 300
 
 batchsize: 10
-num_workers: 18
+num_workers: 5
 
 resume: True
 mask_free: False
@@ -47,9 +47,7 @@ optimizer: adam
 lr: 0.001
 phone_size: 68
 seed: 777
-gpu: 1
 
 train_step_log: 20
 dev_step_log: 2
 
-# collect_stats: True

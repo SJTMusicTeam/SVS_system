@@ -1,10 +1,10 @@
 # public kiritan data
-train_align: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/alignment/train
-train_pitch: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/pitch_beat_extraction/train
-train_wav: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info/train
-val_align: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/alignment/test
-val_pitch: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/pitch_beat_extraction/test
-val_wav: /data5/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info/test
+train_align: downloads/kiritan_data/alignment/train
+train_pitch: downloads/kiritan_data/pitch_beat_extraction/train
+train_wav: downloads/kiritan_data/wav_info/train
+val_align: downloads/kiritan_data/alignment/dev
+val_pitch: downloads/kiritan_data/pitch_beat_extraction/dev
+val_wav: downloads/kiritan_data/wav_info/dev
 
 model_save_dir: exp/pure_transformer/model
 # standard: 4

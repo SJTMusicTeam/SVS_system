@@ -1,6 +1,6 @@
-test_align: /export/c04/jiatong/project/svs/SVS_system/data/alignment/test/
-test_pitch: /export/c04/jiatong/project/svs/SVS_system/data/pitch_beat_extraction/test/
-test_wav: /export/c04/jiatong/project/svs/SVS_system/data/wav_info/test
+test_align: downloads/kiritan_data/alignment/test
+test_pitch: downloads/kiritan_data/pitch_beat_extraction/test
+test_wav: downloads/kiritan_data/wav_info/test
 
 model_file: exp/debug1/model/epoch_2.pth.tar
 prediction_path: exp/debug1/result_cbhg
