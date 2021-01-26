@@ -230,11 +230,12 @@ def process(args):
             )
             print("saved {}".format(os.path.join(song_wav, name) + ".wav"))
         index += 1
-    
-    with open(os.path.join(args.outdir, 'phone_set.txt'), 'w') as f:
+
+    with open(os.path.join(args.outdir, "phone_set.txt"), "w") as f:
         for p_id, p in enumerate(phone_set):
-            f.write(str(p_id)+" "+p)
-            f.write('\n')
+            f.write(str(p_id) + " " + p)
+            f.write("\n")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
