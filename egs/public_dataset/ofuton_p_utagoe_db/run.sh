@@ -8,7 +8,7 @@
 
 stage=0
 stop_stage=3
-ngpu=0
+ngpu=1
 raw_data_dir=downloads
 expdir=exp/rnn
 
