@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # Copyright 2020 RUC (author: Shuai Guo)
 
-import os
 import argparse
+import os
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
