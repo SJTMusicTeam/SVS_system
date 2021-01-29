@@ -7,7 +7,7 @@
 
 
 stage=0
-stop_stage=3
+stop_stage=100
 ngpu=1
 raw_data_dir=downloads
 expdir=exp/rnn
@@ -28,7 +28,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
   echo " Stage0: download data "
   echo =======================
   mkdir -p ${raw_data_dir}
-  ./local/download_and_untar.sh ${raw_data_dir} 'https://uc3ac3d286cfd5e74fddc5e89b2f.dl.dropboxusercontent.com/cd/0/get/BH0ymVh2ZYSeU77SkE3bKVE3U7677EXiYe9RAg9JbHcCEKPmr8b86uN74Mb2aqwE8CSA_fCieF4kXgxtAYJNPIn-8cbcDL3BW0SUqikk7HHDBEEu_I5ktIyM0kLuOQe7vys/file?_download_id=55245822596510105054397496268015654120582580896732133304782966454&_notify_doma' OFUTON_P_UTAGOE_DB.zip
+  ./local/download_and_untar.sh ${raw_data_dir} 'https://doc-00-bs-docs.googleusercontent.com/docs/securesc/f7j5086anjlk94elkcocfjja7egds00v/onaktddvgna79e13m1g8p2p8rg1hfnpm/1611905625000/00948940906475156563/00948940906475156563/136Ir-35Fe9fGlwGKP_ETBKvAy-bTpYIz?e=download&authuser=0&nonce=5uk3dtcl40grk&user=00948940906475156563&hash=c8sj8n26414b' OFUTON_P_UTAGOE_DB.zip
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then 
@@ -50,7 +50,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 
   ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
   train.py \
-    -c conf/train_rnn.yaml \
+    -c conf/train_rnn_norm_perp.yaml \
     --collect_stats True \
     --model_save_dir ${expdir} \
     --stats_file ${expdir}/feats_stats.npz \
@@ -65,7 +65,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
 
   ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_train.log \
   train.py \
-    -c conf/train_rnn.yaml \
+    -c conf/train_rnn_norm_perp.yaml \
     --gpu_id -1 \
     --model_save_dir ${expdir} \
     --stats_file ${expdir}/feats_stats.npz \
@@ -80,7 +80,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   echo ===============
 
   ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_infer.log \
-  infer.py -c conf/infer_rnn.yaml
+  infer.py -c conf/infer_rnn_norm_perp.yaml
 
 fi
 
