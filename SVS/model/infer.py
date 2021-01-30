@@ -29,7 +29,7 @@ from SVS.model.utils.SVSDataset import SVSCollator
 from SVS.model.utils.SVSDataset import SVSDataset
 from SVS.model.utils.utils import AverageMeter
 from SVS.model.utils.utils import log_figure
-import SVS.tools.metrics as Metrics
+import SVS.utils.metrics as Metrics
 import time
 import torch
 
