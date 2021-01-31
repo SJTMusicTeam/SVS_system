@@ -24,11 +24,13 @@ from SVS.model.network import GLU_TransformerSVS
 from SVS.model.network import GRUSVS_gs
 from SVS.model.network import LSTMSVS
 from SVS.model.network import TransformerSVS
+from SVS.model.network import WaveRNN
 from SVS.model.utils.loss import MaskedLoss
 from SVS.model.utils.SVSDataset import SVSCollator
 from SVS.model.utils.SVSDataset import SVSDataset
 from SVS.model.utils.utils import AverageMeter
 from SVS.model.utils.utils import log_figure
+from SVS.model.utils.utils import log_mel
 import SVS.utils.metrics as Metrics
 import time
 import torch
@@ -285,6 +287,29 @@ def infer(args):
     f0_synthesis_all = np.reshape(np.array([]), (-1, 1))
     start_t_test = time.time()
 
+    # preload vocoder model
+    if args.vocoder_category == "wavernn":
+        voc_model = WaveRNN(
+            rnn_dims=512,
+            fc_dims=512,
+            bits=9,
+            pad=2,
+            upsample_factors=(
+                5,
+                5,
+                11,
+            ),
+            feat_dims=80,
+            compute_dims=128,
+            res_out_dims=128,
+            res_blocks=10,
+            hop_length=275,  # 12.5ms - in line with Tacotron 2 paper
+            sample_rate=22050,
+            mode="MOL",
+        ).to(device)
+
+        voc_model.load("./weights/wavernn/latest_weights.pyt")
+
     with torch.no_grad():
         for (
             step,
@@ -418,15 +443,27 @@ def infer(args):
             vuv_error_metric.update(vuv_error_value, frame_number_step)
 
             if step % 1 == 0:
-                log_figure(
-                    step,
-                    output,
-                    spec_origin,
-                    att,
-                    length,
-                    args.prediction_path,
-                    args,
-                )
+                if args.vocoder_category == "griffin":
+                    log_figure(
+                        step,
+                        output,
+                        spec_origin,
+                        att,
+                        length,
+                        args.prediction_path,
+                        args,
+                    )
+                elif args.vocoder_category == "wavernn":
+                    log_mel(
+                        step,
+                        output_mel,
+                        spec_origin,
+                        att,
+                        length,
+                        args.prediction_path,
+                        args,
+                        voc_model,
+                    )
                 out_log = (
                     "step {}:train_loss{:.4f};"
                     "spec_loss{:.4f};mcd_value{:.4f};".format(
