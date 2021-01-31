@@ -292,13 +292,13 @@ def infer(args):
         voc_model = WaveRNN(
             rnn_dims=512,
             fc_dims=512,
-            bits=9,  # bit depth of signal
-            pad=2,  # this will pad the input so that the resnet can 'see' wider than input length
+            bits=9,
+            pad=2,
             upsample_factors=(
                 5,
                 5,
                 11,
-            ),  # NB - this needs to correctly factorise hop_length
+            ),
             feat_dims=80,
             compute_dims=128,
             res_out_dims=128,
@@ -308,7 +308,7 @@ def infer(args):
             mode="MOL",
         ).to(device)
 
-        voc_model.load("./model_weights/wavernn_voc_weights/latest_weights.pyt")
+        voc_model.load("./weights/wavernn/latest_weights.pyt")
 
     with torch.no_grad():
         for (

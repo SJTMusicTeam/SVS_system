@@ -1695,7 +1695,7 @@ class WaveRNN(nn.Module):
         self.upsample = UpsampleNetwork(
             feat_dims, upsample_factors, compute_dims, res_blocks, res_out_dims, pad
         )
-        self.I = nn.Linear(feat_dims + self.aux_dims + 1, rnn_dims)
+        self.line = nn.Linear(feat_dims + self.aux_dims + 1, rnn_dims)
 
         self.rnn1 = nn.GRU(rnn_dims, rnn_dims, batch_first=True)
         self.rnn2 = nn.GRU(rnn_dims + self.aux_dims, rnn_dims, batch_first=True)
@@ -1733,7 +1733,7 @@ class WaveRNN(nn.Module):
         a4 = aux[:, :, aux_idx[3] : aux_idx[4]]
 
         x = torch.cat([x.unsqueeze(-1), mels, a1], dim=2)
-        x = self.I(x)
+        x = self.line(x)
         res = x
         x, _ = self.rnn1(x, h1)
 
@@ -1872,8 +1872,8 @@ class WaveRNN(nn.Module):
         return padded
 
     def fold_with_overlap(self, x, target, overlap):
-
         """Fold the tensor with overlap for quick batched inference.
+
             Overlap will be used for crossfading in xfade_and_unfold()
 
         Args:
@@ -2024,8 +2024,8 @@ class WaveRNN(nn.Module):
 
 
 def sample_from_discretized_mix_logistic(y, log_scale_min=None):
-    """
-    Sample from discretized mixture of logistic distributions
+    """Sample from discretized mixture of logistic distributions.
+
     Args:
         y (Tensor): B x C x T
         log_scale_min (float): Log scale minimum value
