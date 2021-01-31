@@ -1658,6 +1658,8 @@ class USTC_SVS(nn.Module):
 
 
 class WaveRNN(nn.Module):
+    """Wavernn."""
+
     def __init__(
         self,
         rnn_dims,
@@ -1875,28 +1877,21 @@ class WaveRNN(nn.Module):
         """Fold the tensor with overlap for quick batched inference.
 
             Overlap will be used for crossfading in xfade_and_unfold()
-
         Args:
             x (tensor)    : Upsampled conditioning features.
                             shape=(1, timesteps, features)
             target (int)  : Target timesteps for each index of batch
             overlap (int) : Timesteps for both xfade and rnn warmup
-
         Return:
             (tensor) : shape=(num_folds, target + 2 * overlap, features)
-
         Details:
             x = [[h1, h2, ... hn]]
-
             Where each h is a vector of conditioning features
-
             Eg: target=2, overlap=1 with x.size(1)=10
-
             folded = [[h1, h2, h3, h4],
                       [h4, h5, h6, h7],
                       [h7, h8, h9, h10]]
         """
-
         _, total_len, features = x.size()
 
         # Calculate variables needed
@@ -1921,7 +1916,7 @@ class WaveRNN(nn.Module):
         return folded
 
     def xfade_and_unfold(self, y, overlap):
-        """Applies a crossfade and unfolds into a 1d array.
+        """Apply a crossfade and unfolds into a 1d array.
 
         Args:
             y (ndarry)    : Batched sequences of audio samples
@@ -2014,12 +2009,10 @@ class WaveRNN(nn.Module):
         return parameters
 
     def _flatten_parameters(self):
-        """Calls `flatten_parameters` on all the rnns used by the WaveRNN.
+        """Call `flatten_parameters` on all the rnns used by the WaveRNN.
 
         Used to improve efficiency and avoid PyTorch yelling at us.
-
         """
-
         [m.flatten_parameters() for m in self._to_flatten]
 
 
