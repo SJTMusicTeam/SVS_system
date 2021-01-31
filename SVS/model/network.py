@@ -1873,7 +1873,7 @@ class WaveRNN(nn.Module):
 
     def fold_with_overlap(self, x, target, overlap):
 
-        """ Fold the tensor with overlap for quick batched inference.
+        """Fold the tensor with overlap for quick batched inference.
             Overlap will be used for crossfading in xfade_and_unfold()
 
         Args:
@@ -1921,7 +1921,7 @@ class WaveRNN(nn.Module):
         return folded
 
     def xfade_and_unfold(self, y, overlap):
-        """ Applies a crossfade and unfolds into a 1d array.
+        """Applies a crossfade and unfolds into a 1d array.
 
         Args:
             y (ndarry)    : Batched sequences of audio samples
