@@ -805,6 +805,77 @@ def log_figure(step, output, spec, att, length, save_dir, args):
         plt.savefig(os.path.join(save_dir, "{}_att.png".format(step)))
 
 
+def log_mel(step, output_mel, spec, att, length, save_dir, args, voc_model):
+    """log_mel."""
+    # only get one sample from a batch
+    # save wav and plot spectrogram
+    output_mel = output_mel.cpu().detach().numpy()[0]
+    out_spec = spec.cpu().detach().numpy()[0]
+    length = np.max(length.cpu().detach().numpy()[0])
+    output_mel = output_mel[:length]
+    out_spec = out_spec[:length]
+
+    wav = voc_model.generate(output_mel)
+
+    wav_true = spectrogram2wav(
+        out_spec,
+        args.max_db,
+        args.ref_db,
+        args.preemphasis,
+        args.power,
+        args.sampling_rate,
+        args.frame_shift,
+        args.frame_length,
+        args.nfft,
+    )
+
+    if librosa.__version__ < "0.8.0":
+        librosa.output.write_wav(
+            os.path.join(save_dir, "{}.wav".format(step)), wav, args.sampling_rate
+        )
+        librosa.output.write_wav(
+            os.path.join(save_dir, "{}_true.wav".format(step)),
+            wav_true,
+            args.sampling_rate,
+        )
+    else:
+        # librosa > 0.8 remove librosa.output.write_wav module
+        sf.write(
+            os.path.join(save_dir, "{}.wav".format(step)),
+            wav,
+            args.sampling_rate,
+            format="wav",
+            subtype="PCM_24",
+        )
+        sf.write(
+            os.path.join(save_dir, "{}_true.wav".format(step)),
+            wav_true,
+            args.sampling_rate,
+            format="wav",
+            subtype="PCM_24",
+        )
+
+    plt.subplot(1, 2, 1)
+    specshow(output_mel.T)
+    plt.title("prediction")
+    plt.subplot(1, 2, 2)
+    specshow(out_spec.T)
+    plt.title("ground_truth")
+    plt.savefig(os.path.join(save_dir, "{}.png".format(step)))
+    if att is not None:
+        att = att.cpu().detach().numpy()[0]
+        att = att[:, :length, :length]
+        plt.subplot(1, 4, 1)
+        specshow(att[0])
+        plt.subplot(1, 4, 2)
+        specshow(att[1])
+        plt.subplot(1, 4, 3)
+        specshow(att[2])
+        plt.subplot(1, 4, 4)
+        specshow(att[3])
+        plt.savefig(os.path.join(save_dir, "{}_att.png".format(step)))
+
+
 def Calculate_time(elapsed_time):
     """Calculate_time."""
     elapsed_hours = int(elapsed_time / 3600)
