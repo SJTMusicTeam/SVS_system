@@ -3,14 +3,14 @@ test_align: data/alignment/test
 test_pitch: data/pitch_beat_extraction/test
 test_wav: data/wav_info/test
 
-model_file: exp/10_12_rnn_norm_perp/model/epoch_41.pth.tar
-prediction_path: exp/10_12_rnn_norm_perp/result_cbhg_epoch_41
-stats_file: exp/10_12_rnn_norm_perp/model/feats_stats.npz
-stats_mel_file: exp/10_12_rnn_norm_perp/model/feats_mel_stats.npz
+model_file: exp/rnn/epoch_loss_220.pth.tar
+prediction_path: exp/rnn/result_cbhg_epoch_41
+stats_file: exp/rnn/feats_stats.npz
+stats_mel_file: exp/rnn/feats_mel_stats.npz
 
 # gpu related
-auto_select_gpu: False
-gpu_id: 1
+auto_select_gpu: True
+gpu_id: 0
 
 # model related
 model_type: LSTM

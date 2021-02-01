@@ -6,7 +6,7 @@
 . ./cmd.sh || exit 1;
 
 
-stage=0
+stage=4
 stop_stage=100
 ngpu=1
 raw_data_dir=downloads
