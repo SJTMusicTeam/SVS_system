@@ -3,8 +3,8 @@ test_align: data/alignment/test
 test_pitch: data/pitch_beat_extraction/test
 test_wav: data/wav_info/test
 
-model_file: exp/rnn/epoch_loss_220.pth.tar
-prediction_path: exp/rnn/result_cbhg_epoch_41
+model_file: exp/rnn/epoch_spec_loss_220.pth.tar
+prediction_path: exp/rnn/result_cbhg_epoch_43
 stats_file: exp/rnn/feats_stats.npz
 stats_mel_file: exp/rnn/feats_mel_stats.npz
 

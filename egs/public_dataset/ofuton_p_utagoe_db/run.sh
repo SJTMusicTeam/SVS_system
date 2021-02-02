@@ -6,7 +6,7 @@
 . ./cmd.sh || exit 1;
 
 
-stage=4
+stage=0
 stop_stage=100
 ngpu=1
 raw_data_dir=downloads
@@ -80,7 +80,8 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   echo ===============
 
   ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_infer.log \
-  infer.py -c conf/infer_rnn_norm_perp.yaml
+  infer.py -c conf/infer_rnn_norm_perp.yaml \
+  --vocoder_category wavernn
 
 fi
 
