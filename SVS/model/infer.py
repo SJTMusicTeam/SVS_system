@@ -227,6 +227,9 @@ def infer(args):
         align_root_path=args.test_align,
         pitch_beat_root_path=args.test_pitch,
         wav_root_path=args.test_wav,
+        pw_f0_root_path=args.test_pw_f0,
+        pw_sp_root_path=args.test_pw_sp,
+        pw_ap_root_path=args.test_pw_ap,
         char_max_len=args.char_max_len,
         max_len=args.num_frames,
         sr=args.sampling_rate,
@@ -299,6 +302,9 @@ def infer(args):
                 chars,
                 char_len_list,
                 mel,
+                pw_f0,
+                pw_sp,
+                pw_ap,
             ),
         ) in enumerate(test_loader, 1):
             # if step >= args.decode_sample:
@@ -306,6 +312,9 @@ def infer(args):
             phone = phone.to(device)
             beat = beat.to(device)
             pitch = pitch.to(device).float()
+            pw_f0 = pw_f0.to(device).float()
+            pw_sp = pw_sp.to(device).float()
+            pw_ap = pw_ap.to(device).float()
             spec = spec.to(device).float()
             mel = mel.to(device).float()
             real = real.to(device).float()

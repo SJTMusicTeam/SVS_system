@@ -35,10 +35,10 @@ from SVS.model.utils.SVSDataset import SVSCollator
 from SVS.model.utils.SVSDataset import SVSDataset
 from SVS.model.utils.transformer_optim import ScheduledOptim
 
-from SVS.model.utils.utils import collect_stats
-from SVS.model.utils.utils import save_model
-from SVS.model.utils.utils import train_one_epoch
-from SVS.model.utils.utils import validate
+from SVS.model.utils.utils_pw import collect_stats
+from SVS.model.utils.utils_pw import save_model
+from SVS.model.utils.utils_pw import train_one_epoch
+from SVS.model.utils.utils_pw import validate
 
 import sys
 import time
@@ -168,6 +168,9 @@ def train(args):
         align_root_path=args.train_align,
         pitch_beat_root_path=args.train_pitch,
         wav_root_path=args.train_wav,
+        pw_f0_root_path=args.train_pw_f0,
+        pw_sp_root_path=args.train_pw_sp,
+        pw_ap_root_path=args.train_pw_ap,
         char_max_len=args.char_max_len,
         max_len=args.num_frames,
         sr=args.sampling_rate,
@@ -187,6 +190,9 @@ def train(args):
         align_root_path=args.val_align,
         pitch_beat_root_path=args.val_pitch,
         wav_root_path=args.val_wav,
+        pw_f0_root_path=args.val_pw_f0,
+        pw_sp_root_path=args.val_pw_sp,
+        pw_ap_root_path=args.val_pw_ap,
         char_max_len=args.char_max_len,
         max_len=args.num_frames,
         sr=args.sampling_rate,

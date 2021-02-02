@@ -53,6 +53,9 @@ def collect_stats(train_loader, args):
             chars,
             char_len_list,
             mel,
+            pw_f0,
+            pw_sp,
+            pw_ap,
         ),
     ) in enumerate(train_loader, 1):
         # print(f"spec.shape: {spec.shape},length.shape:
@@ -142,11 +145,17 @@ def train_one_epoch(
             chars,
             char_len_list,
             mel,
+            pw_f0,
+            pw_sp,
+            pw_ap,
         ),
     ) in enumerate(train_loader, 1):
         phone = phone.to(device)
         beat = beat.to(device)
         pitch = pitch.to(device).float()
+        pw_f0 = pw_f0.to(device).float()
+        pw_sp = pw_sp.to(device).float()
+        pw_ap = pw_ap.to(device).float()
         spec = spec.to(device).float()
         if mel is not None:
             mel = mel.to(device).float()
@@ -231,6 +240,9 @@ def train_one_epoch(
             spec_loss = 0
         else:
             spec_loss = criterion(output, spec, length_mask)
+
+        if args.use_pw == True:
+            spec_loss = criterion(output, torch.cat((f0,ap,sp), dim=2), length_mask)
 
         if args.n_mels > 0:
             mel_loss = criterion(output_mel, mel, length_mel_mask)
@@ -356,11 +368,17 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                 chars,
                 char_len_list,
                 mel,
+                pw_f0,
+                pw_sp,
+                pw_ap,
             ),
         ) in enumerate(dev_loader, 1):
             phone = phone.to(device)
             beat = beat.to(device)
             pitch = pitch.to(device).float()
+            pw_f0 = pw_f0.to(device).float()
+            pw_sp = pw_sp.to(device).float()
+            pw_ap = pw_ap.to(device).float()
             spec = spec.to(device).float()
             if mel is not None:
                 mel = mel.to(device).float()

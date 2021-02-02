@@ -842,6 +842,10 @@ class LSTMSVS(nn.Module):
             output = self.postnet(mel_output2)
             # out = self.postnet(mel)
             return output, (h0, c0), mel_output, mel_output2
+
+        if self.use_pw:
+            out = self.output_fc(out)
+            return out, (h0, c0), None, None
         else:
             out = self.output_fc(out)
             return out, (h0, c0), None, None

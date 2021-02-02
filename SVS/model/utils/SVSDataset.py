@@ -143,6 +143,9 @@ class SVSCollator(object):
             mel = np.zeros((batch_size, self.max_len, self.n_mels))
         pitch = np.zeros((batch_size, self.max_len))
         beat = np.zeros((batch_size, self.max_len))
+        pw_f0 = np.zeros((batch_size, self.max_len))
+        pw_sp = np.zeros((batch_size, self.max_len))
+        pw_ap = np.zeros((batch_size, self.max_len))
         length_mask = np.zeros((batch_size, self.max_len))
 
         if self.use_asr_post:
@@ -161,6 +164,10 @@ class SVSCollator(object):
             imag[i, :length, :] = batch[i]["phase"][:length].imag
             pitch[i, :length] = batch[i]["pitch"][:length]
             beat[i, :length] = batch[i]["beat"][:length]
+            pw_f0[i, :length] = batch[i]["pw_f0"][:length]
+            pw_sp[i, :length] = batch[i]["pw_sp"][:length]
+            pw_ap[i, :length] = batch[i]["pw_ap"][:length]
+
             if self.n_mels > 0:
                 mel[i, :length, :] = batch[i]["mel"][:length]
 
@@ -182,6 +189,9 @@ class SVSCollator(object):
         length_mask = torch.from_numpy(length_mask).long()
         pitch = torch.from_numpy(pitch).unsqueeze(dim=-1).long()
         beat = torch.from_numpy(beat).unsqueeze(dim=-1).long()
+        pw_f0 = torch.from_numpy(pw_f0).unsqueeze(dim=-1).long()
+        pw_sp = torch.from_numpy(pw_sp).unsqueeze(dim=-1).long()
+        pw_ap = torch.from_numpy(pw_ap).unsqueeze(dim=-1).long()
         phone = torch.from_numpy(phone).unsqueeze(dim=-1).long()
 
         if not self.use_asr_post:
@@ -198,6 +208,9 @@ class SVSCollator(object):
                 chars,
                 char_len_mask,
                 mel,
+                pw_f0,
+                pw_sp,
+                pw_ap,
             )
         else:
             return (
@@ -211,6 +224,9 @@ class SVSCollator(object):
                 None,
                 None,
                 mel,
+                pw_f0,
+                pw_sp,
+                pw_ap,
             )
 
 
@@ -222,6 +238,9 @@ class SVSDataset(Dataset):
         align_root_path,
         pitch_beat_root_path,
         wav_root_path,
+        pw_f0_root_path,
+        pw_sp_root_path,
+        pw_ap_root_path,
         char_max_len=80,
         max_len=500,
         sr=44100,
@@ -240,6 +259,9 @@ class SVSDataset(Dataset):
         self.align_root_path = align_root_path
         self.pitch_beat_root_path = pitch_beat_root_path
         self.wav_root_path = wav_root_path
+        self.pw_f0_root_path = pw_f0_root_path
+        self.pw_sp_root_path = pw_sp_root_path
+        self.pw_ap_root_path = pw_ap_root_path
         self.char_max_len = char_max_len
         self.max_len = max_len
         self.sr = sr
@@ -298,6 +320,28 @@ class SVSDataset(Dataset):
             self.filename_list[i][4:-4] + ".wav",
         )
 
+        pw_f0_path = os.path.join(
+            self.pw_f0_root_path,
+            str(int(self.filename_list[i][1:4])),
+            self.filename_list[i][4:-4] + "_f0.npy",
+        )
+        pw_f0 = np.load(pw_f0_path)
+
+        pw_sp_path = os.path.join(
+            self.pw_sp_root_path,
+            str(int(self.filename_list[i][1:4])),
+            self.filename_list[i][4:-4] + "_sp.npy",
+        )
+        pw_sp = np.load(pw_sp_path)
+
+        pw_ap_path = os.path.join(
+            self.pw_ap_root_path,
+            str(int(self.filename_list[i][1:4])),
+            self.filename_list[i][4:-4] + "_ap.npy",
+        )
+        pw_ap = np.load(pw_ap_path)
+            
+
         spectrogram, mel, phase = _get_spectrograms(
             wav_path,
             self.sr,
@@ -354,4 +398,7 @@ class SVSDataset(Dataset):
             "char": char,
             "phase": phase,
             "mel": mel,
+            "pw_f0": pw_f0,
+            "pw_sp": pw_sp,
+            "pw_ap": pw_ap,
         }
