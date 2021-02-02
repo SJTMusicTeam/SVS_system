@@ -124,6 +124,7 @@ if __name__ == "__main__":
     parser.add_argument("--dec_dropout", default=0.1, type=float)
 
     parser.add_argument("--double_mel_loss", default=False, type=float)
+    parser.add_argument("--vocoder_category", default="griffin", type=str)
 
     args = parser.parse_args()
 
