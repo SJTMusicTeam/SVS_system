@@ -470,6 +470,82 @@ class Encoder_Postnet(nn.Module):
 
         return out
 
+class Encoder_Postnet_combine(nn.Module):
+    """Encoder Postnet."""
+
+    def __init__(self, embed_size, singer_size):
+        """init."""
+        super(Encoder_Postnet_combine, self).__init__()
+
+        self.fc_pitch = nn.Linear(1, embed_size)
+        # Remember! embed_size must be even!!
+        self.fc_pos = nn.Linear(embed_size, embed_size)
+        # only 0 and 1 two possibilities
+        self.emb_beats = nn.Embedding(2, embed_size)
+        self.pos = module.PositionalEncoding(embed_size)
+
+        self.emb_singer = nn.Embedding(singer_size, embed_size)
+        self.fc_out = nn.Linear(2 * embed_size, embed_size)
+
+    def aligner(self, encoder_out, align_phone, text_phone):
+        """aligner."""
+        # align_phone = [batch_size, align_phone_length]
+        # text_phone = [batch_size, text_phone_length]
+        # align_phone_length( = frame_num) > text_phone_length
+        # batch
+        align_phone = align_phone.long()
+        for i in range(align_phone.shape[0]):
+            before_text_phone = text_phone[i][0]
+            encoder_ind = 0
+            line = encoder_out[i][0].unsqueeze(0)
+            # frame
+            for j in range(1, align_phone.shape[1]):
+                if align_phone[i][j] == before_text_phone:
+                    temp = encoder_out[i][encoder_ind]
+                    line = torch.cat((line, temp.unsqueeze(0)), dim=0)
+                else:
+                    encoder_ind += 1
+                    if encoder_ind >= text_phone[i].size()[0]:
+                        break
+                    before_text_phone = text_phone[i][encoder_ind]
+                    temp = encoder_out[i][encoder_ind]
+                    line = torch.cat((line, temp.unsqueeze(0)), dim=0)
+            if i == 0:
+                out = line.unsqueeze(0)
+            else:
+                out = torch.cat((out, line.unsqueeze(0)), dim=0)
+
+        return out
+
+    def forward(self, encoder_out, align_phone, text_phone, pitch, beats, singer_vec):
+        """pitch/beats:[batch_size, frame_num]->[batch_size, frame_num，1]."""
+        # singer_vec=[        # repeat singer_id for length times
+        #     [1,1,...,1]
+        #     [0,0,...,0]
+        #     [5,5,...,5]
+        # ]
+        # batch_size = pitch.shape[0]
+        # frame_num = pitch.shape[1]
+        # embedded_dim = encoder_out.shape[2]
+
+        aligner_out = self.aligner(encoder_out, align_phone, text_phone)
+
+        pitch = self.fc_pitch(pitch)
+        out = aligner_out + pitch
+
+        beats = self.emb_beats(beats.squeeze(2))
+        out = out + beats
+
+        pos_encode = self.pos(torch.transpose(aligner_out, 0, 1))
+        pos_out = self.fc_pos(torch.transpose(pos_encode, 0, 1))
+        out = out + pos_out
+
+        singer_embed = self.emb_singer(singer_vec.squeeze(-1))  # [batch size, length, emb_size]
+        out = torch.cat((out, singer_embed), dim=2)     # [batch size, length, 2 * emb_size]
+
+        out = F.leaky_relu(self.fc_out(out))
+
+        return out
 
 class Decoder_noGLU(nn.Module):
     """Decoder Network."""
@@ -718,6 +794,93 @@ class GLU_TransformerSVS(nn.Module):
 
         return output, att_weight, mel_output, mel_output2
 
+class GLU_TransformerSVS_combine(nn.Module):
+    """Transformer Network."""
+
+    def __init__(
+        self,
+        phone_size,
+        singer_size,
+        embed_size,
+        hidden_size,
+        glu_num_layers,
+        dropout,
+        dec_num_block,
+        dec_nhead,
+        output_dim,
+        n_mels=-1,
+        double_mel_loss=True,
+        local_gaussian=False,
+        device="cuda",
+    ):
+        """init."""
+        super(GLU_TransformerSVS_combine, self).__init__()
+        self.encoder = Encoder(
+            phone_size,
+            embed_size,
+            hidden_size,
+            dropout,
+            glu_num_layers,
+            num_layers=1,
+            glu_kernel=3,
+        )
+        self.enc_postnet = Encoder_Postnet_combine(embed_size, singer_size)
+
+        self.use_mel = n_mels > 0
+        if self.use_mel:
+            self.double_mel_loss = double_mel_loss
+        else:
+            self.double_mel_loss = False
+
+        if self.use_mel:
+            self.decoder = Decoder(
+                dec_num_block,
+                embed_size,
+                n_mels,
+                dec_nhead,
+                dropout,
+                local_gaussian=local_gaussian,
+                device=device,
+            )
+            if self.double_mel_loss:
+                self.double_mel = module.PostNet(n_mels, n_mels, n_mels)
+            self.postnet = module.PostNet(n_mels, output_dim, (output_dim // 2 * 2))
+        else:
+            self.decoder = Decoder(
+                dec_num_block,
+                embed_size,
+                output_dim,
+                dec_nhead,
+                dropout,
+                local_gaussian=local_gaussian,
+                device=device,
+            )
+            self.postnet = module.PostNet(output_dim, output_dim, (output_dim // 2 * 2))
+
+    def forward(
+        self,
+        characters,
+        phone,
+        pitch,
+        beat,
+        singer_vec,
+        pos_text=True,
+        pos_char=None,
+        pos_spec=None,
+    ):
+        """forward."""
+        encoder_out, text_phone = self.encoder(characters.squeeze(2), pos=pos_char)
+        post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat, singer_vec)
+        mel_output, att_weight = self.decoder(post_out, pos=pos_spec)
+
+        if self.double_mel_loss:
+            mel_output2 = self.double_mel(mel_output)
+        else:
+            mel_output2 = mel_output
+        output = self.postnet(mel_output2)
+
+        return output, att_weight, mel_output, mel_output2
+
 
 class LSTMSVS(nn.Module):
     """LSTM singing voice synthesis model."""
@@ -830,13 +993,163 @@ class LSTMSVS(nn.Module):
         out = pos + out
         out, _ = self.pos_lstm(out)
         out = F.leaky_relu(self.linear_wrapper3(out))
+
         pitch = F.leaky_relu(self.fc_pitch(pitch))
         out = pitch + out
         out, _ = self.pitch_lstm(out)
         out = F.leaky_relu(self.linear_wrapper4(out))
+
         beats = F.leaky_relu(self.emb_beats(beats.squeeze(-1)))
         out = beats + out
         out, (h0, c0) = self.beats_lstm(out)
+
+        if self.use_mel:
+            mel_output = self.output_mel(out)
+            if self.double_mel_loss:
+                mel_output2 = self.double_mel(mel_output)
+            else:
+                mel_output2 = mel_output
+            output = self.postnet(mel_output2)
+            # out = self.postnet(mel)
+            return output, (h0, c0), mel_output, mel_output2
+        else:
+            out = self.output_fc(out)
+            return out, (h0, c0), None, None
+
+    def _reset_parameters(self):
+        """Initiate parameters in the transformer model."""
+        for p in self.parameters():
+            if p.dim() > 1:
+                xavier_uniform_(p)
+
+
+class LSTMSVS_combine(nn.Module):
+    """LSTM singing voice synthesis model."""
+
+    def __init__(
+        self,
+        embed_size=512,
+        d_model=512,
+        d_output=1324,
+        num_layers=2,
+        phone_size=87,
+        singer_size=10,
+        n_mels=-1,
+        double_mel_loss=True,
+        dropout=0.1,
+        device="cuda",
+        use_asr_post=False,
+    ):
+        """init."""
+        super(LSTMSVS_combine, self).__init__()
+
+        if use_asr_post:
+            self.input_fc = nn.Linear(phone_size - 1, d_model)
+        else:
+            self.input_embed = nn.Embedding(phone_size, embed_size)
+
+        self.emb_singer = nn.Embedding(singer_size, embed_size)
+        self.linear_wrapper = nn.Linear(2 * embed_size, d_model)
+
+        self.phone_lstm = nn.LSTM(
+            input_size=d_model,
+            hidden_size=d_model,
+            num_layers=num_layers,
+            batch_first=True,
+            bidirectional=True,
+            dropout=dropout,
+        )
+
+        self.linear_wrapper2 = nn.Linear(d_model * 2, d_model)
+
+        self.pos = module.PositionalEncoding(d_model)
+        # Remember! embed_size must be even!!
+        assert embed_size % 2 == 0
+        self.fc_pos = nn.Linear(d_model, d_model)
+
+        self.pos_lstm = nn.LSTM(
+            input_size=d_model,
+            hidden_size=d_model,
+            num_layers=num_layers,
+            batch_first=True,
+            bidirectional=True,
+            dropout=dropout,
+        )
+
+        self.fc_pitch = nn.Linear(1, d_model)
+        self.linear_wrapper3 = nn.Linear(d_model * 2, d_model)
+        self.pitch_lstm = nn.LSTM(
+            input_size=d_model,
+            hidden_size=d_model,
+            num_layers=num_layers,
+            batch_first=True,
+            bidirectional=True,
+            dropout=dropout,
+        )
+
+        # only 0 and 1 two possibilities
+        self.emb_beats = nn.Embedding(2, d_model)
+        self.linear_wrapper4 = nn.Linear(d_model * 2, d_model)
+        self.beats_lstm = nn.LSTM(
+            input_size=d_model,
+            hidden_size=d_model,
+            num_layers=num_layers,
+            batch_first=True,
+            bidirectional=True,
+            dropout=dropout,
+        )
+
+        self.output_fc = nn.Linear(d_model * 2, d_output)
+
+        self.use_mel = n_mels > 0
+        self.n_mels = n_mels
+        if self.use_mel:
+            self.output_mel = nn.Linear(d_model * 2, n_mels)
+            self.postnet = module.PostNet(n_mels, d_output, (d_output // 2 * 2))
+
+            self.double_mel_loss = double_mel_loss
+            if self.double_mel_loss:
+                self.double_mel = module.PostNet(n_mels, n_mels, n_mels)
+        else:
+            self.output_fc = nn.Linear(d_model * 2, d_output)
+
+            self.double_mel_loss = False
+
+        self._reset_parameters()
+
+        self.use_asr_post = use_asr_post
+        self.d_model = d_model
+
+    def forward(self, phone, pitch, beats, singer_vec):
+        """forward."""
+        if self.use_asr_post:
+            out = self.input_fc(phone.squeeze(-1))
+        else:
+            out = self.input_embed(phone.squeeze(-1))
+
+        singer_embed = self.emb_singer(singer_vec.squeeze(-1))  # [batch size, length, emb_size]
+        out = torch.cat((out, singer_embed), dim=2)     # # [batch size, length, 2 * emb_size]
+        
+        out = F.leaky_relu(out)
+        out = F.leaky_relu(self.linear_wrapper(out))
+        out, _ = self.phone_lstm(out)
+        out = F.leaky_relu(self.linear_wrapper2(out))
+
+        pos = self.pos(out)
+        # pos_encode = self.fc_pos(pos)
+        out = pos + out
+        out, _ = self.pos_lstm(out)
+        out = F.leaky_relu(self.linear_wrapper3(out))
+
+        pitch = F.leaky_relu(self.fc_pitch(pitch))
+        out = pitch + out
+        out, _ = self.pitch_lstm(out)
+        out = F.leaky_relu(self.linear_wrapper4(out))
+
+        beats = F.leaky_relu(self.emb_beats(beats.squeeze(-1)))
+        out = beats + out
+        out, (h0, c0) = self.beats_lstm(out)
+
         if self.use_mel:
             mel_output = self.output_mel(out)
             if self.double_mel_loss:
@@ -1083,7 +1396,7 @@ class TransformerSVS(nn.Module):
 
 
 class ConformerSVS(nn.Module):
-    """Conformer Transformer Network."""
+    """Conformer Transformer Network.(Conformer encoder + plain decoder)"""
 
     def __init__(
         self,
@@ -1322,6 +1635,131 @@ class ConformerSVS_FULL(nn.Module):
         output = self.postnet(mel_output)
 
         return output, None, mel_output, None
+
+class ConformerSVS_FULL_combine(nn.Module):
+    """Conformer Transformer Network."""
+
+    def __init__(
+        self,
+        phone_size,
+        singer_size,
+        embed_size,
+        output_dim,
+        n_mels=-1,
+        enc_attention_dim=256,
+        enc_attention_heads=4,
+        enc_linear_units=2048,
+        enc_num_blocks=6,
+        enc_dropout_rate=0.1,
+        enc_positional_dropout_rate=0.1,
+        enc_attention_dropout_rate=0.0,
+        enc_input_layer="conv2d",
+        enc_normalize_before=True,
+        enc_concat_after=False,
+        enc_positionwise_layer_type="linear",
+        enc_positionwise_conv_kernel_size=1,
+        enc_macaron_style=False,
+        enc_pos_enc_layer_type="abs_pos",
+        enc_selfattention_layer_type="selfattn",
+        enc_activation_type="swish",
+        enc_use_cnn_module=False,
+        enc_cnn_module_kernel=31,
+        enc_padding_idx=-1,
+        dec_attention_dim=256,
+        dec_attention_heads=4,
+        dec_linear_units=2048,
+        dec_num_blocks=6,
+        dec_dropout_rate=0.1,
+        dec_positional_dropout_rate=0.1,
+        dec_attention_dropout_rate=0.0,
+        dec_input_layer="conv2d",
+        dec_normalize_before=True,
+        dec_concat_after=False,
+        dec_positionwise_layer_type="linear",
+        dec_positionwise_conv_kernel_size=1,
+        dec_macaron_style=False,
+        dec_pos_enc_layer_type="abs_pos",
+        dec_selfattention_layer_type="selfattn",
+        dec_activation_type="swish",
+        dec_use_cnn_module=False,
+        dec_cnn_module_kernel=31,
+        dec_padding_idx=-1,
+        device="cuda",
+    ):
+        """init."""
+        super(ConformerSVS_FULL_combine, self).__init__()
+        self.encoder = Conformer_Encoder(
+            phone_size,
+            embed_size,
+            attention_dim=enc_attention_dim,
+            attention_heads=enc_attention_heads,
+            linear_units=enc_linear_units,
+            num_blocks=enc_num_blocks,
+            dropout_rate=enc_dropout_rate,
+            positional_dropout_rate=enc_positional_dropout_rate,
+            attention_dropout_rate=enc_attention_dropout_rate,
+            input_layer=enc_input_layer,
+            normalize_before=enc_normalize_before,
+            concat_after=enc_concat_after,
+            positionwise_layer_type=enc_positionwise_layer_type,
+            positionwise_conv_kernel_size=enc_positionwise_conv_kernel_size,
+            macaron_style=enc_macaron_style,
+            pos_enc_layer_type=enc_pos_enc_layer_type,
+            selfattention_layer_type=enc_selfattention_layer_type,
+            activation_type=enc_activation_type,
+            use_cnn_module=enc_use_cnn_module,
+            cnn_module_kernel=enc_cnn_module_kernel,
+            padding_idx=enc_padding_idx,
+        )
+        self.enc_postnet = Encoder_Postnet_combine(embed_size, singer_size)
+
+        self.decoder = Conformer_Decoder(
+            embed_size,
+            n_mels=n_mels,
+            attention_dim=dec_attention_dim,
+            attention_heads=dec_attention_heads,
+            linear_units=dec_linear_units,
+            num_blocks=dec_num_blocks,
+            dropout_rate=dec_dropout_rate,
+            positional_dropout_rate=dec_positional_dropout_rate,
+            attention_dropout_rate=dec_attention_dropout_rate,
+            input_layer=dec_input_layer,
+            normalize_before=dec_normalize_before,
+            concat_after=dec_concat_after,
+            positionwise_layer_type=dec_positionwise_layer_type,
+            positionwise_conv_kernel_size=dec_positionwise_conv_kernel_size,
+            macaron_style=dec_macaron_style,
+            pos_enc_layer_type=dec_pos_enc_layer_type,
+            selfattention_layer_type=dec_selfattention_layer_type,
+            activation_type=dec_activation_type,
+            use_cnn_module=dec_use_cnn_module,
+            cnn_module_kernel=dec_cnn_module_kernel,
+            padding_idx=dec_padding_idx,
+        )
+
+        self.postnet = module.PostNet(n_mels, output_dim, (output_dim // 2 * 2))
+
+    def forward(
+        self,
+        characters,
+        phone,
+        pitch,
+        beat,
+        singer_vec,
+        pos_text=True,
+        pos_char=None,
+        pos_spec=None,
+    ):
+        """forward."""
+        encoder_out, text_phone = self.encoder(
+            characters.squeeze(2), pos=pos_char, length=pos_spec
+        )
+        post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat, singer_vec)
+        mel_output = self.decoder(post_out, pos=pos_spec)
+        output = self.postnet(mel_output)
+
+        return output, None, mel_output, None
+
 
 
 # Reproduce the DAR model from USTC
