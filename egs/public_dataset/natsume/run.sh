@@ -6,8 +6,8 @@
 . ./cmd.sh || exit 1;
 
 
-stage=1
-stop_stage=1
+stage=0
+stop_stage=100
 ngpu=0
 raw_data_dir=downloads
 expdir=exp/rnn
@@ -16,7 +16,7 @@ expdir=exp/rnn
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
 set -e
 set -u
-# set -o pipefail
+set -o pipefail
 
 
 ./utils/parse_options.sh || exit 1;

@@ -17,17 +17,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import yamlargparse
+import jsonargparse
 import logging
 from SVS.model.infer import infer
 
 if __name__ == "__main__":
-    parser = yamlargparse.ArgumentParser(description="SVS training")
+    parser = jsonargparse.ArgumentParser(description="SVS training")
     parser.add_argument(
         "-c",
         "--config",
         help="config file path",
-        action=yamlargparse.ActionConfigFile,
+        action=jsonargparse.ActionConfigFile,
     )
     parser.add_argument("--test_align", help="alignment data dir used for validation.")
     parser.add_argument("--test_pitch", help="pitch data dir used for validation.")
