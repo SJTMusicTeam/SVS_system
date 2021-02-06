@@ -1,3 +1,7 @@
+#! /usr/bin/env python3
+# Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
+# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
+
 """Copyright [2020] [Jiatong Shi].
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,9 +16,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-# !/usr/bin/env python3
-# Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
-# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
 import jsonargparse
 import logging

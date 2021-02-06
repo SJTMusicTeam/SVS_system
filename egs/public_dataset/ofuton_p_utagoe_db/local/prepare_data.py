@@ -104,15 +104,14 @@ def load_label(label_file, s_type="s", sr=48000, frame_shift=0.03, sil="pau"):
     label_data = open(label_file, "r")
     label_data = label_data.read().split("\n")
     quantized_align = []
-    # print('-------',label_data)
     for label in label_data:
-        label = label.split("\t")
+        label = label.split(" ")
         if len(label) < 3:
             continue
         if s_type == "s":
             length = (float(label[1]) - float(label[0])) / frame_shift
         else:
-            length = (float(label[1]) - float(label[0])) / (frame_shift * 1e7)
+            length = (float(label[1]) - float(label[0])) / (frame_shift * 10e7)
         quantized_align.extend([label[-1]] * round(length))
     segment = make_segment(quantized_align, sil=sil)
     return segment, list(set(quantized_align))
@@ -182,6 +181,7 @@ def process(args):
                     start * hop_length + len(alignment) * hop_length
                 )
             ]
+
             """extract beats"""
             tempo, beats = librosa.beat.beat_track(
                 y=seg_signal, sr=args.sr, hop_length=hop_length
@@ -214,9 +214,7 @@ def process(args):
             )
 
             sf.write(
-                os.path.join(song_wav, name) + ".wav",
-                seg_signal,
-                samplerate=args.sr,
+                os.path.join(song_wav, name) + ".wav", seg_signal, samplerate=args.sr
             )
             print("saved {}".format(os.path.join(song_wav, name) + ".wav"))
         index += 1
