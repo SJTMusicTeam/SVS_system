@@ -1773,7 +1773,6 @@ class WaveRNN(nn.Module):
         mu_law = mu_law if self.mode == "RAW" else False
 
         output = []
-        start = time.time()
         rnn1 = self.get_gru_cell(self.rnn1)
         rnn2 = self.get_gru_cell(self.rnn2)
 
