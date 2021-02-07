@@ -1657,10 +1657,12 @@ class USTC_SVS(nn.Module):
 
 
 def label_2_float(x, bits):
+    """Label_2_float."""
     return 2 * x / (2 ** bits - 1.0) - 1.0
 
 
 def decode_mu_law(y, mu, from_labels=True):
+    """Decode_mu_law."""
     if from_labels:
         y = label_2_float(y, math.log2(mu))
     mu = mu - 1
