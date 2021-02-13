@@ -19,7 +19,6 @@ limitations under the License.
 # import sys
 # sys.path.append("/Users/jiatongshi/projects/svs_system/SVS_system")
 
-from datetime import time
 import math
 import numpy as np
 from pathlib import Path
@@ -1657,6 +1656,20 @@ class USTC_SVS(nn.Module):
         return output
 
 
+def label_2_float(x, bits):
+    """Label_2_float."""
+    return 2 * x / (2 ** bits - 1.0) - 1.0
+
+
+def decode_mu_law(y, mu, from_labels=True):
+    """Decode_mu_law."""
+    if from_labels:
+        y = label_2_float(y, math.log2(mu))
+    mu = mu - 1
+    x = np.sign(y) / mu * ((1 + mu) ** np.abs(y) - 1)
+    return x
+
+
 class WaveRNN(nn.Module):
     """Wavernn."""
 
@@ -1752,16 +1765,15 @@ class WaveRNN(nn.Module):
         x = F.relu(self.fc2(x))
         return self.fc3(x)
 
-    def generate(self, mels):
+    def generate(self, mels, batched, target, overlap, mu_law):
         """Generate."""
         self.eval()
 
         device = next(self.parameters()).device  # use same device as parameters
 
-        # mu_law = mu_law if self.mode == 'RAW' else False
+        mu_law = mu_law if self.mode == "RAW" else False
 
         output = []
-        start = time.time()
         rnn1 = self.get_gru_cell(self.rnn1)
         rnn2 = self.get_gru_cell(self.rnn2)
 
@@ -1772,9 +1784,9 @@ class WaveRNN(nn.Module):
             mels = self.pad_tensor(mels.transpose(1, 2), pad=self.pad, side="both")
             mels, aux = self.upsample(mels.transpose(1, 2))
 
-            # if batched:
-            #     mels = self.fold_with_overlap(mels, target, overlap)
-            #     aux = self.fold_with_overlap(aux, target, overlap)
+            if batched:
+                mels = self.fold_with_overlap(mels, target, overlap)
+                aux = self.fold_with_overlap(aux, target, overlap)
 
             b_size, seq_len, _ = mels.size()
 
@@ -1792,7 +1804,7 @@ class WaveRNN(nn.Module):
                 a1_t, a2_t, a3_t, a4_t = (a[:, i, :] for a in aux_split)
 
                 x = torch.cat([x, m_t, a1_t], dim=1)
-                x = self.I(x)
+                x = self.I_line(x)
                 h1 = rnn1(x, h1)
 
                 x = x + h1
@@ -1826,19 +1838,17 @@ class WaveRNN(nn.Module):
                 else:
                     raise RuntimeError("Unknown model mode value - ", self.mode)
 
-                if i % 100 == 0:
-                    self.gen_display(i, seq_len, b_size, start)
-
         output = torch.stack(output).transpose(0, 1)
         output = output.cpu().numpy()
+        output = output.astype(np.float64)
 
-        # if mu_law:
-        #     output = decode_mu_law(output, self.n_classes, False)
-        #
-        # if batched:
-        #     output = self.xfade_and_unfold(output, overlap)
-        # else:
-        #     output = output[0]
+        if mu_law:
+            output = decode_mu_law(output, self.n_classes, False)
+
+        if batched:
+            output = self.xfade_and_unfold(output, overlap)
+        else:
+            output = output[0]
 
         # Fade-out at the end to avoid signal cutting out suddenly
         fade_out = np.linspace(1, 0, 20 * self.hop_length)
