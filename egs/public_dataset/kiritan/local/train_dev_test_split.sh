@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2020 Shuai Guo
+# Copyright 2020 Jiatong Shi
 # Apache 2.0
 
 
@@ -19,22 +19,44 @@ test=$4
 mkdir -p ${data}/alignment/${dev}
 mkdir -p ${data}/alignment/${test}
 mkdir -p ${data}/alignment/${train}
-mv ${data}/alignment/0031* ${data}/alignment/${dev}
-mv ${data}/alignment/0030* ${data}/alignment/${test}
-mv ${data}/alignment/00* ${data}/alignment/${train}
+mv ${data}/alignment/0001* ${data}/alignment/${dev}
+mv ${data}/alignment/0002* ${data}/alignment/${test}
+mv ${data}/alignment/0* ${data}/alignment/${train}
 
 # process pitch-beat split
 mkdir -p ${data}/pitch_beat_extraction/${dev}
 mkdir -p ${data}/pitch_beat_extraction/${test}
 mkdir -p ${data}/pitch_beat_extraction/${train}
-mv ${data}/pitch_beat_extraction/31 ${data}/pitch_beat_extraction/${dev}/
-mv ${data}/pitch_beat_extraction/30 ${data}/pitch_beat_extraction/${test}/
-mv ${data}/pitch_beat_extraction/{1..50} ${data}/pitch_beat_extraction/${train}/
+mv ${data}/pitch_beat_extraction/1 ${data}/pitch_beat_extraction/${dev}/
+mv ${data}/pitch_beat_extraction/2 ${data}/pitch_beat_extraction/${test}/
+mv ${data}/pitch_beat_extraction/{3..51} ${data}/pitch_beat_extraction/${train}/
 
 # process wav split
 mkdir -p ${data}/wav_info/${dev}
 mkdir -p ${data}/wav_info/${test}
 mkdir -p ${data}/wav_info/${train}
-mv ${data}/wav_info/31 ${data}/wav_info/${dev}/
-mv ${data}/wav_info/30 ${data}/wav_info/${test}/
-mv ${data}/wav_info/{1..50} ${data}/wav_info/${train}/
+mv ${data}/wav_info/1 ${data}/wav_info/${dev}/
+mv ${data}/wav_info/2 ${data}/wav_info/${test}/
+mv ${data}/wav_info/{3..51} ${data}/wav_info/${train}/
+
+# process pw_f0
+mkdir -p ${data}/pyworld_f0/${dev}
+mkdir -p ${data}/pyworld_f0/${test}
+mkdir -p ${data}/pyworld_f0/${train}
+mv ${data}/pyworld_f0/1 ${data}/pyworld_f0/${dev}/
+mv ${data}/pyworld_f0/2 ${data}/pyworld_f0/${test}/
+mv ${data}/pyworld_f0/{3..51} ${data}/pyworld_f0/${train}/
+
+mkdir -p ${data}/pyworld_sp/${dev}
+mkdir -p ${data}/pyworld_sp/${test}
+mkdir -p ${data}/pyworld_sp/${train}
+mv ${data}/pyworld_sp/1 ${data}/pyworld_sp/${dev}/
+mv ${data}/pyworld_sp/2 ${data}/pyworld_sp/${test}/
+mv ${data}/pyworld_sp/{3..51} ${data}/pyworld_sp/${train}/
+
+mkdir -p ${data}/pyworld_ap/${dev}
+mkdir -p ${data}/pyworld_ap/${test}
+mkdir -p ${data}/pyworld_ap/${train}
+mv ${data}/pyworld_ap/1 ${data}/pyworld_ap/${dev}/
+mv ${data}/pyworld_ap/2 ${data}/pyworld_ap/${test}/
+mv ${data}/pyworld_ap/{3..51} ${data}/pyworld_ap/${train}/
