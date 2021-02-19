@@ -6,17 +6,17 @@
 . ./cmd.sh || exit 1;
 
 
-stage=0
-stop_stage=100
+stage=1
+stop_stage=2
 ngpu=1
 raw_data_dir=downloads
 expdir=exp/rnn_norm_perp
 
 # Set bash to 'debug' mode, it will exit on :
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
-set -e
-set -u
-set -o pipefail
+#set -e
+#set -u
+#set -o pipefail
 
 ./utils/parse_options.sh || exit 1;
 
@@ -25,10 +25,10 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
   echo =======================
   echo " Stage0: download data "
   echo =======================
-  mkdir -p ${raw_data_dir}
-  echo "please download kiritan dataset from https://zunko.jp/kiridev/login.php, requires a Facebook account due to licensing issues"
-  echo "put kiritan_singing.zip under ${raw_data_dir}"
-  unzip -o ${raw_data_dir}/kiritan_singing.zip -d ${raw_data_dir}
+  # mkdir -p ${raw_data_dir}
+  # echo "please download kiritan dataset from https://zunko.jp/kiridev/login.php, requires a Facebook account due to licensing issues"
+  # echo "put kiritan_singing.zip under ${raw_data_dir}"
+  # unzip -o ${raw_data_dir}/kiritan_singing.zip -d ${raw_data_dir}
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then 
