@@ -53,6 +53,9 @@ def collect_stats(train_loader, args):
             chars,
             char_len_list,
             mel,
+            pw_f0,
+            pw_sp,
+            pw_ap,
         ),
     ) in enumerate(train_loader, 1):
         # print(f"spec.shape: {spec.shape},length.shape:
@@ -142,11 +145,17 @@ def train_one_epoch(
             chars,
             char_len_list,
             mel,
+            pw_f0,
+            pw_sp,
+            pw_ap,
         ),
     ) in enumerate(train_loader, 1):
         phone = phone.to(device)
         beat = beat.to(device)
         pitch = pitch.to(device).float()
+        pw_f0 = pw_f0.to(device).float()
+        pw_sp = pw_sp.to(device).float()
+        pw_ap = pw_ap.to(device).float()
         spec = spec.to(device).float()
         if mel is not None:
             mel = mel.to(device).float()
@@ -229,6 +238,9 @@ def train_one_epoch(
 
         if args.model_type == "USTC_DAR":
             spec_loss = 0
+        elif args.use_pw == True:
+            pw_loss = criterion(output, torch.cat((f0,ap,sp), dim=2), length_mask)
+            spec_loss = pw_loss
         else:
             spec_loss = criterion(output, spec, length_mask)
 
@@ -296,6 +308,14 @@ def train_one_epoch(
                 out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
                     step, losses.avg, spec_losses.avg
                 )
+            elif args.use_pw == True:
+                if args.normalize and args.stats_file:
+                    output, _ = sepc_normalizer.inverse(output, length)
+                log_figure_pw(step, output, spec_origin, att, length, log_save_dir, args)
+                out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
+                    step, losses.avg, spec_losses.avg
+                )
+
             else:
                 # normalize inverse 只在infer的时候用，因为log过程需要转换成wav,和计算mcd等指标
                 if args.normalize and args.stats_file:
@@ -356,11 +376,17 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                 chars,
                 char_len_list,
                 mel,
+                pw_f0,
+                pw_sp,
+                pw_ap,
             ),
         ) in enumerate(dev_loader, 1):
             phone = phone.to(device)
             beat = beat.to(device)
             pitch = pitch.to(device).float()
+            pw_f0 = pw_f0.to(device).float()
+            pw_sp = pw_sp.to(device).float()
+            pw_ap = pw_ap.to(device).float()
             spec = spec.to(device).float()
             if mel is not None:
                 mel = mel.to(device).float()
@@ -496,6 +522,16 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                         step,
                         output_mel,
                         mel_origin,
+                        att,
+                        length,
+                        log_save_dir,
+                        args,
+                    )
+                elif args.use_pw == True:
+                    log_figure_pw(
+                        step,
+                        output,
+                        spec_origin,
                         att,
                         length,
                         log_save_dir,
@@ -805,17 +841,21 @@ def log_figure(step, output, spec, att, length, save_dir, args):
         plt.savefig(os.path.join(save_dir, "{}_att.png".format(step)))
 
 
-def log_mel(step, output_mel, spec, att, length, save_dir, args, voc_model):
-    """log_mel."""
+def log_figure_pw(step, output, spec, att, length, save_dir, args):
+    """log_figure."""
     # only get one sample from a batch
     # save wav and plot spectrogram
-    output_mel = output_mel.cpu().detach().numpy()[0]
+    output = output.cpu().detach().numpy()[0]
     out_spec = spec.cpu().detach().numpy()[0]
     length = np.max(length.cpu().detach().numpy()[0])
-    output_mel = output_mel[:length]
+    # output = output[:length]
     out_spec = out_spec[:length]
 
-    wav = voc_model.generate(output_mel)
+    pw_f0 = output[:1081]
+    pw_sp = output[1081:2162]
+    pw_ap = output[2162:3243]
+
+    wav_pw = pyworld.synthesize(pw_f0, pw_sp, pw_ap, args.sampling_rate)
 
     wav_true = spectrogram2wav(
         out_spec,
@@ -831,7 +871,9 @@ def log_mel(step, output_mel, spec, att, length, save_dir, args, voc_model):
 
     if librosa.__version__ < "0.8.0":
         librosa.output.write_wav(
-            os.path.join(save_dir, "{}.wav".format(step)), wav, args.sampling_rate
+            os.path.join(save_dir, "{}_pw.wav".format(step)),
+            wav_pw,
+            args.sampling_rate,
         )
         librosa.output.write_wav(
             os.path.join(save_dir, "{}_true.wav".format(step)),
@@ -841,8 +883,8 @@ def log_mel(step, output_mel, spec, att, length, save_dir, args, voc_model):
     else:
         # librosa > 0.8 remove librosa.output.write_wav module
         sf.write(
-            os.path.join(save_dir, "{}.wav".format(step)),
-            wav,
+            os.path.join(save_dir, "{}_pw.wav".format(step)),
+            wav_pw,
             args.sampling_rate,
             format="wav",
             subtype="PCM_24",
@@ -854,26 +896,6 @@ def log_mel(step, output_mel, spec, att, length, save_dir, args, voc_model):
             format="wav",
             subtype="PCM_24",
         )
-
-    plt.subplot(1, 2, 1)
-    specshow(output_mel.T)
-    plt.title("prediction")
-    plt.subplot(1, 2, 2)
-    specshow(out_spec.T)
-    plt.title("ground_truth")
-    plt.savefig(os.path.join(save_dir, "{}.png".format(step)))
-    if att is not None:
-        att = att.cpu().detach().numpy()[0]
-        att = att[:, :length, :length]
-        plt.subplot(1, 4, 1)
-        specshow(att[0])
-        plt.subplot(1, 4, 2)
-        specshow(att[1])
-        plt.subplot(1, 4, 3)
-        specshow(att[2])
-        plt.subplot(1, 4, 4)
-        specshow(att[3])
-        plt.savefig(os.path.join(save_dir, "{}_att.png".format(step)))
 
 
 def Calculate_time(elapsed_time):
