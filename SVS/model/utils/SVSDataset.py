@@ -128,7 +128,7 @@ class SVSCollator(object):
         self.phone_size = phone_size - 1
         self.n_mels = n_mels
 
-    def __call__(self, batch):
+    def __call__(self, batch, args):
         """call."""
         # phone, beat, pitch, spectrogram, char, phase, mel
 
@@ -143,7 +143,7 @@ class SVSCollator(object):
             mel = np.zeros((batch_size, self.max_len, self.n_mels))
         pitch = np.zeros((batch_size, self.max_len))
         beat = np.zeros((batch_size, self.max_len))
-        if args.use_pyworld_vocoder == True:
+        if args.vocoder_category == "pyworld":
             pw_f0 = np.zeros((batch_size, self.max_len))
             pw_sp = np.zeros((batch_size, self.max_len))
             pw_ap = np.zeros((batch_size, self.max_len))
@@ -166,7 +166,7 @@ class SVSCollator(object):
             pitch[i, :length] = batch[i]["pitch"][:length]
             beat[i, :length] = batch[i]["beat"][:length]
 
-            if args.use_pyworld_vocoder == True:
+            if args.vocoder_category == "pyworld":
                 pw_f0[i, :length] = batch[i]["pw_f0"][:length]
                 pw_sp[i, :length] = batch[i]["pw_sp"][:length]
                 pw_ap[i, :length] = batch[i]["pw_ap"][:length]
@@ -193,7 +193,7 @@ class SVSCollator(object):
         pitch = torch.from_numpy(pitch).unsqueeze(dim=-1).long()
         beat = torch.from_numpy(beat).unsqueeze(dim=-1).long()
         phone = torch.from_numpy(phone).unsqueeze(dim=-1).long()
-        if args.use_pyworld_vocoder == True:
+        if args.vocoder_category == "pyworld":
             pw_f0 = torch.from_numpy(pw_f0).unsqueeze(dim=-1).long()
             pw_sp = torch.from_numpy(pw_sp).unsqueeze(dim=-1).long()
             pw_ap = torch.from_numpy(pw_ap).unsqueeze(dim=-1).long()
@@ -201,7 +201,7 @@ class SVSCollator(object):
         if not self.use_asr_post:
             chars = torch.from_numpy(chars).unsqueeze(dim=-1).to(torch.int64)
             char_len_mask = torch.from_numpy(char_len_mask).long()
-            if args.use_pyworld_vocoder == True:
+            if args.vocoder_category == "pyworld":
                 return (
                     phone,
                     beat,
@@ -234,7 +234,7 @@ class SVSCollator(object):
                     None,
                 )
         else:
-            if args.use_pyworld_vocoder == True:
+            if args.vocoder_category == "pyworld":
                 return (
                     phone,
                     beat,
@@ -358,7 +358,7 @@ class SVSDataset(Dataset):
             self.filename_list[i][4:-4] + ".wav",
         )
 
-        if args.use_pyworld_vocoder == True:
+        if args.vocoder_category == "pyworld":
             pw_f0_path = os.path.join(
                 self.pw_f0_root_path,
                 str(int(self.filename_list[i][1:4])),
@@ -428,7 +428,7 @@ class SVSDataset(Dataset):
 
         # print("char len: {}, phone len: {}, spectrom: {}"
         # .format(len(char), len(phone), np.shape(spectrogram)[0]))
-        if args.use_pyworld_vocoder == True:
+        if args.vocoder_category == "pyworld":
             return {
                 "phone": phone,
                 "beat": beat,

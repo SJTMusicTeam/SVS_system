@@ -153,7 +153,7 @@ def train_one_epoch(
         phone = phone.to(device)
         beat = beat.to(device)
         pitch = pitch.to(device).float()
-        if args.use_pyworld_vocoder == True:
+        if args.vocoder_category == "pyworld":
             pw_f0 = pw_f0.to(device).float()
             pw_sp = pw_sp.to(device).float()
             pw_ap = pw_ap.to(device).float()
@@ -239,7 +239,7 @@ def train_one_epoch(
 
         if args.model_type == "USTC_DAR":
             spec_loss = 0
-        elif args.use_pyworld_vocoder == True:
+        elif args.vocoder_category == "pyworld":
             f0 = f0.reshape((-1,1))
             pw_loss = criterion(output, torch.cat((f0,ap,sp), dim=2), length_mask)
             spec_loss = pw_loss
@@ -311,7 +311,7 @@ def train_one_epoch(
                     step, losses.avg, spec_losses.avg
                 )
 
-            elif args.use_pyworld_vocoder == True:
+            elif args.vocoder_category == "pyworld":
                 if args.normalize and args.stats_file:
                     output, _ = sepc_normalizer.inverse(output, length)
                 log_figure_pw(step, output, spec_origin, att, length, log_save_dir, args)
@@ -387,7 +387,7 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
             phone = phone.to(device)
             beat = beat.to(device)
             pitch = pitch.to(device).float()
-            if args.use_pyworld_vocoder == True:
+            if args.vocoder_category == "pyworld":
                 pw_f0 = pw_f0.to(device).float()
                 pw_sp = pw_sp.to(device).float()
                 pw_ap = pw_ap.to(device).float()
@@ -531,7 +531,7 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                         log_save_dir,
                         args,
                     )
-                elif args.use_pyworld_vocoder == True:
+                elif args.vocoder_category == "pyworld":
                     log_figure_pw(
                         step,
                         output,
