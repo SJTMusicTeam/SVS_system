@@ -164,7 +164,7 @@ def process(args):
         song_align = os.path.join(args.outdir, "alignment")
         song_wav = os.path.join(args.outdir, "wav_info", str(index))
         song_pitch_beat = os.path.join(args.outdir, "pitch_beat_extraction", str(index))
-        if args.use_pyworld_vocoder == True:
+        if args.vocoder_category == "pyworld":
             pw_path_f0 = os.path.join(args.outdir, "pyworld_f0", str(index))
             pw_path_sp = os.path.join(args.outdir, "pyworld_sp", str(index))
             pw_path_ap = os.path.join(args.outdir, "pyworld_ap", str(index))
@@ -176,7 +176,7 @@ def process(args):
             os.makedirs(song_wav)
         if not os.path.exists(song_pitch_beat):
             os.makedirs(song_pitch_beat)
-        if args.use_pyworld_vocoder == True:
+        if args.vocoder_category == "pyworld":
             if not os.path.exists(pw_path_f0):
                 os.makedirs(pw_path_f0)
             if not os.path.exists(pw_path_sp):
@@ -194,7 +194,7 @@ def process(args):
                 )
             ]
 
-            if args.use_pyworld_vocoder == True:
+            if args.vocoder_category == "pyworld":
                 """extract pw_paras"""
                 pw_f0, pw_sp, pw_ap = pw.wav2world(seg_signal, args.sr, frame_period=30.0)
                 np.save(os.path.join(pw_path_f0, name) + "_f0", np.array(pw_f0))
@@ -268,5 +268,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("--label_extention", type=str, default=".txt")
     parser.add_argument("--wav_extention", type=str, default="wav")
+    parser.add_argument("--vocoder_category", type=str, default="pyworld")
     args = parser.parse_args()
     process(args)
