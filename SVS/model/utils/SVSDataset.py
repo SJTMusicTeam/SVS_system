@@ -143,9 +143,10 @@ class SVSCollator(object):
             mel = np.zeros((batch_size, self.max_len, self.n_mels))
         pitch = np.zeros((batch_size, self.max_len))
         beat = np.zeros((batch_size, self.max_len))
-        pw_f0 = np.zeros((batch_size, self.max_len))
-        pw_sp = np.zeros((batch_size, self.max_len))
-        pw_ap = np.zeros((batch_size, self.max_len))
+        if args.use_pyworld_vocoder == True:
+            pw_f0 = np.zeros((batch_size, self.max_len))
+            pw_sp = np.zeros((batch_size, self.max_len))
+            pw_ap = np.zeros((batch_size, self.max_len))
         length_mask = np.zeros((batch_size, self.max_len))
 
         if self.use_asr_post:
@@ -164,9 +165,11 @@ class SVSCollator(object):
             imag[i, :length, :] = batch[i]["phase"][:length].imag
             pitch[i, :length] = batch[i]["pitch"][:length]
             beat[i, :length] = batch[i]["beat"][:length]
-            pw_f0[i, :length] = batch[i]["pw_f0"][:length]
-            pw_sp[i, :length] = batch[i]["pw_sp"][:length]
-            pw_ap[i, :length] = batch[i]["pw_ap"][:length]
+
+            if args.use_pyworld_vocoder == True:
+                pw_f0[i, :length] = batch[i]["pw_f0"][:length]
+                pw_sp[i, :length] = batch[i]["pw_sp"][:length]
+                pw_ap[i, :length] = batch[i]["pw_ap"][:length]
 
             if self.n_mels > 0:
                 mel[i, :length, :] = batch[i]["mel"][:length]
@@ -189,45 +192,80 @@ class SVSCollator(object):
         length_mask = torch.from_numpy(length_mask).long()
         pitch = torch.from_numpy(pitch).unsqueeze(dim=-1).long()
         beat = torch.from_numpy(beat).unsqueeze(dim=-1).long()
-        pw_f0 = torch.from_numpy(pw_f0).unsqueeze(dim=-1).long()
-        pw_sp = torch.from_numpy(pw_sp).unsqueeze(dim=-1).long()
-        pw_ap = torch.from_numpy(pw_ap).unsqueeze(dim=-1).long()
         phone = torch.from_numpy(phone).unsqueeze(dim=-1).long()
+        if args.use_pyworld_vocoder == True:
+            pw_f0 = torch.from_numpy(pw_f0).unsqueeze(dim=-1).long()
+            pw_sp = torch.from_numpy(pw_sp).unsqueeze(dim=-1).long()
+            pw_ap = torch.from_numpy(pw_ap).unsqueeze(dim=-1).long()
 
         if not self.use_asr_post:
             chars = torch.from_numpy(chars).unsqueeze(dim=-1).to(torch.int64)
             char_len_mask = torch.from_numpy(char_len_mask).long()
-            return (
-                phone,
-                beat,
-                pitch,
-                spec,
-                real,
-                imag,
-                length_mask,
-                chars,
-                char_len_mask,
-                mel,
-                pw_f0,
-                pw_sp,
-                pw_ap,
-            )
+            if args.use_pyworld_vocoder == True:
+                return (
+                    phone,
+                    beat,
+                    pitch,
+                    spec,
+                    real,
+                    imag,
+                    length_mask,
+                    chars,
+                    char_len_mask,
+                    mel,
+                    pw_f0,
+                    pw_sp,
+                    pw_ap,
+                )
+            else:
+                return (
+                    phone,
+                    beat,
+                    pitch,
+                    spec,
+                    real,
+                    imag,
+                    length_mask,
+                    chars,
+                    char_len_mask,
+                    mel,
+                    None,
+                    None,
+                    None,
+                )
         else:
-            return (
-                phone,
-                beat,
-                pitch,
-                spec,
-                real,
-                imag,
-                length_mask,
-                None,
-                None,
-                mel,
-                pw_f0,
-                pw_sp,
-                pw_ap,
-            )
+            if args.use_pyworld_vocoder == True:
+                return (
+                    phone,
+                    beat,
+                    pitch,
+                    spec,
+                    real,
+                    imag,
+                    length_mask,
+                    None,
+                    None,
+                    mel,
+                    pw_f0,
+                    pw_sp,
+                    pw_ap,
+                )
+            else:
+                return (
+                    phone,
+                    beat,
+                    pitch,
+                    spec,
+                    real,
+                    imag,
+                    length_mask,
+                    None,
+                    None,
+                    mel,
+                    None,
+                    None,
+                    None,
+                )
 
 
 class SVSDataset(Dataset):
@@ -320,27 +358,27 @@ class SVSDataset(Dataset):
             self.filename_list[i][4:-4] + ".wav",
         )
 
-        pw_f0_path = os.path.join(
-            self.pw_f0_root_path,
-            str(int(self.filename_list[i][1:4])),
-            self.filename_list[i][4:-4] + "_f0.npy",
-        )
-        pw_f0 = np.load(pw_f0_path)
+        if args.use_pyworld_vocoder == True:
+            pw_f0_path = os.path.join(
+                self.pw_f0_root_path,
+                str(int(self.filename_list[i][1:4])),
+                self.filename_list[i][4:-4] + "_f0.npy",
+            )
+            pw_f0 = np.load(pw_f0_path)
 
-        pw_sp_path = os.path.join(
-            self.pw_sp_root_path,
-            str(int(self.filename_list[i][1:4])),
-            self.filename_list[i][4:-4] + "_sp.npy",
-        )
-        pw_sp = np.load(pw_sp_path)
+            pw_sp_path = os.path.join(
+                self.pw_sp_root_path,
+                str(int(self.filename_list[i][1:4])),
+                self.filename_list[i][4:-4] + "_sp.npy",
+            )
+            pw_sp = np.load(pw_sp_path)
 
-        pw_ap_path = os.path.join(
-            self.pw_ap_root_path,
-            str(int(self.filename_list[i][1:4])),
-            self.filename_list[i][4:-4] + "_ap.npy",
-        )
-        pw_ap = np.load(pw_ap_path)
-            
+            pw_ap_path = os.path.join(
+                self.pw_ap_root_path,
+                str(int(self.filename_list[i][1:4])),
+                self.filename_list[i][4:-4] + "_ap.npy",
+            )
+            pw_ap = np.load(pw_ap_path)
 
         spectrogram, mel, phase = _get_spectrograms(
             wav_path,
@@ -390,15 +428,29 @@ class SVSDataset(Dataset):
 
         # print("char len: {}, phone len: {}, spectrom: {}"
         # .format(len(char), len(phone), np.shape(spectrogram)[0]))
-        return {
-            "phone": phone,
-            "beat": beat,
-            "pitch": pitch,
-            "spec": spectrogram,
-            "char": char,
-            "phase": phase,
-            "mel": mel,
-            "pw_f0": pw_f0,
-            "pw_sp": pw_sp,
-            "pw_ap": pw_ap,
-        }
+        if args.use_pyworld_vocoder == True:
+            return {
+                "phone": phone,
+                "beat": beat,
+                "pitch": pitch,
+                "spec": spectrogram,
+                "char": char,
+                "phase": phase,
+                "mel": mel,
+                "pw_f0": pw_f0,
+                "pw_sp": pw_sp,
+                "pw_ap": pw_ap,
+            }
+        else:
+            return {
+                "phone": phone,
+                "beat": beat,
+                "pitch": pitch,
+                "spec": spectrogram,
+                "char": char,
+                "phase": phase,
+                "mel": mel,
+                "pw_f0": None,
+                "pw_sp": None,
+                "pw_ap": None,
+            }
