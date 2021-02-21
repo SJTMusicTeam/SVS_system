@@ -218,6 +218,14 @@ if __name__ == "__main__":
         type=int,
         help="how many learning_steps use lr_decay",
     )
+    
+    parser.add_argument("--use_pyworld_vocoder", default=False, type=bool)
+    parser.add_argument("--train_pw_f0", help="pyworld f0 data dir used for training.")
+    parser.add_argument("--train_pw_sp", help="pyworld sp data dir used for training.")
+    parser.add_argument("--train_pw_ap", help="pyworld ap data dir used for training.")
+    parser.add_argument("--val_pw_f0", help="pyworld f0 data dir used for validation.")
+    parser.add_argument("--val_pw_sp", help="pyworld sp data dir used for validation.")
+    parser.add_argument("--val_pw_ap", help="pyworld ap data dir used for validation.")
 
     args = parser.parse_args()
 
