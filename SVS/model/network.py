@@ -813,7 +813,7 @@ class LSTMSVS(nn.Module):
         self.use_asr_post = use_asr_post
         self.d_model = d_model
 
-    def forward(self, phone, pitch, beats):
+    def forward(self, phone, pitch, beats, args):
         """forward."""
         if self.use_asr_post:
             out = self.input_fc(phone.squeeze(-1))
@@ -846,7 +846,7 @@ class LSTMSVS(nn.Module):
             # out = self.postnet(mel)
             return output, (h0, c0), mel_output, mel_output2
 
-        elif args.use_pyworld_vocoder:
+        elif args.vocoder_category == "pyworld":
             out = self.output_fc(out)
             return out, (h0, c0), None, None
 

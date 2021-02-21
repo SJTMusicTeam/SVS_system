@@ -24,13 +24,15 @@ from SVS.model.network import GLU_TransformerSVS
 from SVS.model.network import GRUSVS_gs
 from SVS.model.network import LSTMSVS
 from SVS.model.network import TransformerSVS
+from SVS.model.network import WaveRNN
 from SVS.model.utils.loss import MaskedLoss
 from SVS.model.utils.SVSDataset import SVSCollator
 from SVS.model.utils.SVSDataset import SVSDataset
 from SVS.model.utils.utils import AverageMeter
 from SVS.model.utils.utils import log_figure
 from SVS.model.utils.utils import log_figure_pw
-import SVS.tools.metrics as Metrics
+from SVS.model.utils.utils import log_mel
+import SVS.utils.metrics as Metrics
 import time
 import torch
 
@@ -289,6 +291,25 @@ def infer(args):
     f0_synthesis_all = np.reshape(np.array([]), (-1, 1))
     start_t_test = time.time()
 
+    # preload vocoder model
+    if args.vocoder_category == "wavernn":
+        voc_model = WaveRNN(
+            rnn_dims=args.voc_rnn_dims,
+            fc_dims=args.voc_fc_dims,
+            bits=args.bits,
+            pad=args.voc_pad,
+            upsample_factors=args.voc_upsample_factors,
+            feat_dims=args.n_mels,
+            compute_dims=args.voc_compute_dims,
+            res_out_dims=args.voc_res_out_dims,
+            res_blocks=args.voc_res_blocks,
+            hop_length=args.hop_length,
+            sample_rate=args.sample_rate,
+            mode="MOL",
+        ).to(device)
+
+        voc_model.load("./weights/wavernn/latest_weights.pyt")
+
     with torch.no_grad():
         for (
             step,
@@ -313,9 +334,10 @@ def infer(args):
             phone = phone.to(device)
             beat = beat.to(device)
             pitch = pitch.to(device).float()
-            pw_f0 = pw_f0.to(device).float()
-            pw_sp = pw_sp.to(device).float()
-            pw_ap = pw_ap.to(device).float()
+            if args.vocoder_category == "pyworld":
+                pw_f0 = pw_f0.to(device).float()
+                pw_sp = pw_sp.to(device).float()
+                pw_ap = pw_ap.to(device).float()
             spec = spec.to(device).float()
             mel = mel.to(device).float()
             real = real.to(device).float()
@@ -428,7 +450,17 @@ def infer(args):
             vuv_error_metric.update(vuv_error_value, frame_number_step)
 
             if step % 1 == 0:
-                if args.use_pw == True:
+                if args.vocoder_category == "griffin":
+                    log_figure(
+                        step,
+                        output,
+                        spec_origin,
+                        att,
+                        length,
+                        args.prediction_path,
+                        args,
+                    )
+                elif args.vocoder_category == "pyworld":
                     log_figure_pw(
                         step,
                         output,
@@ -438,15 +470,16 @@ def infer(args):
                         args.prediction_path,
                         args,
                     )
-                else:
-                    log_figure(
+                elif args.vocoder_category == "wavernn":
+                    log_mel(
                         step,
-                        output,
-                        spec_origin,
+                        output_mel,
+                        mel,
                         att,
                         length,
                         args.prediction_path,
                         args,
+                        voc_model,
                     )
                 out_log = (
                     "step {}:train_loss{:.4f};"

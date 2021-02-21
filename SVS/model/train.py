@@ -164,7 +164,7 @@ def train(args):
         device = torch.device("cpu")
         logging.info("Warning: CPU is used")
 
-    if args.use_pyworld_vocoder == True:
+    if args.vocoder_category == "pyworld":
         train_set = SVSDataset(
             align_root_path=args.train_align,
             pitch_beat_root_path=args.train_pitch,
