@@ -219,6 +219,7 @@ if __name__ == "__main__":
         help="how many learning_steps use lr_decay",
     )
     
+    parser.add_argument("--vocoder_category", type=str, help="The vocoder to be used (e.g., pyworld).")
     parser.add_argument("--train_pw_f0", help="pyworld f0 data dir used for training.")
     parser.add_argument("--train_pw_sp", help="pyworld sp data dir used for training.")
     parser.add_argument("--train_pw_ap", help="pyworld ap data dir used for training.")
