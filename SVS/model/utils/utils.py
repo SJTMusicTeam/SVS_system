@@ -27,6 +27,7 @@ from SVS.model.layers.global_mvn import GlobalMVN
 import SVS.utils.metrics as Metrics
 import time
 import torch
+import pyworld as pw
 
 # from SVS.model.layers.utterance_mvn import UtteranceMVN
 # from pathlib import Path
@@ -53,6 +54,9 @@ def collect_stats(train_loader, args):
             chars,
             char_len_list,
             mel,
+            pw_f0,
+            pw_sp,
+            pw_ap,
         ),
     ) in enumerate(train_loader, 1):
         # print(f"spec.shape: {spec.shape},length.shape:
@@ -142,11 +146,18 @@ def train_one_epoch(
             chars,
             char_len_list,
             mel,
+            pw_f0,
+            pw_sp,
+            pw_ap,
         ),
     ) in enumerate(train_loader, 1):
         phone = phone.to(device)
         beat = beat.to(device)
         pitch = pitch.to(device).float()
+        if args.vocoder_category == "pyworld":
+            pw_f0 = pw_f0.to(device).float()
+            pw_sp = pw_sp.to(device).float()
+            pw_ap = pw_ap.to(device).float()
         spec = spec.to(device).float()
         if mel is not None:
             mel = mel.to(device).float()
@@ -156,6 +167,9 @@ def train_one_epoch(
         if mel is not None:
             length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
             length_mel_mask = length_mel_mask.to(device)
+        if args.vocoder_category == "pyworld":
+            length_mask_pw = length_mask.repeat(1, 1, args.feat_dim*2+1).float()
+            length_mask_pw = length_mask_pw.to(device)
         length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
         length_mask = length_mask.to(device)
         length = length.to(device)
@@ -221,18 +235,25 @@ def train_one_epoch(
 
         spec_origin = spec.clone()
         mel_origin = mel.clone()
+        if args.vocoder_category == "pyworld":
+            pw_f0_origin = pw_f0.clone()
+            pw_sp_origin = pw_sp.clone()
+            pw_ap_origin = pw_ap.clone()
         if args.normalize:
             sepc_normalizer = GlobalMVN(args.stats_file)
             mel_normalizer = GlobalMVN(args.stats_mel_file)
             spec, _ = sepc_normalizer(spec, length)
             mel, _ = mel_normalizer(mel, length)
 
-        if args.model_type == "USTC_DAR":
+        if args.model_type == "USTC_DAR" and args.vocoder_category != "pyworld":
             spec_loss = 0
+        elif args.vocoder_category == "pyworld":
+            pw_loss = criterion(output, torch.cat((pw_f0_origin,pw_ap_origin,pw_sp_origin), dim=2), length_mask_pw)
+            spec_loss = pw_loss
         else:
             spec_loss = criterion(output, spec, length_mask)
 
-        if args.n_mels > 0:
+        if args.n_mels > 0 and args.vocoder_category != "pyworld":
             mel_loss = criterion(output_mel, mel, length_mel_mask)
             if args.double_mel_loss:
                 double_mel_loss = criterion(output_mel2, mel, length_mel_mask)
@@ -244,7 +265,7 @@ def train_one_epoch(
 
         train_loss = mel_loss + double_mel_loss + spec_loss
 
-        if args.perceptual_loss > 0:
+        if args.perceptual_loss > 0 and args.vocoder_category != "pyworld":
             pe_loss = perceptual_entropy(output, real, imag)
             final_loss = (
                 args.perceptual_loss * pe_loss + (1 - args.perceptual_loss) * train_loss
@@ -270,9 +291,9 @@ def train_one_epoch(
         if args.model_type != "USTC_DAR":
             spec_losses.update(spec_loss.item(), phone.size(0))
 
-        if args.perceptual_loss > 0:
+        if args.perceptual_loss > 0 and args.vocoder_category != "pyworld":
             pe_losses.update(pe_loss.item(), phone.size(0))
-        if args.n_mels > 0:
+        if args.n_mels > 0 and args.vocoder_category != "pyworld":
             mel_losses.update(mel_loss.item(), phone.size(0))
             if args.double_mel_loss:
                 double_mel_losses.update(double_mel_loss.item(), phone.size(0))
@@ -280,7 +301,7 @@ def train_one_epoch(
         if step % args.train_step_log == 0:
             end = time.time()
 
-            if args.model_type == "USTC_DAR":
+            if args.model_type == "USTC_DAR" and args.vocoder_category != "pyworld":
                 # normalize inverse 只在infer的时候用，因为log过程需要转换成wav,和计算mcd等指标
                 if args.normalize and args.stats_file:
                     output_mel, _ = mel_normalizer.inverse(output_mel, length)
@@ -296,6 +317,14 @@ def train_one_epoch(
                 out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
                     step, losses.avg, spec_losses.avg
                 )
+            elif args.vocoder_category == "pyworld":
+                # if args.normalize and args.stats_file:
+                #     output, _ = sepc_normalizer.inverse(output, length)
+                log_figure_pw(step, output, pw_f0_origin, pw_sp_origin, pw_ap_origin, att, length, log_save_dir, args)
+                out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
+                    step, losses.avg, spec_losses.avg
+                )
+
             else:
                 # normalize inverse 只在infer的时候用，因为log过程需要转换成wav,和计算mcd等指标
                 if args.normalize and args.stats_file:
@@ -304,19 +333,19 @@ def train_one_epoch(
                 out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
                     step, losses.avg, spec_losses.avg
                 )
-
-            if args.perceptual_loss > 0:
+ 
+            if args.perceptual_loss > 0 and args.vocoder_category != "pyworld":
                 out_log += "pe_loss {:.4f}; ".format(pe_losses.avg)
-            if args.n_mels > 0:
+            if args.n_mels > 0 and args.vocoder_category != "pyworld":
                 out_log += "mel_loss {:.4f}; ".format(mel_losses.avg)
                 if args.double_mel_loss:
                     out_log += "dmel_loss {:.4f}; ".format(double_mel_losses.avg)
             print("{} -- sum_time: {:.2f}s".format(out_log, (end - start)))
 
     info = {"loss": losses.avg, "spec_loss": spec_losses.avg}
-    if args.perceptual_loss > 0:
+    if args.perceptual_loss > 0 and args.vocoder_category != "pyworld":
         info["pe_loss"] = pe_losses.avg
-    if args.n_mels > 0:
+    if args.n_mels > 0 and args.vocoder_category != "pyworld":
         info["mel_loss"] = mel_losses.avg
     return info
 
@@ -325,9 +354,9 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
     """validate."""
     losses = AverageMeter()
     spec_losses = AverageMeter()
-    if args.perceptual_loss > 0:
+    if args.perceptual_loss > 0 and args.vocoder_category != "pyworld":
         pe_losses = AverageMeter()
-    if args.n_mels > 0:
+    if args.n_mels > 0 and args.vocoder_category != "pyworld":
         mel_losses = AverageMeter()
         mcd_metric = AverageMeter()
         if args.double_mel_loss:
@@ -356,11 +385,18 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                 chars,
                 char_len_list,
                 mel,
+                pw_f0,
+                pw_sp,
+                pw_ap,
             ),
         ) in enumerate(dev_loader, 1):
             phone = phone.to(device)
             beat = beat.to(device)
             pitch = pitch.to(device).float()
+            if args.vocoder_category == "pyworld":
+                pw_f0 = pw_f0.to(device).float()
+                pw_sp = pw_sp.to(device).float()
+                pw_ap = pw_ap.to(device).float()
             spec = spec.to(device).float()
             if mel is not None:
                 mel = mel.to(device).float()
@@ -370,6 +406,9 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
             if mel is not None:
                 length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
                 length_mel_mask = length_mel_mask.to(device)
+            if args.vocoder_category == "pyworld":
+                length_mask_pw = length_mask.repeat(1, 1, args.feat_dim*2+1).float()
+                length_mask_pw = length_mask_pw.to(device)
             length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
             length_mask = length_mask.to(device)
             length = length.to(device)
@@ -428,18 +467,25 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
 
             spec_origin = spec.clone()
             mel_origin = mel.clone()
+            if args.vocoder_category == "pyworld":
+                pw_f0_origin = pw_f0.clone()
+                pw_sp_origin = pw_sp.clone()
+                pw_ap_origin = pw_ap.clone()
             if args.normalize:
                 sepc_normalizer = GlobalMVN(args.stats_file)
                 mel_normalizer = GlobalMVN(args.stats_mel_file)
                 spec, _ = sepc_normalizer(spec, length)
                 mel, _ = mel_normalizer(mel, length)
 
-            if args.model_type == "USTC_DAR":
+            if args.model_type == "USTC_DAR" and args.vocoder_category != "pyworld":
                 spec_loss = 0
+            elif args.vocoder_category == "pyworld":
+                pw_loss = criterion(output, torch.cat((pw_f0_origin,pw_ap_origin,pw_sp_origin), dim=2), length_mask_pw)
+                spec_loss = pw_loss
             else:
                 spec_loss = criterion(output, spec, length_mask)
 
-            if args.n_mels > 0:
+            if args.n_mels > 0 and args.vocoder_category != "pyworld":
                 mel_loss = criterion(output_mel, mel, length_mel_mask)
 
                 if args.double_mel_loss:
@@ -452,7 +498,7 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
 
             dev_loss = mel_loss + double_mel_loss + spec_loss
 
-            if args.perceptual_loss > 0:
+            if args.perceptual_loss > 0 and args.vocoder_category != "pyworld":
                 pe_loss = perceptual_entropy(output, real, imag)
                 final_loss = (
                     args.perceptual_loss * pe_loss
@@ -464,19 +510,24 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
             losses.update(final_loss.item(), phone.size(0))
             if args.model_type != "USTC_DAR":
                 spec_losses.update(spec_loss.item(), phone.size(0))
-
-            if args.perceptual_loss > 0:
+            if args.perceptual_loss > 0 and args.vocoder_category != "pyworld":
                 # pe_loss = perceptual_entropy(output, real, imag)
                 pe_losses.update(pe_loss.item(), phone.size(0))
-            if args.n_mels > 0:
+            if args.n_mels > 0 and args.vocoder_category != "pyworld":
                 mel_losses.update(mel_loss.item(), phone.size(0))
                 if args.double_mel_loss:
                     double_mel_losses.update(double_mel_loss.item(), phone.size(0))
 
-            if args.model_type == "USTC_DAR":
+            if args.model_type == "USTC_DAR" and args.vocoder_category != "pyworld":
                 # normalize inverse stage
                 if args.normalize and args.stats_file:
                     output_mel, _ = mel_normalizer.inverse(output_mel, length)
+                mcd_value, length_sum = (
+                    0,
+                    1,
+                )  # FIX ME! Calculate_melcd_fromMelSpectrum
+            elif args.vocoder_category == "pyworld":
+                output = output
                 mcd_value, length_sum = (
                     0,
                     1,
@@ -488,14 +539,28 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                 (mcd_value, length_sum,) = Metrics.Calculate_melcd_fromLinearSpectrum(
                     output, spec_origin, length, args
                 )
-            mcd_metric.update(mcd_value, length_sum)
+
+            if args.vocoder_category != "pyworld":
+                mcd_metric.update(mcd_value, length_sum)
 
             if step % args.dev_step_log == 0:
-                if args.model_type == "USTC_DAR":
+                if args.model_type == "USTC_DAR" and args.vocoder_category != "pyworld":
                     log_figure_mel(
                         step,
                         output_mel,
                         mel_origin,
+                        att,
+                        length,
+                        log_save_dir,
+                        args,
+                    )
+                elif args.vocoder_category != "pyworld":
+                    log_figure_pw(
+                        step,
+                        output,
+                        pw_f0_origin,
+                        pw_sp_origin,
+                        pw_ap_origin,
                         att,
                         length,
                         log_save_dir,
@@ -511,15 +576,24 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                         log_save_dir,
                         args,
                     )
-                out_log = (
-                    "step {}: train_loss {:.4f}; "
-                    "spec_loss {:.4f}; mcd_value {:.4f};".format(
-                        step, losses.avg, spec_losses.avg, mcd_metric.avg
+
+                if args.vocoder_category != "pyworld":
+                    out_log = (
+                        "step {}: train_loss {:.4f}; "
+                        "spec_loss {:.4f};".format(
+                            step, losses.avg, spec_losses.avg
+                        )
                     )
-                )
-                if args.perceptual_loss > 0:
+                else:
+                    out_log = (
+                        "step {}: train_loss {:.4f}; "
+                        "spec_loss {:.4f}; mcd_value {:.4f};".format(
+                            step, losses.avg, spec_losses.avg, mcd_metric.avg
+                        )
+                    )
+                if args.perceptual_loss > 0 and args.vocoder_category != "pyworld":
                     out_log += "pe_loss {:.4f}; ".format(pe_losses.avg)
-                if args.n_mels > 0:
+                if args.n_mels > 0 and args.vocoder_category != "pyworld":
                     out_log += "mel_loss {:.4f}; ".format(mel_losses.avg)
                     if args.double_mel_loss:
                         out_log += "dmel_loss {:.4f}; ".format(double_mel_losses.avg)
@@ -529,11 +603,12 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
     info = {
         "loss": losses.avg,
         "spec_loss": spec_losses.avg,
-        "mcd_value": mcd_metric.avg,
     }
-    if args.perceptual_loss > 0:
+    if args.vocoder_category != "pyworld":
+        info["mcd_value"] = mcd_metric.avg
+    if args.perceptual_loss > 0 and args.vocoder_category != "pyworld":
         info["pe_loss"] = pe_losses.avg
-    if args.n_mels > 0:
+    if args.n_mels > 0 and args.vocoder_category != "pyworld":
         info["mel_loss"] = mel_losses.avg
     return info
 
@@ -875,6 +950,53 @@ def log_mel(step, output_mel, spec, att, length, save_dir, args, voc_model):
         specshow(att[3])
         plt.savefig(os.path.join(save_dir, "{}_att.png".format(step)))
 
+def log_figure_pw(step, output, pw_f0_ture, pw_sp_ture, pw_ap_ture, att, length, save_dir, args):
+    """log_figure."""
+    # only get one sample from a batch
+    # save wav and plot spectrogram
+    output = output.cpu().detach().numpy()[0]
+    length = np.max(length.cpu().detach().numpy()[0])
+    pw_f0_ture = pw_f0_ture.cpu().detach().numpy()[0]
+    pw_sp_ture = pw_sp_ture.cpu().detach().numpy()[0]
+    pw_ap_ture = pw_ap_ture.cpu().detach().numpy()[0]
+    # output = output[:length]
+
+    pw_f0 = output[:,:1]
+    pw_ap = output[:,1:args.feat_dim+1]
+    pw_sp = output[:,args.feat_dim+1:args.feat_dim*2+1]
+
+    pw_f0 = pw_f0.reshape(-1)
+    pw_f0_ture = pw_f0_ture.reshape(-1)
+    wav_pw = pw.synthesize(np.ascontiguousarray(pw_f0, dtype=np.double), np.ascontiguousarray(pw_sp, dtype=np.double), np.ascontiguousarray(pw_ap, dtype=np.double), args.sampling_rate, frame_period=30.0)
+    wav_true = pw.synthesize(np.ascontiguousarray(pw_f0_ture, dtype=np.double), np.ascontiguousarray(pw_sp_ture, dtype=np.double), np.ascontiguousarray(pw_ap_ture, dtype=np.double), args.sampling_rate, frame_period=30.0)
+
+    if librosa.__version__ < "0.8.0":
+        librosa.output.write_wav(
+            os.path.join(save_dir, "{}_pw.wav".format(step)),
+            wav_pw,
+            args.sampling_rate,
+        )
+        librosa.output.write_wav(
+            os.path.join(save_dir, "{}_true.wav".format(step)),
+            wav_true,
+            args.sampling_rate,
+        )
+    else:
+        # librosa > 0.8 remove librosa.output.write_wav module
+        sf.write(
+            os.path.join(save_dir, "{}_pw.wav".format(step)),
+            wav_pw,
+            args.sampling_rate,
+            format="wav",
+            subtype="PCM_24",
+        )
+        sf.write(
+            os.path.join(save_dir, "{}_true.wav".format(step)),
+            wav_true,
+            args.sampling_rate,
+            format="wav",
+            subtype="PCM_24",
+        )
 
 def Calculate_time(elapsed_time):
     """Calculate_time."""
