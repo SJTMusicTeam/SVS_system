@@ -37,8 +37,8 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   echo " Stage1: data preprocessing "
   echo ============================
 
-  python local/prepare_data.py ${raw_data_dir}/kiritan_singing/wav ${raw_data_dir}/kiritan_singing/mono_label ${raw_data_dir}/kiritan_data
-  ./local/train_dev_test_split.sh ${raw_data_dir}/kiritan_data train dev test
+  python local/prepare_data.py ${raw_data_dir}/kiritan_singing/wav ${raw_data_dir}/kiritan_singing/mono_label ${raw_data_dir}/kiritan_data --use_pyworld_vocoder Ture
+  ./local/train_dev_test_split.sh data train dev test
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then 
@@ -49,7 +49,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 
   ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
   train.py \
-    -c conf/train_rnn_norm_perp.yaml \
+    -c conf/train_conformer_gnorm_perp.yaml \
     --collect_stats True \
     --model_save_dir ${expdir} \
     --stats_file ${expdir}/feats_stats.npz \
@@ -65,7 +65,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
 
   ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
   train.py \
-    -c conf/train_rnn_norm_perp.yaml \
+    -c conf/train_conformer_gnorm_perp.yaml \
     --model_save_dir ${expdir} \
     --stats_file ${expdir}/feats_stats.npz \
     --stats_mel_file ${expdir}/feats_mel_stats.npz
@@ -75,7 +75,7 @@ fi
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then 
   # Stage4: inference
   echo ===============
-  echo " Stage3: infer "
+  echo " Stage4: infer "
   echo ===============
 
   ${cuda_cmd} -gpu ${ngpu} ${expdir}/svs_infer.log \
