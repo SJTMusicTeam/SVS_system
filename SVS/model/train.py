@@ -163,50 +163,107 @@ def train(args):
     else:
         device = torch.device("cpu")
         logging.info("Warning: CPU is used")
+        
+    if args.vocoder_category == "pyworld":
+        train_set = SVSDataset(
+            align_root_path=args.train_align,
+            pitch_beat_root_path=args.train_pitch,
+            wav_root_path=args.train_wav,
+            pw_f0_root_path=args.train_pw_f0,
+            pw_sp_root_path=args.train_pw_sp,
+            pw_ap_root_path=args.train_pw_ap,
+            vocoder_category=args.vocoder_category,
+            char_max_len=args.char_max_len,
+            max_len=args.num_frames,
+            sr=args.sampling_rate,
+            preemphasis=args.preemphasis,
+            nfft=args.nfft,
+            frame_shift=args.frame_shift,
+            frame_length=args.frame_length,
+            n_mels=args.n_mels,
+            power=args.power,
+            max_db=args.max_db,
+            ref_db=args.ref_db,
+            sing_quality=args.sing_quality,
+            standard=args.standard,
+        )
 
-    train_set = SVSDataset(
-        align_root_path=args.train_align,
-        pitch_beat_root_path=args.train_pitch,
-        wav_root_path=args.train_wav,
-        char_max_len=args.char_max_len,
-        max_len=args.num_frames,
-        sr=args.sampling_rate,
-        preemphasis=args.preemphasis,
-        nfft=args.nfft,
-        frame_shift=args.frame_shift,
-        frame_length=args.frame_length,
-        n_mels=args.n_mels,
-        power=args.power,
-        max_db=args.max_db,
-        ref_db=args.ref_db,
-        sing_quality=args.sing_quality,
-        standard=args.standard,
-    )
+        dev_set = SVSDataset(
+            align_root_path=args.val_align,
+            pitch_beat_root_path=args.val_pitch,
+            wav_root_path=args.val_wav,
+            pw_f0_root_path=args.val_pw_f0,
+            pw_sp_root_path=args.val_pw_sp,
+            pw_ap_root_path=args.val_pw_ap,
+            vocoder_category=args.vocoder_category,
+            char_max_len=args.char_max_len,
+            max_len=args.num_frames,
+            sr=args.sampling_rate,
+            preemphasis=args.preemphasis,
+            nfft=args.nfft,
+            frame_shift=args.frame_shift,
+            frame_length=args.frame_length,
+            n_mels=args.n_mels,
+            power=args.power,
+            max_db=args.max_db,
+            ref_db=args.ref_db,
+            sing_quality=args.sing_quality,
+            standard=args.standard,
+        )
+    else:
+        train_set = SVSDataset(
+            align_root_path=args.train_align,
+            pitch_beat_root_path=args.train_pitch,
+            wav_root_path=args.train_wav,
+            pw_f0_root_path=None,
+            pw_sp_root_path=None,
+            pw_ap_root_path=None,
+            vocoder_category=args.vocoder_category,
+            char_max_len=args.char_max_len,
+            max_len=args.num_frames,
+            sr=args.sampling_rate,
+            preemphasis=args.preemphasis,
+            nfft=args.nfft,
+            frame_shift=args.frame_shift,
+            frame_length=args.frame_length,
+            n_mels=args.n_mels,
+            power=args.power,
+            max_db=args.max_db,
+            ref_db=args.ref_db,
+            sing_quality=args.sing_quality,
+            standard=args.standard,
+        )
 
-    dev_set = SVSDataset(
-        align_root_path=args.val_align,
-        pitch_beat_root_path=args.val_pitch,
-        wav_root_path=args.val_wav,
-        char_max_len=args.char_max_len,
-        max_len=args.num_frames,
-        sr=args.sampling_rate,
-        preemphasis=args.preemphasis,
-        nfft=args.nfft,
-        frame_shift=args.frame_shift,
-        frame_length=args.frame_length,
-        n_mels=args.n_mels,
-        power=args.power,
-        max_db=args.max_db,
-        ref_db=args.ref_db,
-        sing_quality=args.sing_quality,
-        standard=args.standard,
-    )
+        dev_set = SVSDataset(
+            align_root_path=args.val_align,
+            pitch_beat_root_path=args.val_pitch,
+            wav_root_path=args.val_wav,
+            pw_f0_root_path=None,
+            pw_sp_root_path=None,
+            pw_ap_root_path=None,
+            vocoder_category=args.vocoder_category,
+            char_max_len=args.char_max_len,
+            max_len=args.num_frames,
+            sr=args.sampling_rate,
+            preemphasis=args.preemphasis,
+            nfft=args.nfft,
+            frame_shift=args.frame_shift,
+            frame_length=args.frame_length,
+            n_mels=args.n_mels,
+            power=args.power,
+            max_db=args.max_db,
+            ref_db=args.ref_db,
+            sing_quality=args.sing_quality,
+            standard=args.standard,
+        )
     collate_fn_svs = SVSCollator(
         args.num_frames,
+        args.vocoder_category,
         args.char_max_len,
         args.use_asr_post,
         args.phone_size,
         args.n_mels,
+        args.feat_dim,
     )
     train_loader = torch.utils.data.DataLoader(
         dataset=train_set,
@@ -250,18 +307,34 @@ def train(args):
             device=device,
         )
     elif args.model_type == "LSTM":
-        model = LSTMSVS(
-            phone_size=args.phone_size,
-            embed_size=args.embedding_size,
-            d_model=args.hidden_size,
-            num_layers=args.num_rnn_layers,
-            dropout=args.dropout,
-            d_output=args.feat_dim,
-            n_mels=args.n_mels,
-            double_mel_loss=args.double_mel_loss,
-            device=device,
-            use_asr_post=args.use_asr_post,
-        )
+        if args.vocoder_category == "pyworld":
+            model = LSTMSVS(
+                phone_size=args.phone_size,
+                embed_size=args.embedding_size,
+                d_model=args.hidden_size,
+                num_layers=args.num_rnn_layers,
+                dropout=args.dropout,
+                d_output=args.feat_dim,
+                n_mels=args.n_mels,
+                double_mel_loss=args.double_mel_loss,
+                device=device,
+                use_asr_post=args.use_asr_post,
+                feat_dim_pw=1025,
+                vocoder_category='pyworld',
+            )
+        else:
+            model = LSTMSVS(
+                phone_size=args.phone_size,
+                embed_size=args.embedding_size,
+                d_model=args.hidden_size,
+                num_layers=args.num_rnn_layers,
+                dropout=args.dropout,
+                d_output=args.feat_dim,
+                n_mels=args.n_mels,
+                double_mel_loss=args.double_mel_loss,
+                device=device,
+                use_asr_post=args.use_asr_post,
+            )
     elif args.model_type == "GRU_gs":
         model = GRUSVS_gs(
             phone_size=args.phone_size,
@@ -540,7 +613,7 @@ def train(args):
     else:
         raise ValueError("Not Support Loss Type")
 
-    if args.perceptual_loss > 0:
+    if args.perceptual_loss > 0 and args.vocoder_category != 'pyworld':
         win_length = int(args.sampling_rate * args.frame_length)
         psd_dict, bark_num = cal_psd2bark_dict(
             fs=args.sampling_rate,
@@ -591,9 +664,9 @@ def train(args):
             train_info["spec_loss"],
         )
 
-        if args.n_mels > 0:
+        if args.n_mels > 0 and args.vocoder_category != 'pyworld':
             out_log += "mel_loss: {:.4f}, ".format(train_info["mel_loss"])
-        if args.perceptual_loss > 0:
+        if args.perceptual_loss > 0 and args.vocoder_category != 'pyworld':
             out_log += "pe_loss: {:.4f}, ".format(train_info["pe_loss"])
         logging.info(
             "{} time: {:.2f}s".format(
@@ -622,10 +695,11 @@ def train(args):
             dev_info["loss"],
             dev_info["spec_loss"],
         )
-        dev_log += "mcd_value: {:.4f}, ".format(dev_info["mcd_value"])
-        if args.n_mels > 0:
+        if args.vocoder_category != "pyworld":
+            dev_log += "mcd_value: {:.4f}, ".format(dev_info["mcd_value"])
+        if args.n_mels > 0 and args.vocoder_category != "pyworld":
             dev_log += "mel_loss: {:.4f}, ".format(dev_info["mel_loss"])
-        if args.perceptual_loss > 0:
+        if args.perceptual_loss > 0 and args.vocoder_category != 'pyworld':
             dev_log += "pe_loss: {:.4f}, ".format(dev_info["pe_loss"])
         logging.info("{} time: {:.2f}s".format(dev_log, end_t_dev - start_t_train))
 
