@@ -165,7 +165,7 @@ class SVSCollator(object):
         for i in range(batch_size):
             length = min(len_list[i], self.max_len)
             # length_pw = min(len_pw[i], self.max_len)
-            length_pw = len_pw[i]
+            length_pw = length
             length_mask[i, :length] = np.arange(1, length + 1)
             spec[i, :length, :] = batch[i]["spec"][:length]
             real[i, :length, :] = batch[i]["phase"][:length].real
@@ -199,9 +199,9 @@ class SVSCollator(object):
         pitch = torch.from_numpy(pitch).unsqueeze(dim=-1).long()
         beat = torch.from_numpy(beat).unsqueeze(dim=-1).long()
         if self.vocoder_category == 'pyworld':
-            pw_f0 = torch.from_numpy(pw_f0).long()
-            pw_sp = torch.from_numpy(pw_sp).long()
-            pw_ap = torch.from_numpy(pw_ap).long()
+            pw_f0 = torch.from_numpy(pw_f0.astype(np.float))
+            pw_sp = torch.from_numpy(pw_f0.astype(np.float))
+            pw_ap = torch.from_numpy(pw_f0.astype(np.float))
         phone = torch.from_numpy(phone).unsqueeze(dim=-1).long()
 
         if not self.use_asr_post:
