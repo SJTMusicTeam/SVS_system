@@ -18,7 +18,7 @@ limitations under the License.
 import logging
 import numpy as np
 import os
-from SVS.model.network import ConformerSVS
+from SVS.model.network import ConformerSVS, WaveRNN
 from SVS.model.network import ConformerSVS_FULL
 from SVS.model.network import GLU_TransformerSVS
 from SVS.model.network import GRUSVS_gs
@@ -605,6 +605,40 @@ def train(args):
         """Dev Stage"""
         torch.backends.cudnn.enabled = False  # 莫名的bug，关掉才可以跑
 
+        # preload vocoder model
+        voc_model = []
+        if args.vocoder_category == "wavernn":
+            # voc_model = WaveRNN(
+            #     rnn_dims=args.voc_rnn_dims,
+            #     fc_dims=args.voc_fc_dims,
+            #     bits=args.bits,
+            #     pad=args.voc_pad,
+            #     upsample_factors=args.voc_upsample_factors,
+            #     feat_dims=args.n_mels,
+            #     compute_dims=args.voc_compute_dims,
+            #     res_out_dims=args.voc_res_out_dims,
+            #     res_blocks=args.voc_res_blocks,
+            #     hop_length=args.hop_length,
+            #     sample_rate=args.sample_rate,
+            #     mode="MOL",
+            # ).to(device)
+            voc_model = WaveRNN(
+                rnn_dims=512,
+                fc_dims=512,
+                bits=9,
+                pad=2,
+                upsample_factors=(5, 5, 11),
+                feat_dims=80,
+                compute_dims=128,
+                res_out_dims=128,
+                res_blocks=10,
+                hop_length=275,
+                sample_rate=22050,
+                mode="MOL",
+            ).to(device)
+
+            voc_model.load("/home/jimmyli/pycharmproject/SVS_system/SVS/model/weights/wavernn/latest_weights.pyt")
+
         # start_t_dev = time.time()
         dev_info = validate(
             dev_loader,
@@ -614,6 +648,7 @@ def train(args):
             loss_perceptual_entropy,
             epoch,
             args,
+            voc_model,
         )
         end_t_dev = time.time()
 

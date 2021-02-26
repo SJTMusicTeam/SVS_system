@@ -18,6 +18,7 @@ limitations under the License.
 import librosa
 import numpy as np
 import os
+from SVS.model.utils.utils import load_wav, melspectrogram
 import torch
 from torch.utils.data import Dataset
 
@@ -47,6 +48,8 @@ def _get_spectrograms(
     if sr != require_sr:
         y = librosa.resample(y, sr, require_sr)
 
+    # print("y")
+    # print(np.shape(y))
     # Preemphasis
     y = np.append(y[0], y[1:] - preemphasis * y[:-1])
 
@@ -55,16 +58,23 @@ def _get_spectrograms(
         y=y, n_fft=n_fft, hop_length=hop_length, win_length=win_length
     )
 
+    # print("linear")
+    # print(np.shape(linear))
+
     # magnitude spectrogram
     mag, phase = librosa.magphase(linear)
     # mag = np.abs(linear)  # (1+n_fft//2, T)
+    # print("mag")
+    # print(np.shape(mag))
 
     if n_mels > 0:
-        mel_basis = librosa.filters.mel(require_sr, n_fft, n_mels)
-        mel = np.dot(mel_basis, mag)  # (n_mels, t)
-        mel = 20 * np.log10(np.maximum(1e-5, mel))
-        mel = np.clip((mel - ref_db + max_db) / max_db, 1e-8, 1)
-        mel = mel.T.astype(np.float32)
+        # mel_basis = librosa.filters.mel(require_sr, n_fft, n_mels)
+        # mel = np.dot(mel_basis, mag)  # (n_mels, t)
+        # mel = 20 * np.log10(np.maximum(1e-5, mel))
+        # mel = np.clip((mel - ref_db + max_db) / max_db, 1e-8, 1)
+        # mel = mel.T.astype(np.float32)
+        wav = load_wav(fpath)
+        mel = melspectrogram(wav)
 
     # to decibel
     mag = 20 * np.log10(np.maximum(1e-5, mag))
@@ -75,6 +85,9 @@ def _get_spectrograms(
     # Transpose
     mag = mag.T.astype(np.float32)  # (T, 1+n_fft//2)
     phase = phase.T
+
+    # print("mag.T")
+    # print(np.shape(mag))
 
     if n_mels > 0:
         return mag, mel, phase
@@ -162,7 +175,18 @@ class SVSCollator(object):
             pitch[i, :length] = batch[i]["pitch"][:length]
             beat[i, :length] = batch[i]["beat"][:length]
             if self.n_mels > 0:
-                mel[i, :length, :] = batch[i]["mel"][:length]
+                # if mel[i, :, :length].shape == batch[i]["mel"][:, :length].shape:
+                #     mel[i, :, :length] = batch[i]["mel"][:, :length]
+                # else:
+                #     print("wrong data")
+                #     print(mel[i, :, :length].shape)
+                #     print(batch[i]["mel"][:, :length].shape)
+                if mel[i, :length, :].shape == batch[i]["mel"][:length].shape:
+                    mel[i, :length, :] = batch[i]["mel"][:length]
+                else:
+                    print("wrong data")
+                    print(mel[i, :length, :].shape)
+                    print(batch[i]["mel"][:length].shape)
 
             if self.use_asr_post:
                 phone[i, :length, :] = batch[i]["phone"][:length]
@@ -171,6 +195,10 @@ class SVSCollator(object):
                 phone[i, :length] = batch[i]["phone"][:length]
                 chars[i, :char_leng] = batch[i]["char"][:char_leng]
                 char_len_mask[i, :char_leng] = np.arange(1, char_leng + 1)
+        mel = np.array(mel).astype(np.float64)
+        # mel = torch.from_numpy(mel)
+        # mel = mel.transpose(1, 2)
+        # mel = mel.numpy()
 
         spec = torch.from_numpy(spec)
         if self.n_mels > 0:
@@ -309,6 +337,11 @@ class SVSDataset(Dataset):
             self.ref_db,
             n_mels=self.n_mels,
         )
+        # print("parameter")
+        # print(self.sr)
+        # print(self.nfft)
+        # print(self.frame_shift)
+        # print(self.frame_length)
 
         # length check
         if np.abs(len(phone) - np.shape(spectrogram)[0]) > 3:
@@ -335,6 +368,13 @@ class SVSDataset(Dataset):
             len(pitch),
             len(beat),
         )
+        # print("phone  " + str(len(phone)))
+        # print("spec  " + str(np.shape(spectrogram)[0]))
+        # print("trimed  " + str(trimed_length))
+        # print("pitch  " + str(len(pitch)))
+        # print("beat  " + str(len(beat)))
+        # print("mel  " + str(mel.shape))
+
         phone = phone[:min_length]
         beat = beat[:min_length]
         pitch = pitch[:min_length]
@@ -342,7 +382,7 @@ class SVSDataset(Dataset):
         phase = phase[:min_length, :]
 
         if mel is not None:
-            mel = mel[:min_length, :]
+            mel = mel[:min_length, :].T
 
         # print("char len: {}, phone len: {}, spectrom: {}"
         # .format(len(char), len(phone), np.shape(spectrogram)[0]))

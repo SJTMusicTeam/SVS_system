@@ -99,9 +99,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num_workers", default=4, type=int, help="number of cpu workers"
     )
-    parser.add_argument("--frame_length", default=0.06, type=float)
-    parser.add_argument("--frame_shift", default=0.03, type=float)
-    parser.add_argument("--sampling_rate", default=44100, type=int)
+    parser.add_argument("--frame_length", default=0.05, type=float)
+    parser.add_argument("--frame_shift", default=0.0125, type=float)
+    parser.add_argument("--sampling_rate", default=22050, type=int)
     parser.add_argument("--preemphasis", default=0.97, type=float)
     parser.add_argument("--n_mels", default=80, type=int)
     parser.add_argument("--power", default=1.2, type=float)
@@ -211,6 +211,8 @@ if __name__ == "__main__":
     parser.add_argument("--uni_d_model", default=128, type=int)
     parser.add_argument("--uni_num_layers", default=1, type=int)
     parser.add_argument("--feedbackLink_drop_rate", default=0.75, type=float)
+
+    parser.add_argument("--vocoder_category", default="griffin", type=str)
 
     parser.add_argument(
         "--lr_decay_learning_steps",

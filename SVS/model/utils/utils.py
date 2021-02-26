@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 # !/usr/bin/env python3
-
+from pathlib import Path
 
 import copy
 import librosa
@@ -30,7 +30,7 @@ import torch
 
 # from SVS.model.layers.utterance_mvn import UtteranceMVN
 # from pathlib import Path
-
+# from SVS.model.network import WaveRNN
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -223,9 +223,9 @@ def train_one_epoch(
         mel_origin = mel.clone()
         if args.normalize:
             sepc_normalizer = GlobalMVN(args.stats_file)
-            mel_normalizer = GlobalMVN(args.stats_mel_file)
+            # mel_normalizer = GlobalMVN(args.stats_mel_file)
             spec, _ = sepc_normalizer(spec, length)
-            mel, _ = mel_normalizer(mel, length)
+            # mel, _ = mel_normalizer(mel, length)
 
         if args.model_type == "USTC_DAR":
             spec_loss = 0
@@ -282,8 +282,8 @@ def train_one_epoch(
 
             if args.model_type == "USTC_DAR":
                 # normalize inverse 只在infer的时候用，因为log过程需要转换成wav,和计算mcd等指标
-                if args.normalize and args.stats_file:
-                    output_mel, _ = mel_normalizer.inverse(output_mel, length)
+                # if args.normalize and args.stats_file:
+                #     output_mel, _ = mel_normalizer.inverse(output_mel, length)
                 log_figure_mel(
                     step,
                     output_mel,
@@ -321,7 +321,7 @@ def train_one_epoch(
     return info
 
 
-def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, args):
+def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, args, voc_model):
     """validate."""
     losses = AverageMeter()
     spec_losses = AverageMeter()
@@ -430,9 +430,9 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
             mel_origin = mel.clone()
             if args.normalize:
                 sepc_normalizer = GlobalMVN(args.stats_file)
-                mel_normalizer = GlobalMVN(args.stats_mel_file)
+                # mel_normalizer = GlobalMVN(args.stats_mel_file)
                 spec, _ = sepc_normalizer(spec, length)
-                mel, _ = mel_normalizer(mel, length)
+                # mel, _ = mel_normalizer(mel, length)
 
             if args.model_type == "USTC_DAR":
                 spec_loss = 0
@@ -475,8 +475,8 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
 
             if args.model_type == "USTC_DAR":
                 # normalize inverse stage
-                if args.normalize and args.stats_file:
-                    output_mel, _ = mel_normalizer.inverse(output_mel, length)
+                # if args.normalize and args.stats_file:
+                #     output_mel, _ = mel_normalizer.inverse(output_mel, length)
                 mcd_value, length_sum = (
                     0,
                     1,
@@ -502,15 +502,27 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                         args,
                     )
                 else:
-                    log_figure(
-                        step,
-                        output,
-                        spec_origin,
-                        att,
-                        length,
-                        log_save_dir,
-                        args,
-                    )
+                    if args.vocoder_category == "wavernn":
+                        log_mel(
+                            step,
+                            output_mel,
+                            mel,
+                            att,
+                            length,
+                            log_save_dir,
+                            args,
+                            voc_model,
+                        )
+                    else:
+                        log_figure(
+                            step,
+                            output,
+                            spec_origin,
+                            att,
+                            length,
+                            log_save_dir,
+                            args,
+                        )
                 out_log = (
                     "step {}: train_loss {:.4f}; "
                     "spec_loss {:.4f}; mcd_value {:.4f};".format(
@@ -805,29 +817,41 @@ def log_figure(step, output, spec, att, length, save_dir, args):
         plt.savefig(os.path.join(save_dir, "{}_att.png".format(step)))
 
 
-def log_mel(step, output_mel, spec, att, length, save_dir, args, voc_model):
+def log_mel(step, output_mel, ori_mel, att, length, save_dir, args, voc_model):
     """log_mel."""
     # only get one sample from a batch
     # save wav and plot spectrogram
-    output_mel = output_mel.cpu().detach().numpy()[0]
-    out_spec = spec.cpu().detach().numpy()[0]
+    save_dir = Path(save_dir).expanduser()
+
+    # output_mel = output_mel.cpu().detach().numpy()[0]
+    # mel = mel.cpu().detach().numpy()[0]
+    #
     length = np.max(length.cpu().detach().numpy()[0])
+    # output_mel = output_mel[:length]
+    # mel = mel[:length]
+
+    output_mel = output_mel.cpu().detach().numpy()[0]
     output_mel = output_mel[:length]
-    out_spec = out_spec[:length]
+    output_mel = output_mel.transpose(1, 0)
+    output_mel = torch.tensor(output_mel).unsqueeze(0)
 
-    wav = voc_model.generate(output_mel)
+    # ori_mel = ori_mel.cpu().detach().numpy()[0]
+    # ori_mel = ori_mel.transpose(1, 0)
+    # ori_mel = torch.tensor(ori_mel).unsqueeze(0)
 
-    wav_true = spectrogram2wav(
-        out_spec,
-        args.max_db,
-        args.ref_db,
-        args.preemphasis,
-        args.power,
-        args.sampling_rate,
-        args.frame_shift,
-        args.frame_length,
-        args.nfft,
-    )
+    ori_mel = ori_mel[:, :length, :]
+    ori_mel = ori_mel.transpose(1, 2)
+
+    print("ori_mel.shape")
+    print(ori_mel.shape)
+    print(ori_mel)
+    print("output_mel.shape")
+    print(output_mel.shape)
+    print(output_mel)
+
+
+    wav = voc_model.generate(output_mel, save_dir, False, 11000, 550, True)
+    wav_true = voc_model.generate(ori_mel, save_dir, False, 11000, 550, True)
 
     if librosa.__version__ < "0.8.0":
         librosa.output.write_wav(
@@ -855,25 +879,25 @@ def log_mel(step, output_mel, spec, att, length, save_dir, args, voc_model):
             subtype="PCM_24",
         )
 
-    plt.subplot(1, 2, 1)
-    specshow(output_mel.T)
-    plt.title("prediction")
-    plt.subplot(1, 2, 2)
-    specshow(out_spec.T)
-    plt.title("ground_truth")
-    plt.savefig(os.path.join(save_dir, "{}.png".format(step)))
-    if att is not None:
-        att = att.cpu().detach().numpy()[0]
-        att = att[:, :length, :length]
-        plt.subplot(1, 4, 1)
-        specshow(att[0])
-        plt.subplot(1, 4, 2)
-        specshow(att[1])
-        plt.subplot(1, 4, 3)
-        specshow(att[2])
-        plt.subplot(1, 4, 4)
-        specshow(att[3])
-        plt.savefig(os.path.join(save_dir, "{}_att.png".format(step)))
+    # plt.subplot(1, 2, 1)
+    # specshow(output_mel.T)
+    # plt.title("prediction")
+    # plt.subplot(1, 2, 2)
+    # specshow(ori_mel.T)
+    # plt.title("ground_truth")
+    # plt.savefig(os.path.join(save_dir, "{}.png".format(step)))
+    # if att is not None:
+    #     att = att.cpu().detach().numpy()[0]
+    #     att = att[:, :length, :length]
+    #     plt.subplot(1, 4, 1)
+    #     specshow(att[0])
+    #     plt.subplot(1, 4, 2)
+    #     specshow(att[1])
+    #     plt.subplot(1, 4, 3)
+    #     specshow(att[2])
+    #     plt.subplot(1, 4, 4)
+    #     specshow(att[3])
+    #     plt.savefig(os.path.join(save_dir, "{}_att.png".format(step)))
 
 
 def Calculate_time(elapsed_time):
@@ -915,6 +939,40 @@ def Calculate_dataset_duration(dataset_path):
     )
     hours, mins, secs = Calculate_time(total_time)
     print(f"Time: {hours}h {mins}m {secs}s'")
+
+
+def load_wav(path):
+    return librosa.load(path, sr=22050)[0]
+
+
+def save_wav(x, path):
+    librosa.output.write_wav(path, x.astype(np.float32), sr=22050)
+
+
+def melspectrogram(y):
+    D = stft(y)
+    S = amp_to_db(linear_to_mel(np.abs(D)))
+    return normalize(S)
+
+
+def stft(y):
+    return librosa.stft(
+        y=y,
+        n_fft=2048, hop_length=275, win_length=1100)
+
+
+def amp_to_db(x):
+    return 20 * np.log10(np.maximum(1e-5, x))
+
+
+def linear_to_mel(spectrogram):
+    return librosa.feature.melspectrogram(
+        S=spectrogram, sr=22050, n_fft=2048, n_mels=80, fmin=40)
+
+
+def normalize(S):
+    min_level_db = -100
+    return np.clip((S - min_level_db) / -min_level_db, 0, 1)
 
 
 if __name__ == "__main__":

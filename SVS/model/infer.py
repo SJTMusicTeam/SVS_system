@@ -289,22 +289,36 @@ def infer(args):
 
     # preload vocoder model
     if args.vocoder_category == "wavernn":
+        # voc_model = WaveRNN(
+        #     rnn_dims=args.voc_rnn_dims,
+        #     fc_dims=args.voc_fc_dims,
+        #     bits=args.bits,
+        #     pad=args.voc_pad,
+        #     upsample_factors=args.voc_upsample_factors,
+        #     feat_dims=args.n_mels,
+        #     compute_dims=args.voc_compute_dims,
+        #     res_out_dims=args.voc_res_out_dims,
+        #     res_blocks=args.voc_res_blocks,
+        #     hop_length=args.hop_length,
+        #     sample_rate=args.sample_rate,
+        #     mode="MOL",
+        # ).to(device)
         voc_model = WaveRNN(
-            rnn_dims=args.voc_rnn_dims,
-            fc_dims=args.voc_fc_dims,
-            bits=args.bits,
-            pad=args.voc_pad,
-            upsample_factors=args.voc_upsample_factors,
-            feat_dims=args.n_mels,
-            compute_dims=args.voc_compute_dims,
-            res_out_dims=args.voc_res_out_dims,
-            res_blocks=args.voc_res_blocks,
-            hop_length=args.hop_length,
-            sample_rate=args.sample_rate,
+            rnn_dims=512,
+            fc_dims=512,
+            bits=9,
+            pad=2,
+            upsample_factors=(5, 5, 11),
+            feat_dims=80,
+            compute_dims=128,
+            res_out_dims=128,
+            res_blocks=10,
+            hop_length=275,
+            sample_rate=22050,
             mode="MOL",
         ).to(device)
 
-        voc_model.load("./weights/wavernn/latest_weights.pyt")
+        voc_model.load("/home/jimmyli/pycharmproject/SVS_system/SVS/model/weights/wavernn/latest_weights.pyt")
 
     with torch.no_grad():
         for (
@@ -392,9 +406,9 @@ def infer(args):
             # spec_origin = spec
             if args.normalize:
                 sepc_normalizer = GlobalMVN(args.stats_file)
-                mel_normalizer = GlobalMVN(args.stats_mel_file)
+                # mel_normalizer = GlobalMVN(args.stats_mel_file)
                 spec, _ = sepc_normalizer(spec, length)
-                mel, _ = mel_normalizer(mel, length)
+                # mel, _ = mel_normalizer(mel, length)
 
             spec_loss = criterion(output, spec, length_mask)
             if args.n_mels > 0:

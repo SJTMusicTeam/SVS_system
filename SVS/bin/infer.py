@@ -56,9 +56,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--decode_sample", default=-1, type=int, help="samples to decode"
     )
-    parser.add_argument("--frame_length", default=0.06, type=float)
-    parser.add_argument("--frame_shift", default=0.03, type=float)
-    parser.add_argument("--sampling_rate", default=44100, type=int)
+    parser.add_argument("--frame_length", default=0.05, type=float)
+    parser.add_argument("--frame_shift", default=0.0125, type=float)
+    parser.add_argument("--sampling_rate", default=22050, type=int)
     parser.add_argument("--preemphasis", default=0.97, type=float)
     parser.add_argument("--n_mels", default=80, type=int)
     parser.add_argument("--power", default=1.2, type=float)
@@ -125,9 +125,9 @@ if __name__ == "__main__":
 
     parser.add_argument("--double_mel_loss", default=False, type=float)
     parser.add_argument("--vocoder_category", default="griffin", type=str)
-    parser.add_argument("--hop_length", default=672, type=int)
+    parser.add_argument("--hop_length", default=275, type=int)
     parser.add_argument("--voc_mode", default="MOL", type=str)
-    parser.add_argument("--voc_upsample_factors", default=(6, 7, 16), type=tuple)
+    # parser.add_argument("--voc_upsample_factors", default=(6, 7, 16), type=tuple)
     parser.add_argument("--voc_rnn_dims", default=512, type=int)
     parser.add_argument("--voc_fc_dims", default=512, type=int)
     parser.add_argument("--voc_compute_dims", default=128, type=int)
