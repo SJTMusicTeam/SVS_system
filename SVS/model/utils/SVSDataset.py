@@ -185,6 +185,7 @@ class SVSCollator(object):
                     mel[i, :length, :] = batch[i]["mel"][:length]
                 else:
                     print("wrong data")
+                    print(i)
                     print(mel[i, :length, :].shape)
                     print(batch[i]["mel"][:length].shape)
 

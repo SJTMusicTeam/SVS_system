@@ -223,9 +223,10 @@ def train_one_epoch(
         mel_origin = mel.clone()
         if args.normalize:
             sepc_normalizer = GlobalMVN(args.stats_file)
-            # mel_normalizer = GlobalMVN(args.stats_mel_file)
+            mel_normalizer = GlobalMVN(args.stats_mel_file)
+            output_mel_normalizer = GlobalMVN(args.stats_mel_file)
             spec, _ = sepc_normalizer(spec, length)
-            # mel, _ = mel_normalizer(mel, length)
+            mel, _ = mel_normalizer(mel, length)
 
         if args.model_type == "USTC_DAR":
             spec_loss = 0
@@ -282,8 +283,10 @@ def train_one_epoch(
 
             if args.model_type == "USTC_DAR":
                 # normalize inverse 只在infer的时候用，因为log过程需要转换成wav,和计算mcd等指标
-                # if args.normalize and args.stats_file:
-                #     output_mel, _ = mel_normalizer.inverse(output_mel, length)
+                if args.normalize and args.stats_file:
+                    output_mel, _ = mel_normalizer.inverse(output_mel, length)
+                    mel, _ = mel_normalizer.inverse(mel, length)
+                    output_mel = output_mel_normalizer.inverse(output_mel, length)
                 log_figure_mel(
                     step,
                     output_mel,
@@ -300,6 +303,8 @@ def train_one_epoch(
                 # normalize inverse 只在infer的时候用，因为log过程需要转换成wav,和计算mcd等指标
                 if args.normalize and args.stats_file:
                     output, _ = sepc_normalizer.inverse(output, length)
+                    mel, _ = mel_normalizer.inverse(mel, length)
+                    output_mel = output_mel_normalizer.inverse(output_mel, length)
                 log_figure(step, output, spec_origin, att, length, log_save_dir, args)
                 out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
                     step, losses.avg, spec_losses.avg
@@ -430,9 +435,10 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
             mel_origin = mel.clone()
             if args.normalize:
                 sepc_normalizer = GlobalMVN(args.stats_file)
-                # mel_normalizer = GlobalMVN(args.stats_mel_file)
+                mel_normalizer = GlobalMVN(args.stats_mel_file)
+                output_mel_normalizer = GlobalMVN(args.stats_mel_file)
                 spec, _ = sepc_normalizer(spec, length)
-                # mel, _ = mel_normalizer(mel, length)
+                mel, _ = mel_normalizer(mel, length)
 
             if args.model_type == "USTC_DAR":
                 spec_loss = 0
@@ -475,8 +481,10 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
 
             if args.model_type == "USTC_DAR":
                 # normalize inverse stage
-                # if args.normalize and args.stats_file:
-                #     output_mel, _ = mel_normalizer.inverse(output_mel, length)
+                if args.normalize and args.stats_file:
+                    # output_mel, _ = mel_normalizer.inverse(output_mel, length)
+                    mel, _ = mel_normalizer.inverse(mel, length)
+                    output_mel, _ = output_mel_normalizer.inverse(output_mel, length)
                 mcd_value, length_sum = (
                     0,
                     1,
@@ -485,6 +493,9 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                 # normalize inverse stage
                 if args.normalize and args.stats_file:
                     output, _ = sepc_normalizer.inverse(output, length)
+                    # output_mel, _ = mel_normalizer.inverse(output_mel, length)
+                    mel, _ = mel_normalizer.inverse(mel, length)
+                    output_mel, _ = output_mel_normalizer.inverse(output_mel, length)
                 (mcd_value, length_sum,) = Metrics.Calculate_melcd_fromLinearSpectrum(
                     output, spec_origin, length, args
                 )

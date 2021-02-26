@@ -406,27 +406,33 @@ def infer(args):
             # spec_origin = spec
             if args.normalize:
                 sepc_normalizer = GlobalMVN(args.stats_file)
-                # mel_normalizer = GlobalMVN(args.stats_mel_file)
+                mel_normalizer = GlobalMVN(args.stats_mel_file)
+                output_mel_normalizer = GlobalMVN(args.stats_mel_file)
                 spec, _ = sepc_normalizer(spec, length)
-                # mel, _ = mel_normalizer(mel, length)
+                mel, _ = mel_normalizer(mel, length)
 
-            spec_loss = criterion(output, spec, length_mask)
             if args.n_mels > 0:
+                spec_loss = 0
                 mel_loss = criterion(output_mel, mel, length_mel_mask)
+                mel_losses.update(mel_loss.item(), phone.size(0))
             else:
+                spec_loss = criterion(output, spec, length_mask)
                 mel_loss = 0
+                spec_losses.update(spec_loss.item(), phone.size(0))
 
-            final_loss = mel_loss + spec_loss
+            if args.vocoder_category == "wavernn":
+                final_loss = mel_loss
+            else:
+                final_loss = mel_loss + spec_loss
 
             losses.update(final_loss.item(), phone.size(0))
-            spec_losses.update(spec_loss.item(), phone.size(0))
-            if args.n_mels > 0:
-                mel_losses.update(mel_loss.item(), phone.size(0))
 
             # normalize inverse stage
             if args.normalize and args.stats_file:
                 output, _ = sepc_normalizer.inverse(output, length)
                 # spec,_ = sepc_normalizer.inverse(spec,length)
+                mel, _ = mel_normalizer.inverse(mel, length)
+                output_mel, _ = output_mel_normalizer.inverse(output_mel, length)
 
             (mcd_value, length_sum,) = Metrics.Calculate_melcd_fromLinearSpectrum(
                 output, spec_origin, length, args
