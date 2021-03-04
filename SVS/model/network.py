@@ -1409,7 +1409,7 @@ class TransformerSVS(nn.Module):
 
 
 class ConformerSVS(nn.Module):
-    """Conformer Transformer Network.(Conformer encoder + plain decoder)"""
+    """Conformer Transformer Network.(Conformer encoder + plain decoder)."""
 
     def __init__(
         self,
