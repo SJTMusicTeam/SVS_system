@@ -163,14 +163,16 @@ class SVSCollator(object):
 
         for i in range(batch_size):
             length = min(len_list[i], self.max_len)
-            
+
             if self.random_crop and length == self.max_len:
                 # self.max_len < len_list[i] <----> want2cut length < G.T. length
-                index_begin = random.randint(0, int(len_list[i] - self.max_len) )
+                index_begin = random.randint(0, int(len_list[i] - self.max_len))
                 index_end = index_begin + self.max_len
 
                 length_mask[i, :length] = np.arange(1, length + 1)
-                spec[i, :length, :] = batch[i]["spec"][index_begin:index_end]   # [begin, end)
+                spec[i, :length, :] = batch[i]["spec"][
+                    index_begin:index_end
+                ]  # [begin, end)
                 real[i, :length, :] = batch[i]["phase"][index_begin:index_end].real
                 imag[i, :length, :] = batch[i]["phase"][index_begin:index_end].imag
                 pitch[i, :length] = batch[i]["pitch"][index_begin:index_end]
