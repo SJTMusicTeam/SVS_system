@@ -153,6 +153,15 @@ if __name__ == "__main__":
 
     parser.add_argument("--double_mel_loss", default=False, type=float)
     parser.add_argument("--vocoder_category", default="griffin", type=str)
+    parser.add_argument("--hop_length", default=672, type=int)
+    parser.add_argument("--voc_mode", default="MOL", type=str)
+    parser.add_argument("--voc_upsample_factors", default=(6, 7, 16), type=tuple)
+    parser.add_argument("--voc_rnn_dims", default=512, type=int)
+    parser.add_argument("--voc_fc_dims", default=512, type=int)
+    parser.add_argument("--voc_compute_dims", default=128, type=int)
+    parser.add_argument("--voc_res_out_dims", default=128, type=int)
+    parser.add_argument("--voc_blocks", default=10, type=int)
+    parser.add_argument("--voc_pad", default=2, type=int)
 
     args = parser.parse_args()
 

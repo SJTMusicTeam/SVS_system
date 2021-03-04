@@ -409,21 +409,17 @@ def infer(args):
     # preload vocoder model
     if args.vocoder_category == "wavernn":
         voc_model = WaveRNN(
-            rnn_dims=512,
-            fc_dims=512,
-            bits=9,
-            pad=2,
-            upsample_factors=(
-                5,
-                5,
-                11,
-            ),
-            feat_dims=80,
-            compute_dims=128,
-            res_out_dims=128,
-            res_blocks=10,
-            hop_length=275,  # 12.5ms - in line with Tacotron 2 paper
-            sample_rate=22050,
+            rnn_dims=args.voc_rnn_dims,
+            fc_dims=args.voc_fc_dims,
+            bits=args.bits,
+            pad=args.voc_pad,
+            upsample_factors=args.voc_upsample_factors,
+            feat_dims=args.n_mels,
+            compute_dims=args.voc_compute_dims,
+            res_out_dims=args.voc_res_out_dims,
+            res_blocks=args.voc_res_blocks,
+            hop_length=args.hop_length,
+            sample_rate=args.sample_rate,
             mode="MOL",
         ).to(device)
 
@@ -627,7 +623,7 @@ def infer(args):
                     log_mel(
                         step,
                         output_mel,
-                        spec_origin,
+                        mel,
                         att,
                         length,
                         args.prediction_path,
