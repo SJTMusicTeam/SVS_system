@@ -1500,7 +1500,6 @@ class ConformerSVS(nn.Module):
         self,
         characters,
         phone,
-
         pitch,
         beat,
         pos_text=True,
@@ -2412,7 +2411,7 @@ class WaveRNN(nn.Module):
         return padded
 
     def fold_with_overlap(self, x, target, overlap):
-        """ Fold the tensor with overlap for quick batched inference.
+        """Fold the tensor with overlap for quick batched inference.
 
             Overlap will be used for crossfading in xfade_and_unfold()
         Args:
