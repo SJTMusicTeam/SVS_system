@@ -2,11 +2,8 @@
 # Copyright 2020 Renmin University of China (author: Shuai Guo)
 
 import argparse
-import librosa
 import numpy as np
 import os
-import pyworld as pw
-import soundfile as sf
 
 
 def process(args):
@@ -19,9 +16,6 @@ def process(args):
         "ofuton_p_utagoe_db",
         "oniku_kurumi_utagoe_db",
     ]
-
-    output_dir = "data"
-    data_root_path = "/data1/gs/SVS_system/egs/public_dataset/"
 
     # combine phone dict
     phone_dict_db = {}

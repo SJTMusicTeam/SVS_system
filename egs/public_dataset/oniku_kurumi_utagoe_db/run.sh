@@ -36,8 +36,8 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   echo " Stage1: data preprocessing "
   echo ============================
 
-  python local/prepare_data.py ${raw_data_dir}/ONIKU_KURUMI_UTAGOE_DB ${raw_data_dir}/ONIKU_KURUMI_UTAGOE_DB data \
-  --label_type ns
+  python local/prepare_data.py ${raw_data_dir}/ONIKU_KURUMI_UTAGOE_DB \
+    ${raw_data_dir}/ONIKU_KURUMI_UTAGOE_DB data --label_type ns
   ./local/train_dev_test_split.sh data train dev test
 fi
 
