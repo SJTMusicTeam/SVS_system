@@ -1500,6 +1500,7 @@ class ConformerSVS(nn.Module):
         self,
         characters,
         phone,
+
         pitch,
         beat,
         pos_text=True,
