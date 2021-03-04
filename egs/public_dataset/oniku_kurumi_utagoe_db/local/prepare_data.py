@@ -6,7 +6,7 @@
 # os.getcwd()
 
 # The unit of time notation for phoneme labels is 100ns for this dataset
-# "python3 prepare_data.py ONIKU_KURUMI_UTAGOE_DB ONIKU_KURUMI_UTAGOE_DB ONIKU_KURUMI_UTAGOE_DB_data --label_type ns"
+
 
 import argparse
 import librosa
