@@ -7,7 +7,7 @@
 
 
 stage=4
-stop_stage=100
+stop_stage=4
 ngpu=1
 raw_data_dir=downloads
 expdir=exp/2_1_rnn_norm
@@ -42,7 +42,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   ./local/train_dev_test_split.sh data train dev test
 
   if [ ${download_wavernn_vocoder} = True ]; then
-    wget -nc https://raw.githubusercontent.com/pppku/model_zoo/main/wavernn/latest_weights.pyt -P ${raw_data_dir}/model/wavernn
+    wget -nc https://raw.githubusercontent.com/pppku/model_zoo/main/wavernn/latest_weights.pyt -P ${expdir}/model/wavernn
   fi
 
 fi
@@ -77,7 +77,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
       --stats_file ${expdir}/feats_stats.npz \
       --stats_mel_file ${expdir}/feats_mel_stats.npz \
       --vocoder_category wavernn \
-      --wavernn_voc_model ${raw_data_dir}/model/wavernn
+      --wavernn_voc_model ${expdir}/model/wavernn/latest_weights.pyt
   else
     ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
     train.py \
@@ -99,11 +99,11 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     ${cuda_cmd} -gpu ${ngpu} ${expdir}/svs_infer.log \
     infer.py -c conf/infer_rnn_norm_perp.yaml \
       --prediction_path ${expdir}/infer_result \
-      --model_file ${expdir}/epoch_spec_loss_117.pth.tar \
+      --model_file ${expdir}/epoch_loss_102.pth.tar \
       --stats_file ${expdir}/feats_stats.npz \
       --stats_mel_file ${expdir}/feats_mel_stats.npz \
       --vocoder_category wavernn \
-      --wavernn_voc_model ${raw_data_dir}/model/wavernn
+      --wavernn_voc_model ${expdir}/model/wavernn/latest_weights.pyt
   else
     ${cuda_cmd} -gpu ${ngpu} ${expdir}/svs_infer.log \
     infer.py -c conf/infer_rnn_norm_perp.yaml \

@@ -48,6 +48,14 @@ def _get_spectrograms(
     if sr != require_sr:
         y = librosa.resample(y, sr, require_sr)
 
+    if n_mels > 0:
+        # mel_basis = librosa.filters.mel(require_sr, n_fft, n_mels)
+        # mel = np.dot(mel_basis, mag)  # (n_mels, t)
+        # mel = 20 * np.log10(np.maximum(1e-5, mel))
+        # mel = np.clip((mel - ref_db + max_db) / max_db, 1e-8, 1)
+        # mel = mel.T.astype(np.float32)
+        mel = melspectrogram(y, n_fft, hop_length, win_length, sr, n_mels)
+
     y = np.append(y[0], y[1:] - preemphasis * y[:-1])
 
     # stft
@@ -58,15 +66,6 @@ def _get_spectrograms(
     # magnitude spectrogram
     mag, phase = librosa.magphase(linear)
     # mag = np.abs(linear)  # (1+n_fft//2, T)
-
-    if n_mels > 0:
-        # mel_basis = librosa.filters.mel(require_sr, n_fft, n_mels)
-        # mel = np.dot(mel_basis, mag)  # (n_mels, t)
-        # mel = 20 * np.log10(np.maximum(1e-5, mel))
-        # mel = np.clip((mel - ref_db + max_db) / max_db, 1e-8, 1)
-        # mel = mel.T.astype(np.float32)
-        wav = load_wav(fpath)
-        mel = melspectrogram(wav)
 
     # to decibel
     mag = 20 * np.log10(np.maximum(1e-5, mag))

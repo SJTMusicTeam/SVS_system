@@ -1020,23 +1020,23 @@ def save_wav(x, path):
     librosa.output.write_wav(path, x.astype(np.float32), sr=22050)
 
 
-def melspectrogram(y):
-    D = stft(y)
-    S = amp_to_db(linear_to_mel(np.abs(D)))
+def melspectrogram(y, n_fft, hop_length, win_length, sr, n_mels):
+    D = stft(y, n_fft, hop_length, win_length)
+    S = amp_to_db(linear_to_mel(np.abs(D), n_fft, sr, n_mels))
     return normalize(S)
 
 
-def stft(y):
-    return librosa.stft(y=y, n_fft=2048, hop_length=275, win_length=1100)
+def stft(y, n_fft, hop_length, win_length):
+    return librosa.stft(y=y, n_fft=n_fft, hop_length=hop_length, win_length=win_length)
 
 
 def amp_to_db(x):
     return 20 * np.log10(np.maximum(1e-5, x))
 
 
-def linear_to_mel(spectrogram):
+def linear_to_mel(spectrogram, n_fft, sr, n_mels):
     return librosa.feature.melspectrogram(
-        S=spectrogram, sr=22050, n_fft=2048, n_mels=80, fmin=40
+        S=spectrogram, sr=sr, n_fft=n_fft, n_mels=n_mels, fmin=40
     )
 
 
