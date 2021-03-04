@@ -770,7 +770,9 @@ class GLU_TransformerSVS(nn.Module):
                 local_gaussian=local_gaussian,
                 device=device,
             )
-            self.postnet = module.PostNet(output_dim, output_dim, (output_dim // 2 * 2))
+            self.postnet = module.PostNet(
+                output_dim, output_dim, (output_dim // 2 * 2)
+            )
 
     def forward(
         self,
@@ -857,7 +859,9 @@ class GLU_TransformerSVS_combine(nn.Module):
                 local_gaussian=local_gaussian,
                 device=device,
             )
-            self.postnet = module.PostNet(output_dim, output_dim, (output_dim // 2 * 2))
+            self.postnet = module.PostNet(
+                output_dim, output_dim, (output_dim // 2 * 2)
+            )
 
     def forward(
         self,
@@ -1375,7 +1379,9 @@ class TransformerSVS(nn.Module):
                 local_gaussian=local_gaussian,
                 device=device,
             )
-            self.postnet = module.PostNet(output_dim, output_dim, (output_dim // 2 * 2))
+            self.postnet = module.PostNet(
+                output_dim, output_dim, (output_dim // 2 * 2)
+            )
 
     def forward(
         self,
@@ -1494,7 +1500,9 @@ class ConformerSVS(nn.Module):
                 local_gaussian=local_gaussian,
                 device=device,
             )
-            self.postnet = module.PostNet(output_dim, output_dim, (output_dim // 2 * 2))
+            self.postnet = module.PostNet(
+                output_dim, output_dim, (output_dim // 2 * 2)
+            )
 
     def forward(
         self,
@@ -2365,7 +2373,9 @@ class WaveRNN(nn.Module):
                     posterior = F.softmax(logits, dim=1)
                     distrib = torch.distributions.Categorical(posterior)
 
-                    sample = 2 * distrib.sample().float() / (self.n_classes - 1.0) - 1.0
+                    sample = (
+                        2 * distrib.sample().float() / (self.n_classes - 1.0) - 1.0
+                    )
                     output.append(sample)
                     x = sample.unsqueeze(-1)
                 else:
@@ -2445,7 +2455,9 @@ class WaveRNN(nn.Module):
             padding = target + 2 * overlap - remaining
             x = self.pad_tensor(x, padding, side="after")
 
-        folded = torch.zeros(num_folds, target + 2 * overlap, features, device=x.device)
+        folded = torch.zeros(
+            num_folds, target + 2 * overlap, features, device=x.device
+        )
 
         # Get the values for the folded tensor
         for i in range(num_folds):
@@ -2572,7 +2584,8 @@ def sample_from_discretized_mix_logistic(y, log_scale_min=None):
     # select logistic parameters
     means = torch.sum(y[:, :, nr_mix : 2 * nr_mix] * one_hot, dim=-1)
     log_scales = torch.clamp(
-        torch.sum(y[:, :, 2 * nr_mix : 3 * nr_mix] * one_hot, dim=-1), min=log_scale_min
+        torch.sum(y[:, :, 2 * nr_mix : 3 * nr_mix] * one_hot, dim=-1),
+        min=log_scale_min,
     )
     # sample from logistic & clip to interval
     # we don't actually round to the nearest 8bit value when sampling
@@ -2619,7 +2632,9 @@ def _test():
         phone[i, :length, :] = torch.randint(0, phone_size, (length, 1)).long()
         pitch[i, :length, :] = torch.randint(0, 200, (length, 1)).long()
         beat[i, :length, :] = torch.randint(0, 2, (length, 1)).long()
-        char[i, :char_length, :] = torch.randint(0, phone_size, (char_length, 1)).long()
+        char[i, :char_length, :] = torch.randint(
+            0, phone_size, (char_length, 1)
+        ).long()
 
     seq_len = torch.from_numpy(np.array(seq_len_list)).to(device)
     char_seq_len = torch.from_numpy(np.array(char_seq_len_list)).to(device)
