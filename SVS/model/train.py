@@ -726,9 +726,13 @@ def train(args):
             out_log += "lr: {:.6f}, ".format(optimizer._optimizer.param_groups[0]["lr"])
         elif args.optimizer == "adam":
             out_log += "lr: {:.6f}, ".format(optimizer.param_groups[0]["lr"])
-        out_log += "loss: {:.4f}, spec_loss: {:.4f} ".format(
-            train_info["loss"], train_info["spec_loss"]
-        )
+
+        if args.vocoder_category == "wavernn":
+            out_log += "loss: {:.4f} ".format(train_info["loss"])
+        else:
+            out_log += "loss: {:.4f}, spec_loss: {:.4f} ".format(
+                train_info["loss"], train_info["spec_loss"]
+            )
 
         if args.n_mels > 0:
             out_log += "mel_loss: {:.4f}, ".format(train_info["mel_loss"])
