@@ -20,9 +20,12 @@ import numpy as np
 import os
 from SVS.model.network import ConformerSVS
 from SVS.model.network import ConformerSVS_FULL
+from SVS.model.network import ConformerSVS_FULL_combine
 from SVS.model.network import GLU_TransformerSVS
+from SVS.model.network import GLU_TransformerSVS_combine
 from SVS.model.network import GRUSVS_gs
 from SVS.model.network import LSTMSVS
+from SVS.model.network import LSTMSVS_combine
 from SVS.model.network import TransformerSVS
 from SVS.model.network import USTC_SVS
 
@@ -32,7 +35,9 @@ from SVS.model.utils.loss import cal_spread_function
 from SVS.model.utils.loss import MaskedLoss
 from SVS.model.utils.loss import PerceptualEntropy
 from SVS.model.utils.SVSDataset import SVSCollator
+from SVS.model.utils.SVSDataset import SVSCollator_combine
 from SVS.model.utils.SVSDataset import SVSDataset
+from SVS.model.utils.SVSDataset import SVSDataset_combine
 from SVS.model.utils.transformer_optim import ScheduledOptim
 
 from SVS.model.utils.utils import collect_stats
@@ -164,50 +169,97 @@ def train(args):
         device = torch.device("cpu")
         logging.info("Warning: CPU is used")
 
-    train_set = SVSDataset(
-        align_root_path=args.train_align,
-        pitch_beat_root_path=args.train_pitch,
-        wav_root_path=args.train_wav,
-        char_max_len=args.char_max_len,
-        max_len=args.num_frames,
-        sr=args.sampling_rate,
-        preemphasis=args.preemphasis,
-        nfft=args.nfft,
-        frame_shift=args.frame_shift,
-        frame_length=args.frame_length,
-        n_mels=args.n_mels,
-        power=args.power,
-        max_db=args.max_db,
-        ref_db=args.ref_db,
-        sing_quality=args.sing_quality,
-        standard=args.standard,
-    )
+    if args.db_joint:
+        train_set = SVSDataset_combine(
+            align_root_path=args.train_align,
+            pitch_beat_root_path=args.train_pitch,
+            wav_root_path=args.train_wav,
+            char_max_len=args.char_max_len,
+            max_len=args.num_frames,
+            sr=args.sampling_rate,
+            preemphasis=args.preemphasis,
+            nfft=args.nfft,
+            frame_shift=args.frame_shift,
+            frame_length=args.frame_length,
+            n_mels=args.n_mels,
+            power=args.power,
+            max_db=args.max_db,
+            ref_db=args.ref_db,
+            sing_quality=args.sing_quality,
+            standard=args.standard,
+        )
 
-    dev_set = SVSDataset(
-        align_root_path=args.val_align,
-        pitch_beat_root_path=args.val_pitch,
-        wav_root_path=args.val_wav,
-        char_max_len=args.char_max_len,
-        max_len=args.num_frames,
-        sr=args.sampling_rate,
-        preemphasis=args.preemphasis,
-        nfft=args.nfft,
-        frame_shift=args.frame_shift,
-        frame_length=args.frame_length,
-        n_mels=args.n_mels,
-        power=args.power,
-        max_db=args.max_db,
-        ref_db=args.ref_db,
-        sing_quality=args.sing_quality,
-        standard=args.standard,
-    )
-    collate_fn_svs = SVSCollator(
-        args.num_frames,
-        args.char_max_len,
-        args.use_asr_post,
-        args.phone_size,
-        args.n_mels,
-    )
+        dev_set = SVSDataset_combine(
+            align_root_path=args.val_align,
+            pitch_beat_root_path=args.val_pitch,
+            wav_root_path=args.val_wav,
+            char_max_len=args.char_max_len,
+            max_len=args.num_frames,
+            sr=args.sampling_rate,
+            preemphasis=args.preemphasis,
+            nfft=args.nfft,
+            frame_shift=args.frame_shift,
+            frame_length=args.frame_length,
+            n_mels=args.n_mels,
+            power=args.power,
+            max_db=args.max_db,
+            ref_db=args.ref_db,
+            sing_quality=args.sing_quality,
+            standard=args.standard,
+        )
+        collate_fn_svs = SVSCollator_combine(
+            args.num_frames,
+            args.char_max_len,
+            args.use_asr_post,
+            args.phone_size,
+            args.n_mels,
+        )
+
+    else:
+        train_set = SVSDataset(
+            align_root_path=args.train_align,
+            pitch_beat_root_path=args.train_pitch,
+            wav_root_path=args.train_wav,
+            char_max_len=args.char_max_len,
+            max_len=args.num_frames,
+            sr=args.sampling_rate,
+            preemphasis=args.preemphasis,
+            nfft=args.nfft,
+            frame_shift=args.frame_shift,
+            frame_length=args.frame_length,
+            n_mels=args.n_mels,
+            power=args.power,
+            max_db=args.max_db,
+            ref_db=args.ref_db,
+            sing_quality=args.sing_quality,
+            standard=args.standard,
+        )
+
+        dev_set = SVSDataset(
+            align_root_path=args.val_align,
+            pitch_beat_root_path=args.val_pitch,
+            wav_root_path=args.val_wav,
+            char_max_len=args.char_max_len,
+            max_len=args.num_frames,
+            sr=args.sampling_rate,
+            preemphasis=args.preemphasis,
+            nfft=args.nfft,
+            frame_shift=args.frame_shift,
+            frame_length=args.frame_length,
+            n_mels=args.n_mels,
+            power=args.power,
+            max_db=args.max_db,
+            ref_db=args.ref_db,
+            sing_quality=args.sing_quality,
+            standard=args.standard,
+        )
+        collate_fn_svs = SVSCollator(
+            args.num_frames,
+            args.char_max_len,
+            args.use_asr_post,
+            args.phone_size,
+            args.n_mels,
+        )
     train_loader = torch.utils.data.DataLoader(
         dataset=train_set,
         batch_size=args.batchsize,
@@ -224,6 +276,7 @@ def train(args):
         collate_fn=collate_fn_svs,
         pin_memory=True,
     )
+
     assert (
         args.feat_dim == dev_set[0]["spec"].shape[1]
         or args.feat_dim == dev_set[0]["mel"].shape[1]
@@ -235,33 +288,65 @@ def train(args):
         quit()
     # prepare model
     if args.model_type == "GLU_Transformer":
-        model = GLU_TransformerSVS(
-            phone_size=args.phone_size,
-            embed_size=args.embedding_size,
-            hidden_size=args.hidden_size,
-            glu_num_layers=args.glu_num_layers,
-            dropout=args.dropout,
-            output_dim=args.feat_dim,
-            dec_nhead=args.dec_nhead,
-            dec_num_block=args.dec_num_block,
-            n_mels=args.n_mels,
-            double_mel_loss=args.double_mel_loss,
-            local_gaussian=args.local_gaussian,
-            device=device,
-        )
+        if args.db_joint:
+            model = GLU_TransformerSVS_combine(
+                phone_size=args.phone_size,
+                singer_size=args.singer_size,
+                embed_size=args.embedding_size,
+                hidden_size=args.hidden_size,
+                glu_num_layers=args.glu_num_layers,
+                dropout=args.dropout,
+                output_dim=args.feat_dim,
+                dec_nhead=args.dec_nhead,
+                dec_num_block=args.dec_num_block,
+                n_mels=args.n_mels,
+                double_mel_loss=args.double_mel_loss,
+                local_gaussian=args.local_gaussian,
+                device=device,
+            )
+        else:
+            model = GLU_TransformerSVS(
+                phone_size=args.phone_size,
+                embed_size=args.embedding_size,
+                hidden_size=args.hidden_size,
+                glu_num_layers=args.glu_num_layers,
+                dropout=args.dropout,
+                output_dim=args.feat_dim,
+                dec_nhead=args.dec_nhead,
+                dec_num_block=args.dec_num_block,
+                n_mels=args.n_mels,
+                double_mel_loss=args.double_mel_loss,
+                local_gaussian=args.local_gaussian,
+                device=device,
+            )
     elif args.model_type == "LSTM":
-        model = LSTMSVS(
-            phone_size=args.phone_size,
-            embed_size=args.embedding_size,
-            d_model=args.hidden_size,
-            num_layers=args.num_rnn_layers,
-            dropout=args.dropout,
-            d_output=args.feat_dim,
-            n_mels=args.n_mels,
-            double_mel_loss=args.double_mel_loss,
-            device=device,
-            use_asr_post=args.use_asr_post,
-        )
+        if args.db_joint:
+            model = LSTMSVS_combine(
+                phone_size=args.phone_size,
+                singer_size=args.singer_size,
+                embed_size=args.embedding_size,
+                d_model=args.hidden_size,
+                num_layers=args.num_rnn_layers,
+                dropout=args.dropout,
+                d_output=args.feat_dim,
+                n_mels=args.n_mels,
+                double_mel_loss=args.double_mel_loss,
+                device=device,
+                use_asr_post=args.use_asr_post,
+            )
+        else:
+            model = LSTMSVS(
+                phone_size=args.phone_size,
+                embed_size=args.embedding_size,
+                d_model=args.hidden_size,
+                num_layers=args.num_rnn_layers,
+                dropout=args.dropout,
+                d_output=args.feat_dim,
+                n_mels=args.n_mels,
+                double_mel_loss=args.double_mel_loss,
+                device=device,
+                use_asr_post=args.use_asr_post,
+            )
     elif args.model_type == "GRU_gs":
         model = GRUSVS_gs(
             phone_size=args.phone_size,
@@ -322,51 +407,107 @@ def train(args):
             device=device,
         )
     elif args.model_type == "Comformer_full":
-        model = ConformerSVS_FULL(
-            phone_size=args.phone_size,
-            embed_size=args.embedding_size,
-            output_dim=args.feat_dim,
-            n_mels=args.n_mels,
-            enc_attention_dim=args.enc_attention_dim,
-            enc_attention_heads=args.enc_attention_heads,
-            enc_linear_units=args.enc_linear_units,
-            enc_num_blocks=args.enc_num_blocks,
-            enc_dropout_rate=args.enc_dropout_rate,
-            enc_positional_dropout_rate=args.enc_positional_dropout_rate,
-            enc_attention_dropout_rate=args.enc_attention_dropout_rate,
-            enc_input_layer=args.enc_input_layer,
-            enc_normalize_before=args.enc_normalize_before,
-            enc_concat_after=args.enc_concat_after,
-            enc_positionwise_layer_type=args.enc_positionwise_layer_type,
-            enc_positionwise_conv_kernel_size=(args.enc_positionwise_conv_kernel_size),
-            enc_macaron_style=args.enc_macaron_style,
-            enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
-            enc_selfattention_layer_type=args.enc_selfattention_layer_type,
-            enc_activation_type=args.enc_activation_type,
-            enc_use_cnn_module=args.enc_use_cnn_module,
-            enc_cnn_module_kernel=args.enc_cnn_module_kernel,
-            enc_padding_idx=args.enc_padding_idx,
-            dec_attention_dim=args.dec_attention_dim,
-            dec_attention_heads=args.dec_attention_heads,
-            dec_linear_units=args.dec_linear_units,
-            dec_num_blocks=args.dec_num_blocks,
-            dec_dropout_rate=args.dec_dropout_rate,
-            dec_positional_dropout_rate=args.dec_positional_dropout_rate,
-            dec_attention_dropout_rate=args.dec_attention_dropout_rate,
-            dec_input_layer=args.dec_input_layer,
-            dec_normalize_before=args.dec_normalize_before,
-            dec_concat_after=args.dec_concat_after,
-            dec_positionwise_layer_type=args.dec_positionwise_layer_type,
-            dec_positionwise_conv_kernel_size=(args.dec_positionwise_conv_kernel_size),
-            dec_macaron_style=args.dec_macaron_style,
-            dec_pos_enc_layer_type=args.dec_pos_enc_layer_type,
-            dec_selfattention_layer_type=args.dec_selfattention_layer_type,
-            dec_activation_type=args.dec_activation_type,
-            dec_use_cnn_module=args.dec_use_cnn_module,
-            dec_cnn_module_kernel=args.dec_cnn_module_kernel,
-            dec_padding_idx=args.dec_padding_idx,
-            device=device,
-        )
+        if args.db_joint:
+            model = ConformerSVS_FULL_combine(
+                phone_size=args.phone_size,
+                singer_size=args.singer_size,
+                embed_size=args.embedding_size,
+                output_dim=args.feat_dim,
+                n_mels=args.n_mels,
+                enc_attention_dim=args.enc_attention_dim,
+                enc_attention_heads=args.enc_attention_heads,
+                enc_linear_units=args.enc_linear_units,
+                enc_num_blocks=args.enc_num_blocks,
+                enc_dropout_rate=args.enc_dropout_rate,
+                enc_positional_dropout_rate=args.enc_positional_dropout_rate,
+                enc_attention_dropout_rate=args.enc_attention_dropout_rate,
+                enc_input_layer=args.enc_input_layer,
+                enc_normalize_before=args.enc_normalize_before,
+                enc_concat_after=args.enc_concat_after,
+                enc_positionwise_layer_type=args.enc_positionwise_layer_type,
+                enc_positionwise_conv_kernel_size=(
+                    args.enc_positionwise_conv_kernel_size
+                ),
+                enc_macaron_style=args.enc_macaron_style,
+                enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
+                enc_selfattention_layer_type=args.enc_selfattention_layer_type,
+                enc_activation_type=args.enc_activation_type,
+                enc_use_cnn_module=args.enc_use_cnn_module,
+                enc_cnn_module_kernel=args.enc_cnn_module_kernel,
+                enc_padding_idx=args.enc_padding_idx,
+                dec_attention_dim=args.dec_attention_dim,
+                dec_attention_heads=args.dec_attention_heads,
+                dec_linear_units=args.dec_linear_units,
+                dec_num_blocks=args.dec_num_blocks,
+                dec_dropout_rate=args.dec_dropout_rate,
+                dec_positional_dropout_rate=args.dec_positional_dropout_rate,
+                dec_attention_dropout_rate=args.dec_attention_dropout_rate,
+                dec_input_layer=args.dec_input_layer,
+                dec_normalize_before=args.dec_normalize_before,
+                dec_concat_after=args.dec_concat_after,
+                dec_positionwise_layer_type=args.dec_positionwise_layer_type,
+                dec_positionwise_conv_kernel_size=(
+                    args.dec_positionwise_conv_kernel_size
+                ),
+                dec_macaron_style=args.dec_macaron_style,
+                dec_pos_enc_layer_type=args.dec_pos_enc_layer_type,
+                dec_selfattention_layer_type=args.dec_selfattention_layer_type,
+                dec_activation_type=args.dec_activation_type,
+                dec_use_cnn_module=args.dec_use_cnn_module,
+                dec_cnn_module_kernel=args.dec_cnn_module_kernel,
+                dec_padding_idx=args.dec_padding_idx,
+                device=device,
+            )
+        else:
+            model = ConformerSVS_FULL(
+                phone_size=args.phone_size,
+                embed_size=args.embedding_size,
+                output_dim=args.feat_dim,
+                n_mels=args.n_mels,
+                enc_attention_dim=args.enc_attention_dim,
+                enc_attention_heads=args.enc_attention_heads,
+                enc_linear_units=args.enc_linear_units,
+                enc_num_blocks=args.enc_num_blocks,
+                enc_dropout_rate=args.enc_dropout_rate,
+                enc_positional_dropout_rate=args.enc_positional_dropout_rate,
+                enc_attention_dropout_rate=args.enc_attention_dropout_rate,
+                enc_input_layer=args.enc_input_layer,
+                enc_normalize_before=args.enc_normalize_before,
+                enc_concat_after=args.enc_concat_after,
+                enc_positionwise_layer_type=args.enc_positionwise_layer_type,
+                enc_positionwise_conv_kernel_size=(
+                    args.enc_positionwise_conv_kernel_size
+                ),
+                enc_macaron_style=args.enc_macaron_style,
+                enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
+                enc_selfattention_layer_type=args.enc_selfattention_layer_type,
+                enc_activation_type=args.enc_activation_type,
+                enc_use_cnn_module=args.enc_use_cnn_module,
+                enc_cnn_module_kernel=args.enc_cnn_module_kernel,
+                enc_padding_idx=args.enc_padding_idx,
+                dec_attention_dim=args.dec_attention_dim,
+                dec_attention_heads=args.dec_attention_heads,
+                dec_linear_units=args.dec_linear_units,
+                dec_num_blocks=args.dec_num_blocks,
+                dec_dropout_rate=args.dec_dropout_rate,
+                dec_positional_dropout_rate=args.dec_positional_dropout_rate,
+                dec_attention_dropout_rate=args.dec_attention_dropout_rate,
+                dec_input_layer=args.dec_input_layer,
+                dec_normalize_before=args.dec_normalize_before,
+                dec_concat_after=args.dec_concat_after,
+                dec_positionwise_layer_type=args.dec_positionwise_layer_type,
+                dec_positionwise_conv_kernel_size=(
+                    args.dec_positionwise_conv_kernel_size
+                ),
+                dec_macaron_style=args.dec_macaron_style,
+                dec_pos_enc_layer_type=args.dec_pos_enc_layer_type,
+                dec_selfattention_layer_type=args.dec_selfattention_layer_type,
+                dec_activation_type=args.dec_activation_type,
+                dec_use_cnn_module=args.dec_use_cnn_module,
+                dec_cnn_module_kernel=args.dec_cnn_module_kernel,
+                dec_padding_idx=args.dec_padding_idx,
+                device=device,
+            )
 
     elif args.model_type == "USTC_DAR":
         model = USTC_SVS(

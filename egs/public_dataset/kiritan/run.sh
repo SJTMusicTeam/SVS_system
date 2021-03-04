@@ -10,7 +10,7 @@ stage=0
 stop_stage=100
 ngpu=1
 raw_data_dir=downloads
-expdir=exp/rnn_norm_perp
+expdir=exp/2_1_rnn_norm
 
 # Set bash to 'debug' mode, it will exit on :
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
@@ -37,8 +37,8 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   echo " Stage1: data preprocessing "
   echo ============================
 
-  python local/prepare_data.py ${raw_data_dir}/kiritan_singing/wav ${raw_data_dir}/kiritan_singing/mono_label ${raw_data_dir}/kiritan_data
-  ./local/train_dev_test_split.sh ${raw_data_dir}/kiritan_data train dev test
+  python local/prepare_data.py ${raw_data_dir}/kiritan_singing/wav ${raw_data_dir}/kiritan_singing/mono_label data
+  ./local/train_dev_test_split.sh data train dev test
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then 
@@ -75,11 +75,15 @@ fi
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then 
   # Stage4: inference
   echo ===============
-  echo " Stage3: infer "
+  echo " Stage4: infer "
   echo ===============
 
   ${cuda_cmd} -gpu ${ngpu} ${expdir}/svs_infer.log \
-  infer.py -c conf/infer.yaml
+  infer.py -c conf/infer_rnn_norm_perp.yaml \
+    --prediction_path ${expdir}/infer_result \
+    --model_file ${expdir}/epoch_spec_loss_117.pth.tar \
+    --stats_file ${expdir}/feats_stats.npz \
+    --stats_mel_file ${expdir}/feats_mel_stats.npz
 
 
 fi

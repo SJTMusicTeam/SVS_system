@@ -42,19 +42,35 @@ def collect_stats(train_loader, args):
     count_mel, sum_mel, sum_square_mel = 0, 0, 0
     for (
         step,
-        (
-            phone,
-            beat,
-            pitch,
-            spec,
-            real,
-            imag,
-            length,
-            chars,
-            char_len_list,
-            mel,
-        ),
+        data_step,
     ) in enumerate(train_loader, 1):
+        if args.db_joint:
+            (
+                phone,
+                beat,
+                pitch,
+                spec,
+                real,
+                imag,
+                length,
+                chars,
+                char_len_list,
+                mel,
+                singer_id,
+            ) = data_step
+        else:
+            (
+                phone,
+                beat,
+                pitch,
+                spec,
+                real,
+                imag,
+                length,
+                chars,
+                char_len_list,
+                mel,
+            ) = data_step
         # print(f"spec.shape: {spec.shape},length.shape:
         # {length.shape}, mel.shape: {mel.shape}")
         for i, seq in enumerate(spec.cpu().numpy()):
@@ -131,19 +147,44 @@ def train_one_epoch(
 
     for (
         step,
-        (
-            phone,
-            beat,
-            pitch,
-            spec,
-            real,
-            imag,
-            length,
-            chars,
-            char_len_list,
-            mel,
-        ),
+        data_step,
     ) in enumerate(train_loader, 1):
+        if args.db_joint:
+            (
+                phone,
+                beat,
+                pitch,
+                spec,
+                real,
+                imag,
+                length,
+                chars,
+                char_len_list,
+                mel,
+                singer_id,
+            ) = data_step
+
+            singer_id = np.array(singer_id).reshape(
+                np.shape(phone)[0], -1
+            )  # [batch size, 1]
+            singer_vec = singer_id.repeat(
+                np.shape(phone)[1], axis=1
+            )  # [batch size, length]
+            singer_vec = torch.from_numpy(singer_vec).to(device)
+
+        else:
+            (
+                phone,
+                beat,
+                pitch,
+                spec,
+                real,
+                imag,
+                length,
+                chars,
+                char_len_list,
+                mel,
+            ) = data_step
         phone = phone.to(device)
         beat = beat.to(device)
         pitch = pitch.to(device).float()
@@ -170,16 +211,32 @@ def train_one_epoch(
         # output = [batch size, num frames, feat_dim]
         # output_mel = [batch size, num frames, n_mels dimension]
         if args.model_type == "GLU_Transformer":
-            output, att, output_mel, output_mel2 = model(
-                chars,
-                phone,
-                pitch,
-                beat,
-                pos_char=char_len_list,
-                pos_spec=length,
-            )
+            if args.db_joint:
+                output, att, output_mel, output_mel2 = model(
+                    chars,
+                    phone,
+                    pitch,
+                    beat,
+                    singer_vec,
+                    pos_char=char_len_list,
+                    pos_spec=length,
+                )
+            else:
+                output, att, output_mel, output_mel2 = model(
+                    chars,
+                    phone,
+                    pitch,
+                    beat,
+                    pos_char=char_len_list,
+                    pos_spec=length,
+                )
         elif args.model_type == "LSTM":
-            output, hidden, output_mel, output_mel2 = model(phone, pitch, beat)
+            if args.db_joint:
+                output, hidden, output_mel, output_mel2 = model(
+                    phone, pitch, beat, singer_vec
+                )
+            else:
+                output, hidden, output_mel, output_mel2 = model(phone, pitch, beat)
             att = None
         elif args.model_type == "GRU_gs":
             output, att, output_mel = model(spec, phone, pitch, beat, length, args)
@@ -205,14 +262,25 @@ def train_one_epoch(
                 pos_spec=length,
             )
         elif args.model_type == "Comformer_full":
-            output, att, output_mel, output_mel2 = model(
-                chars,
-                phone,
-                pitch,
-                beat,
-                pos_char=char_len_list,
-                pos_spec=length,
-            )
+            if args.db_joint:
+                output, att, output_mel, output_mel2 = model(
+                    chars,
+                    phone,
+                    pitch,
+                    beat,
+                    singer_vec,
+                    pos_char=char_len_list,
+                    pos_spec=length,
+                )
+            else:
+                output, att, output_mel, output_mel2 = model(
+                    chars,
+                    phone,
+                    pitch,
+                    beat,
+                    pos_char=char_len_list,
+                    pos_spec=length,
+                )
         elif args.model_type == "USTC_DAR":
             output_mel = model(
                 phone, pitch, beat, length, args
@@ -345,19 +413,45 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
     with torch.no_grad():
         for (
             step,
-            (
-                phone,
-                beat,
-                pitch,
-                spec,
-                real,
-                imag,
-                length,
-                chars,
-                char_len_list,
-                mel,
-            ),
+            data_step,
         ) in enumerate(dev_loader, 1):
+            if args.db_joint:
+                (
+                    phone,
+                    beat,
+                    pitch,
+                    spec,
+                    real,
+                    imag,
+                    length,
+                    chars,
+                    char_len_list,
+                    mel,
+                    singer_id,
+                ) = data_step
+
+                singer_id = np.array(singer_id).reshape(
+                    np.shape(phone)[0], -1
+                )  # [batch size, 1]
+                singer_vec = singer_id.repeat(
+                    np.shape(phone)[1], axis=1
+                )  # [batch size, length]
+                singer_vec = torch.from_numpy(singer_vec).to(device)
+
+            else:
+                (
+                    phone,
+                    beat,
+                    pitch,
+                    spec,
+                    real,
+                    imag,
+                    length,
+                    chars,
+                    char_len_list,
+                    mel,
+                ) = data_step
+
             phone = phone.to(device)
             beat = beat.to(device)
             pitch = pitch.to(device).float()
@@ -381,17 +475,34 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                 phone = phone.float()
 
             if args.model_type == "GLU_Transformer":
-                output, att, output_mel, output_mel2 = model(
-                    chars,
-                    phone,
-                    pitch,
-                    beat,
-                    pos_char=char_len_list,
-                    pos_spec=length,
-                )
+                if args.db_joint:
+                    output, att, output_mel, output_mel2 = model(
+                        chars,
+                        phone,
+                        pitch,
+                        beat,
+                        singer_vec,
+                        pos_char=char_len_list,
+                        pos_spec=length,
+                    )
+                else:
+                    output, att, output_mel, output_mel2 = model(
+                        chars,
+                        phone,
+                        pitch,
+                        beat,
+                        pos_char=char_len_list,
+                        pos_spec=length,
+                    )
             elif args.model_type == "LSTM":
-                output, hidden, output_mel, output_mel2 = model(phone, pitch, beat)
+                if args.db_joint:
+                    output, hidden, output_mel, output_mel2 = model(
+                        phone, pitch, beat, singer_vec
+                    )
+                else:
+                    output, hidden, output_mel, output_mel2 = model(phone, pitch, beat)
                 att = None
+
             elif args.model_type == "GRU_gs":
                 output, att, output_mel = model(spec, phone, pitch, beat, length, args)
                 att = None
@@ -414,14 +525,25 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                     pos_spec=length,
                 )
             elif args.model_type == "Comformer_full":
-                output, att, output_mel, output_mel2 = model(
-                    chars,
-                    phone,
-                    pitch,
-                    beat,
-                    pos_char=char_len_list,
-                    pos_spec=length,
-                )
+                if args.db_joint:
+                    output, att, output_mel, output_mel2 = model(
+                        chars,
+                        phone,
+                        pitch,
+                        beat,
+                        singer_vec,
+                        pos_char=char_len_list,
+                        pos_spec=length,
+                    )
+                else:
+                    output, att, output_mel, output_mel2 = model(
+                        chars,
+                        phone,
+                        pitch,
+                        beat,
+                        pos_char=char_len_list,
+                        pos_spec=length,
+                    )
             elif args.model_type == "USTC_DAR":
                 output_mel = model(phone, pitch, beat, length, args)
                 att = None
