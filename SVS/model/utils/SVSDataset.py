@@ -14,7 +14,7 @@ limitations under the License.
 """
 # !/usr/bin/env python3
 
-
+import logging
 import librosa
 import numpy as np
 import os
@@ -542,6 +542,10 @@ class SVSDataset_combine(Dataset):
             singer_id = 3
         elif db_name == "pjs":
             singer_id = 4
+        elif db_name == "ofuton":
+            singer_id = 5
+        elif db_name == "oniku":
+            singer_id = 6
         else:
             raise ValueError(
                 "ValueError exception thrown, No such dataset: ", db_name
@@ -579,8 +583,8 @@ class SVSDataset_combine(Dataset):
 
         # length check
         if np.abs(len(phone) - np.shape(spectrogram)[0]) > 3:
-            print("error file: %s" % self.filename_list[i])
-            print(
+            logging.info("error file: %s" % self.filename_list[i])
+            logging.info(
                 "spectrum_size: {}, alignment_size: {}, "
                 "pitch_size: {}, beat_size: {}".format(
                     np.shape(spectrogram)[0],
@@ -589,7 +593,7 @@ class SVSDataset_combine(Dataset):
                     len(beat),
                 )
             )
-        assert np.abs(len(phone) - np.shape(spectrogram)[0]) < 5
+        assert np.abs(len(phone) - np.shape(spectrogram)[0]) <= 15
         # for post condition
         if len(phone.shape) > 1:
             char, trimed_length = None, len(phone)
