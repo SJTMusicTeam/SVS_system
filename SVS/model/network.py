@@ -2116,6 +2116,7 @@ class MelResNet(nn.Module):
     """MelResNet."""
 
     def __init__(self, res_blocks, in_dims, compute_dims, res_out_dims, pad):
+        """Init."""
         super().__init__()
         k_size = pad * 2 + 1
         self.conv_in = nn.Conv1d(in_dims, compute_dims, kernel_size=k_size, bias=False)
@@ -2126,6 +2127,7 @@ class MelResNet(nn.Module):
         self.conv_out = nn.Conv1d(compute_dims, res_out_dims, kernel_size=1)
 
     def forward(self, x):
+        """Forward."""
         x = self.conv_in(x)
         x = self.batch_norm(x)
         x = F.relu(x)
@@ -2139,6 +2141,7 @@ class ResBlock(nn.Module):
     """ResBlock."""
 
     def __init__(self, dims):
+        """Init."""
         super().__init__()
         self.conv1 = nn.Conv1d(dims, dims, kernel_size=1, bias=False)
         self.conv2 = nn.Conv1d(dims, dims, kernel_size=1, bias=False)
@@ -2146,6 +2149,7 @@ class ResBlock(nn.Module):
         self.batch_norm2 = nn.BatchNorm1d(dims)
 
     def forward(self, x):
+        """Forward."""
         residual = x
         x = self.conv1(x)
         x = self.batch_norm1(x)
@@ -2159,11 +2163,13 @@ class Stretch2d(nn.Module):
     """Stretch2d."""
 
     def __init__(self, x_scale, y_scale):
+        """Init."""
         super().__init__()
         self.x_scale = x_scale
         self.y_scale = y_scale
 
     def forward(self, x):
+        """Forward."""
         b, c, h, w = x.size()
         x = x.unsqueeze(-1).unsqueeze(3)
         x = x.repeat(1, 1, 1, self.y_scale, 1, self.x_scale)
@@ -2176,6 +2182,7 @@ class UpsampleNetwork(nn.Module):
     def __init__(
         self, feat_dims, upsample_scales, compute_dims, res_blocks, res_out_dims, pad
     ):
+        """Init."""
         super().__init__()
         total_scale = np.cumproduct(upsample_scales)[-1]
         self.indent = pad * total_scale
@@ -2192,6 +2199,7 @@ class UpsampleNetwork(nn.Module):
             self.up_layers.append(conv)
 
     def forward(self, m):
+        """Forward."""
         aux = self.resnet(m).unsqueeze(1)
         aux = self.resnet_stretch(aux)
         aux = aux.squeeze(1)
@@ -2220,6 +2228,7 @@ class WaveRNN(nn.Module):
         sample_rate,
         mode="RAW",
     ):
+        """Init."""
         super().__init__()
         self.mode = mode
         self.pad = pad
@@ -2257,6 +2266,7 @@ class WaveRNN(nn.Module):
         self._flatten_parameters()
 
     def forward(self, x, mels):
+        """Forward."""
         device = next(self.parameters()).device  # use same device as parameters
         # Although we `_flatten_parameters()` on init, when using DataParallel
         # the model gets replicated, making it no longer guaranteed that the
@@ -2296,6 +2306,7 @@ class WaveRNN(nn.Module):
     def generate(
         self, mels, save_path: Union[str, Path], batched, target, overlap, mu_law
     ):
+        """Generate."""
         self.eval()
 
         device = next(self.parameters()).device  # use same device as parameters
@@ -2389,6 +2400,7 @@ class WaveRNN(nn.Module):
         return output
 
     def get_gru_cell(self, gru):
+        """Get_gru_cell."""
         gru_cell = nn.GRUCell(gru.input_size, gru.hidden_size)
         gru_cell.weight_hh.data = gru.weight_hh_l0.data
         gru_cell.weight_ih.data = gru.weight_ih_l0.data
@@ -2397,6 +2409,7 @@ class WaveRNN(nn.Module):
         return gru_cell
 
     def pad_tensor(self, x, pad, side="both"):
+        """Pad_tensor."""
         # NB - this is just a quick method i need right now
         # i.e., it won't generalise to other shapes/dims
         b, t, c = x.size()
@@ -2451,7 +2464,7 @@ class WaveRNN(nn.Module):
         return folded
 
     def xfade_and_unfold(self, y, target, overlap):
-        """Applies a crossfade and unfolds into a 1d array.
+        """Apply a crossfade and unfolds into a 1d array.
 
         Args:
             y (ndarry)    : Batched sequences of audio samples
@@ -2507,24 +2520,29 @@ class WaveRNN(nn.Module):
         return unfolded
 
     def get_step(self):
+        """Get_step."""
         return self.step.data.item()
 
     def log(self, path, msg):
+        """Log."""
         with open(path, "a") as f:
             print(msg, file=f)
 
     def load(self, path: Union[str, Path]):
+        """Load."""
         # Use device of model params as location for loaded state
         device = next(self.parameters()).device
         self.load_state_dict(torch.load(path, map_location=device), strict=False)
 
     def save(self, path: Union[str, Path]):
+        """Save."""
         # No optimizer argument because saving a model should not include data
         # only relevant in the training process - it should only be properties
         # of the model itself. Let caller take care of saving optimzier state.
         torch.save(self.state_dict(), path)
 
     def num_params(self, print_out=True):
+        """Num_params."""
         parameters = filter(lambda p: p.requires_grad, self.parameters())
         parameters = sum([np.prod(p.size()) for p in parameters]) / 1_000_000
         if print_out:

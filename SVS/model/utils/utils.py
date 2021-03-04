@@ -1013,34 +1013,41 @@ def Calculate_dataset_duration(dataset_path):
 
 
 def load_wav(path):
+    """Load wav"""
     return librosa.load(path, sr=22050)[0]
 
 
 def save_wav(x, path):
+    """Save wav"""
     librosa.output.write_wav(path, x.astype(np.float32), sr=22050)
 
 
 def melspectrogram(y, n_fft, hop_length, win_length, sr, n_mels):
+    """Melspectrogram."""
     D = stft(y, n_fft, hop_length, win_length)
     S = amp_to_db(linear_to_mel(np.abs(D), n_fft, sr, n_mels))
     return normalize(S)
 
 
 def stft(y, n_fft, hop_length, win_length):
+    """Stft."""
     return librosa.stft(y=y, n_fft=n_fft, hop_length=hop_length, win_length=win_length)
 
 
 def amp_to_db(x):
+    """Amp to db."""
     return 20 * np.log10(np.maximum(1e-5, x))
 
 
 def linear_to_mel(spectrogram, n_fft, sr, n_mels):
+    """Linear to mel."""
     return librosa.feature.melspectrogram(
         S=spectrogram, sr=sr, n_fft=n_fft, n_mels=n_mels, fmin=40
     )
 
 
 def normalize(S):
+    """Normalize."""
     min_level_db = -100
     return np.clip((S - min_level_db) / -min_level_db, 0, 1)
 
