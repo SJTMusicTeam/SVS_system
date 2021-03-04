@@ -2262,7 +2262,6 @@ class WaveRNN(nn.Module):
 
     def forward(self, x, mels):
         device = next(self.parameters()).device  # use same device as parameters
-
         # Although we `_flatten_parameters()` on init, when using DataParallel
         # the model gets replicated, making it no longer guaranteed that the
         # weights are contiguous in GPU memory. Hence, we must call it again
