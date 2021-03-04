@@ -290,7 +290,7 @@ class SVSDataset(Dataset):
             phone = np.load(path)
         except Exception:
             print("error path {}".format(path))
-        
+
         if self.db_joint:
             db_name = self.filename_list[i].split("_")[0]
             if db_name == "hts":
@@ -308,7 +308,9 @@ class SVSDataset(Dataset):
             elif db_name == "oniku":
                 singer_id = 6
             else:
-                raise ValueError("ValueError exception thrown, No such dataset: ", db_name)
+                raise ValueError(
+                    "ValueError exception thrown, No such dataset: ", db_name
+                )
 
             beat_path = os.path.join(
                 self.pitch_beat_root_path,
@@ -398,7 +400,7 @@ class SVSDataset(Dataset):
 
         # print("char len: {}, phone len: {}, spectrom: {}"
         # .format(len(char), len(phone), np.shape(spectrogram)[0]))
-        
+
         if self.db_joint:
             return {
                 "phone": phone,

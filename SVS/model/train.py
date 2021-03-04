@@ -212,7 +212,7 @@ def train(args):
         args.use_asr_post,
         args.phone_size,
         args.n_mels,
-        args.db_joint
+        args.db_joint,
     )
     train_loader = torch.utils.data.DataLoader(
         dataset=train_set,
