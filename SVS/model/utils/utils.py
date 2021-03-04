@@ -1013,12 +1013,12 @@ def Calculate_dataset_duration(dataset_path):
 
 
 def load_wav(path):
-    """Load wav"""
+    """Load wav."""
     return librosa.load(path, sr=22050)[0]
 
 
 def save_wav(x, path):
-    """Save wav"""
+    """Save wav."""
     librosa.output.write_wav(path, x.astype(np.float32), sr=22050)
 
 
