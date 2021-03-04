@@ -1980,7 +1980,6 @@ class USTC_SVS(nn.Module):
         )
 
         self.fc_linear = nn.Linear(uni_d_model, output_dim)
-
         self.output_dim = output_dim
         self.uni_d_model = uni_d_model
         self.device = device
