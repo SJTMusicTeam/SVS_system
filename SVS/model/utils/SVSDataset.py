@@ -18,6 +18,7 @@ import librosa
 import logging
 import numpy as np
 import os
+import random
 import torch
 from torch.utils.data import Dataset
 
@@ -120,6 +121,7 @@ class SVSCollator(object):
         phone_size=68,
         n_mels=80,
         db_joint=False,
+        random_crop=False,
     ):
         """init."""
         self.max_len = max_len
@@ -129,6 +131,7 @@ class SVSCollator(object):
         self.phone_size = phone_size - 1
         self.n_mels = n_mels
         self.db_joint = db_joint
+        self.random_crop = random_crop
 
     def __call__(self, batch):
         """call."""
@@ -160,22 +163,46 @@ class SVSCollator(object):
 
         for i in range(batch_size):
             length = min(len_list[i], self.max_len)
-            length_mask[i, :length] = np.arange(1, length + 1)
-            spec[i, :length, :] = batch[i]["spec"][:length]
-            real[i, :length, :] = batch[i]["phase"][:length].real
-            imag[i, :length, :] = batch[i]["phase"][:length].imag
-            pitch[i, :length] = batch[i]["pitch"][:length]
-            beat[i, :length] = batch[i]["beat"][:length]
-            if self.n_mels > 0:
-                mel[i, :length, :] = batch[i]["mel"][:length]
+            
+            if self.random_crop and length == self.max_len:
+                # self.max_len < len_list[i] <----> want2cut length < G.T. length
+                index_begin = random.randint(0, int(len_list[i] - self.max_len) )
+                index_end = index_begin + self.max_len
 
-            if self.use_asr_post:
-                phone[i, :length, :] = batch[i]["phone"][:length]
+                length_mask[i, :length] = np.arange(1, length + 1)
+                spec[i, :length, :] = batch[i]["spec"][index_begin:index_end]   # [begin, end)
+                real[i, :length, :] = batch[i]["phase"][index_begin:index_end].real
+                imag[i, :length, :] = batch[i]["phase"][index_begin:index_end].imag
+                pitch[i, :length] = batch[i]["pitch"][index_begin:index_end]
+                beat[i, :length] = batch[i]["beat"][index_begin:index_end]
+                if self.n_mels > 0:
+                    mel[i, :length, :] = batch[i]["mel"][index_begin:index_end]
+
+                if self.use_asr_post:
+                    phone[i, :length, :] = batch[i]["phone"][index_begin:index_end]
+                else:
+                    char_leng = min(len(batch[i]["char"]), self.char_max_len)
+                    phone[i, :length] = batch[i]["phone"][index_begin:index_end]
+                    chars[i, :char_leng] = batch[i]["char"][:char_leng]
+                    char_len_mask[i, :char_leng] = np.arange(1, char_leng + 1)
+
             else:
-                char_leng = min(len(batch[i]["char"]), self.char_max_len)
-                phone[i, :length] = batch[i]["phone"][:length]
-                chars[i, :char_leng] = batch[i]["char"][:char_leng]
-                char_len_mask[i, :char_leng] = np.arange(1, char_leng + 1)
+                length_mask[i, :length] = np.arange(1, length + 1)
+                spec[i, :length, :] = batch[i]["spec"][:length]
+                real[i, :length, :] = batch[i]["phase"][:length].real
+                imag[i, :length, :] = batch[i]["phase"][:length].imag
+                pitch[i, :length] = batch[i]["pitch"][:length]
+                beat[i, :length] = batch[i]["beat"][:length]
+                if self.n_mels > 0:
+                    mel[i, :length, :] = batch[i]["mel"][:length]
+
+                if self.use_asr_post:
+                    phone[i, :length, :] = batch[i]["phone"][:length]
+                else:
+                    char_leng = min(len(batch[i]["char"]), self.char_max_len)
+                    phone[i, :length] = batch[i]["phone"][:length]
+                    chars[i, :char_leng] = batch[i]["char"][:char_leng]
+                    char_len_mask[i, :char_leng] = np.arange(1, char_leng + 1)
 
         spec = torch.from_numpy(spec)
         if self.n_mels > 0:
@@ -400,6 +427,7 @@ class SVSDataset(Dataset):
 
         # print("char len: {}, phone len: {}, spectrom: {}"
         # .format(len(char), len(phone), np.shape(spectrogram)[0]))
+        # logging.info(min_length)
 
         if self.db_joint:
             return {

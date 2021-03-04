@@ -213,6 +213,7 @@ def train(args):
         args.phone_size,
         args.n_mels,
         args.db_joint,
+        args.random_crop,
     )
     train_loader = torch.utils.data.DataLoader(
         dataset=train_set,

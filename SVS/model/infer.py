@@ -342,6 +342,7 @@ def infer(args):
         args.phone_size,
         args.n_mels,
         args.db_joint,
+        args.random_crop,
     )
     test_loader = torch.utils.data.DataLoader(
         dataset=test_set,

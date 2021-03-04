@@ -66,6 +66,12 @@ if __name__ == "__main__":
         default=False,
         help="Combine multiple datasets & add singer embedding",
     )
+    parser.add_argument(
+        "--random_crop",
+        type=bool,
+        default=False,
+        help="Random crop on frame length, cut follow num_frames",
+    )
 
     parser.add_argument(
         "--max_epochs",
