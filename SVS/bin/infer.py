@@ -24,10 +24,7 @@ from SVS.model.infer import infer
 if __name__ == "__main__":
     parser = jsonargparse.ArgumentParser(description="SVS training")
     parser.add_argument(
-        "-c",
-        "--config",
-        help="config file path",
-        action=jsonargparse.ActionConfigFile,
+        "-c", "--config", help="config file path", action=jsonargparse.ActionConfigFile
     )
     parser.add_argument("--test_align", help="alignment data dir used for validation.")
     parser.add_argument("--test_pitch", help="pitch data dir used for validation.")
@@ -42,10 +39,7 @@ if __name__ == "__main__":
         help="Type of model (New_Transformer or GLU_Transformer or LSTM)",
     )
     parser.add_argument(
-        "--num_frames",
-        default=500,
-        type=int,
-        help="number of frames in one utterance",
+        "--num_frames", default=500, type=int, help="number of frames in one utterance"
     )
     parser.add_argument(
         "--char_max_len", default=100, type=int, help="max length for character"
@@ -124,16 +118,21 @@ if __name__ == "__main__":
     parser.add_argument("--dec_dropout", default=0.1, type=float)
 
     parser.add_argument("--double_mel_loss", default=False, type=float)
+
     parser.add_argument("--vocoder_category", default="griffin", type=str)
-    parser.add_argument("--hop_length", default=275, type=int)
-    parser.add_argument("--voc_mode", default="MOL", type=str)
-    # parser.add_argument("--voc_upsample_factors", default=(6, 7, 16), type=tuple)
     parser.add_argument("--voc_rnn_dims", default=512, type=int)
     parser.add_argument("--voc_fc_dims", default=512, type=int)
+    parser.add_argument("--voc_bits", default=9, type=int)
+    parser.add_argument("--voc_pad", default=2, type=int)
+    parser.add_argument("--voc_upsample_factors_0", default=5, type=int)
+    parser.add_argument("--voc_upsample_factors_1", default=5, type=int)
+    parser.add_argument("--voc_upsample_factors_2", default=11, type=int)
     parser.add_argument("--voc_compute_dims", default=128, type=int)
     parser.add_argument("--voc_res_out_dims", default=128, type=int)
-    parser.add_argument("--voc_blocks", default=10, type=int)
-    parser.add_argument("--voc_pad", default=2, type=int)
+    parser.add_argument("--voc_res_blocks", default=10, type=int)
+    parser.add_argument("--hop_length", default=275, type=int)
+    parser.add_argument("--voc_mode", default="MOL", type=str)
+    parser.add_argument("--wavernn_voc_model", help="wavernn model used for training.")
 
     args = parser.parse_args()
 

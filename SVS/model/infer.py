@@ -244,10 +244,7 @@ def infer(args):
         sing_quality=args.sing_quality,
     )
     collate_fn_svs = SVSCollator(
-        args.num_frames,
-        args.char_max_len,
-        args.use_asr_post,
-        args.phone_size,
+        args.num_frames, args.char_max_len, args.use_asr_post, args.phone_size
     )
     test_loader = torch.utils.data.DataLoader(
         dataset=test_set,
@@ -272,10 +269,7 @@ def infer(args):
     if args.n_mels > 0:
         mel_losses = AverageMeter()
         mcd_metric = AverageMeter()
-        f0_distortion_metric, vuv_error_metric = (
-            AverageMeter(),
-            AverageMeter(),
-        )
+        f0_distortion_metric, vuv_error_metric = (AverageMeter(), AverageMeter())
         if args.double_mel_loss:
             double_mel_losses = AverageMeter()
     model.eval()
@@ -289,52 +283,31 @@ def infer(args):
 
     # preload vocoder model
     if args.vocoder_category == "wavernn":
-        # voc_model = WaveRNN(
-        #     rnn_dims=args.voc_rnn_dims,
-        #     fc_dims=args.voc_fc_dims,
-        #     bits=args.bits,
-        #     pad=args.voc_pad,
-        #     upsample_factors=args.voc_upsample_factors,
-        #     feat_dims=args.n_mels,
-        #     compute_dims=args.voc_compute_dims,
-        #     res_out_dims=args.voc_res_out_dims,
-        #     res_blocks=args.voc_res_blocks,
-        #     hop_length=args.hop_length,
-        #     sample_rate=args.sample_rate,
-        #     mode="MOL",
-        # ).to(device)
         voc_model = WaveRNN(
-            rnn_dims=512,
-            fc_dims=512,
-            bits=9,
-            pad=2,
-            upsample_factors=(5, 5, 11),
-            feat_dims=80,
-            compute_dims=128,
-            res_out_dims=128,
-            res_blocks=10,
-            hop_length=275,
-            sample_rate=22050,
-            mode="MOL",
+            rnn_dims=args.voc_rnn_dims,
+            fc_dims=args.voc_fc_dims,
+            bits=args.voc_bits,
+            pad=args.voc_pad,
+            upsample_factors=(
+                args.voc_upsample_factors_0,
+                args.voc_upsample_factors_1,
+                args.voc_upsample_factors_2,
+            ),
+            feat_dims=args.n_mels,
+            compute_dims=args.voc_compute_dims,
+            res_out_dims=args.voc_res_out_dims,
+            res_blocks=args.voc_res_blocks,
+            hop_length=args.hop_length,
+            sample_rate=args.sampling_rate,
+            mode=args.voc_mode,
         ).to(device)
 
-        voc_model.load("/home/jimmyli/pycharmproject/SVS_system/SVS/model/weights/wavernn/latest_weights.pyt")
+        voc_model.load(args.wavernn_voc_model)
 
     with torch.no_grad():
         for (
             step,
-            (
-                phone,
-                beat,
-                pitch,
-                spec,
-                real,
-                imag,
-                length,
-                chars,
-                char_len_list,
-                mel,
-            ),
+            (phone, beat, pitch, spec, real, imag, length, chars, char_len_list, mel),
         ) in enumerate(test_loader, 1):
             # if step >= args.decode_sample:
             #     break
@@ -361,12 +334,7 @@ def infer(args):
 
             if args.model_type == "GLU_Transformer":
                 output, att, output_mel, output_mel2 = model(
-                    chars,
-                    phone,
-                    pitch,
-                    beat,
-                    pos_char=char_len_list,
-                    pos_spec=length,
+                    chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
                 )
             elif args.model_type == "LSTM":
                 output, hidden, output_mel, output_mel2 = model(phone, pitch, beat)
@@ -376,30 +344,15 @@ def infer(args):
                 att = None
             elif args.model_type == "PureTransformer":
                 output, att, output_mel, output_mel2 = model(
-                    chars,
-                    phone,
-                    pitch,
-                    beat,
-                    pos_char=char_len_list,
-                    pos_spec=length,
+                    chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
                 )
             elif args.model_type == "Conformer":
                 output, att, output_mel, output_mel2 = model(
-                    chars,
-                    phone,
-                    pitch,
-                    beat,
-                    pos_char=char_len_list,
-                    pos_spec=length,
+                    chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
                 )
             elif args.model_type == "Comformer_full":
                 output, att, output_mel, output_mel2 = model(
-                    chars,
-                    phone,
-                    pitch,
-                    beat,
-                    pos_char=char_len_list,
-                    pos_spec=length,
+                    chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
                 )
 
             spec_origin = spec.clone()
@@ -434,7 +387,7 @@ def infer(args):
                 mel, _ = mel_normalizer.inverse(mel, length)
                 output_mel, _ = output_mel_normalizer.inverse(output_mel, length)
 
-            (mcd_value, length_sum,) = Metrics.Calculate_melcd_fromLinearSpectrum(
+            (mcd_value, length_sum) = Metrics.Calculate_melcd_fromLinearSpectrum(
                 output, spec_origin, length, args
             )
             (
@@ -483,10 +436,7 @@ def infer(args):
                 out_log = (
                     "step {}:train_loss{:.4f};"
                     "spec_loss{:.4f};mcd_value{:.4f};".format(
-                        step,
-                        losses.avg,
-                        spec_losses.avg,
-                        mcd_metric.avg,
+                        step, losses.avg, spec_losses.avg, mcd_metric.avg
                     )
                 )
                 if args.perceptual_loss > 0:
@@ -513,9 +463,7 @@ def infer(args):
     out_log += (
         " f0_rmse_value {:.4f} Hz, "
         "vuv_error_value {:.4f} %, F0_CORR {:.4f}; ".format(
-            np.sqrt(f0_distortion_metric.avg),
-            vuv_error_metric.avg * 100,
-            f0_corr,
+            np.sqrt(f0_distortion_metric.avg), vuv_error_metric.avg * 100, f0_corr
         )
     )
     logging.info("{} time: {:.2f}s".format(out_log, end_t_test - start_t_test))

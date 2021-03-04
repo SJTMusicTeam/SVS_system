@@ -51,11 +51,7 @@ for root, dirs, files in os.walk(args.datadir):
             )
             times = librosa.frames_to_time(beats, sr=sr)
             frames = librosa.time_to_frames(
-                times,
-                sr=sr,
-                hop_length=hop_length,
-                n_fft=n_fft,
-                win_length=win_length,
+                times, sr=sr, hop_length=hop_length, n_fft=n_fft, win_length=win_length
             )
             # file=open((os.path.join(args.outdir, name))+'_beats.txt', "w+")
             # for beat in beats:
@@ -65,11 +61,7 @@ for root, dirs, files in os.walk(args.datadir):
 
             """extract pitches"""
             pitches, magnitudes = librosa.piptrack(
-                y=y,
-                sr=sr,
-                n_fft=n_fft,
-                hop_length=hop_length,
-                win_length=win_length,
+                y=y, sr=sr, n_fft=n_fft, hop_length=hop_length, win_length=win_length
             )
             pitches = pitches.T
             # file=open((os.path.join(args.outdir, name))+'_pitches.txt',"w+")

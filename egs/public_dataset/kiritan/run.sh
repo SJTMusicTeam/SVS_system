@@ -6,11 +6,12 @@
 . ./cmd.sh || exit 1;
 
 
-stage=0
-stop_stage=100
+stage=3
+stop_stage=5
 ngpu=1
 raw_data_dir=downloads
 expdir=exp/rnn_norm_perp
+download_wavernn_vocoder=True
 
 # Set bash to 'debug' mode, it will exit on :
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
@@ -63,23 +64,32 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   echo " Stage3: train "
   echo ===============
 
+  if [ ${download_wavernn_vocoder} = True ]; then
+    wget -nc https://raw.githubusercontent.com/pppku/model_zoo/main/wavernn/latest_weights.pyt -P ${raw_data_dir}/model/wavernn
+  fi
+
   ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
   train.py \
     -c conf/train_rnn_norm_perp.yaml \
     --model_save_dir ${expdir} \
     --stats_file ${expdir}/feats_stats.npz \
-    --stats_mel_file ${expdir}/feats_mel_stats.npz
+    --stats_mel_file ${expdir}/feats_mel_stats.npz \
+    --vocoder_category wavernn
 
 fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then 
   # Stage4: inference
   echo ===============
-  echo " Stage3: infer "
+  echo " Stage4: infer "
   echo ===============
 
-  ${cuda_cmd} -gpu ${ngpu} ${expdir}/svs_infer.log \
-  infer.py -c conf/infer.yaml
+  if [ ${download_wavernn_vocoder} = True ]; then
+    wget -nc https://raw.githubusercontent.com/pppku/model_zoo/main/wavernn/latest_weights.pyt -P ${raw_data_dir}/model/wavernn
+  fi
 
+  ${cuda_cmd} -gpu ${ngpu} ${expdir}/svs_infer.log \
+  infer.py -c conf/infer_rnn_norm_perp.yaml \
+    --vocoder_category wavernn
 
 fi
