@@ -31,10 +31,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.init import xavier_uniform_
-from torchaudio.models.wavernn import UpsampleNetwork
 from typing import Union
 
-from SVS.model.utils.utils import save_wav
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

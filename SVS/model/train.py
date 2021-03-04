@@ -18,7 +18,7 @@ limitations under the License.
 import logging
 import numpy as np
 import os
-from SVS.model.network import ConformerSVS, WaveRNN
+from SVS.model.network import ConformerSVS
 from SVS.model.network import ConformerSVS_FULL
 from SVS.model.network import ConformerSVS_FULL_combine
 from SVS.model.network import GLU_TransformerSVS
@@ -28,6 +28,7 @@ from SVS.model.network import LSTMSVS
 from SVS.model.network import LSTMSVS_combine
 from SVS.model.network import TransformerSVS
 from SVS.model.network import USTC_SVS
+from SVS.model.network import WaveRNN
 
 from SVS.model.utils.gpu_util import use_single_gpu
 from SVS.model.utils.loss import cal_psd2bark_dict

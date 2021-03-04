@@ -18,7 +18,7 @@ import librosa
 import logging
 import numpy as np
 import os
-from SVS.model.utils.utils import load_wav, melspectrogram
+from SVS.model.utils.utils import melspectrogram
 import torch
 from torch.utils.data import Dataset
 
@@ -162,10 +162,15 @@ class SVSCollator(object):
                 if mel[i, :length, :].shape == batch[i]["mel"][:length].shape:
                     mel[i, :length, :] = batch[i]["mel"][:length]
                 else:
-                    print("There is a wrong data, batch: {}".format(i + 1))
+                    print("There is a wrong data, batch: {} ".format(i + 1))
                     print(
-                        "mel[i, :length, :].shape: {}, batch[i]['mel'][:length].shape: {}".format(
-                            mel[i, :length, :].shape, batch[i]["mel"][:length].shape
+                        "mel[i, :length, :].shape: {}, ".format(
+                            mel[i, :length, :].shape
+                        )
+                    )
+                    print(
+                        "batch[i]['mel'][:length].shape: {} ".format(
+                            batch[i]["mel"][:length].shape
                         )
                     )
 
