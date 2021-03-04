@@ -1,0 +1,31 @@
+# db_joint data
+test_align: data/alignment/train
+test_pitch: data/pitch_beat_extraction/train
+test_wav: data/wav_info/train
+
+# gpu related
+auto_select_gpu: False
+gpu_id: 1
+
+# model related
+model_type: LSTM
+normalize: True
+# perceptual_loss: 0.01
+
+hidden_size: 256
+embedding_size: 256
+num_rnn_layers: 3
+
+# feature related
+sampling_rate: 22050
+nfft: 2048
+feat_dim: 1025
+frame_length: 0.06
+frame_shift: 0.03
+
+num_frames: 500
+char_max_len: 80
+phone_size: 68
+singer_size: 10
+seed: 777
+
