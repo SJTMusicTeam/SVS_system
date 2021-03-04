@@ -22,8 +22,8 @@ model_type: LSTM
 max_epochs: 200
 batchsize: 4
 num_workers: 10
-hidden_size: 512
-embedding_size: 512
+hidden_size: 256
+embedding_size: 256
 num_rnn_layers: 3
 num_frames: 500
 char_max_len: 100
@@ -31,7 +31,7 @@ optimizer: adam
 lr: 0.001
 phone_size: 68
 seed: 777
-gpu_id: -1
+gpu_id: 1
 
 normalize: False # for utterence normalize
 # collect_stats: True

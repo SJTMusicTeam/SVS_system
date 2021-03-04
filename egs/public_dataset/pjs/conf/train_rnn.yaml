@@ -1,4 +1,4 @@
-# public hts data path
+# public pjs data path
 train_align: data/alignment/train
 train_pitch: data/pitch_beat_extraction/train
 train_wav: data/wav_info/train

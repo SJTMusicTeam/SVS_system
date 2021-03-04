@@ -50,6 +50,12 @@ if __name__ == "__main__":
         default=False,
         help="Resume the optimization from snapshot",
     )
+    parser.add_argument(
+        "--db_joint",
+        type=bool,
+        default=False,
+        help="Combine multiple datasets & add singer embedding",
+    )
 
     parser.add_argument(
         "--max_epochs", default=20, type=int, help="Max. number of epochs to train"
@@ -87,6 +93,7 @@ if __name__ == "__main__":
     parser.add_argument("--ref_db", default=20, type=int)
     parser.add_argument("--nfft", default=2048, type=int)
     parser.add_argument("--phone_size", default=67, type=int)
+    parser.add_argument("--singer_size", default=10, type=int)
     parser.add_argument("--feat_dim", default=1324, type=int)
     parser.add_argument("--embedding_size", default=256, type=int)
     parser.add_argument("--hidden_size", default=256, type=int)

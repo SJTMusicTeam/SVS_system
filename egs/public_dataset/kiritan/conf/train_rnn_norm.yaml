@@ -1,29 +1,29 @@
 # public kiritan data
-train_align: downloads/kiritan_data/alignment/train
-train_pitch: downloads/kiritan_data/pitch_beat_extraction/train
-train_wav: downloads/kiritan_data/wav_info/train
-val_align: downloads/kiritan_data/alignment/dev
-val_pitch: downloads/kiritan_data/pitch_beat_extraction/dev
-val_wav: downloads/kiritan_data/wav_info/dev
+train_align: data/alignment/train
+train_pitch: data/pitch_beat_extraction/train
+train_wav: data/wav_info/train
+val_align: data/alignment/dev
+val_pitch: data/pitch_beat_extraction/dev
+val_wav: data/wav_info/dev
 
 # standard: 4
 # sing_quality: conf/sing_quality.csv
 
 model_type: LSTM
-model_save_dir: exp/10_12_rnn_norm/model
-stats_file: exp/10_12_rnn_norm/model/feats_stats.npz
-stats_mel_file: exp/10_12_rnn_norm/model/feats_mel_stats.npz
+# model_save_dir: exp/10_12_rnn_norm/model
+# stats_file: exp/10_12_rnn_norm/model/feats_stats.npz
+# stats_mel_file: exp/10_12_rnn_norm/model/feats_mel_stats.npz
 
 normalize: True
 double_mel_loss: False
 
 batchsize: 10
-num_workers: 18
+num_workers: 6
 accumulation_steps: 1
 auto_select_gpu: False
 gpu_id: 1
 
-max_epochs: 300
+max_epochs: 150
 
 resume: True
 mask_free: False
@@ -44,8 +44,7 @@ char_max_len: 100
 optimizer: adam
 lr: 0.001
 phone_size: 68
-seed: 777
-gpu: 1
+seed: 666
 
 train_step_log: 20
 dev_step_log: 2

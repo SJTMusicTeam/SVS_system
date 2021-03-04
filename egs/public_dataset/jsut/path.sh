@@ -6,7 +6,7 @@ export PATH=$PWD/utils/:$KALDI_ROOT/tools/openfst/bin:$PATH
 . $KALDI_ROOT/tools/config/common_path.sh
 export LC_ALL=C
 
-. "${MAIN_ROOT}"/tools/activate_python.sh && . "${MAIN_ROOT}"/tools/extra_path.sh
+# . "${MAIN_ROOT}"/tools/activate_python.sh && . "${MAIN_ROOT}"/tools/extra_path.sh
 export PATH=$MAIN_ROOT/utils:$MAIN_ROOT/SVS/bin:$PATH
 
 export OMP_NUM_THREADS=1
