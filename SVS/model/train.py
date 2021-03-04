@@ -35,9 +35,7 @@ from SVS.model.utils.loss import cal_spread_function
 from SVS.model.utils.loss import MaskedLoss
 from SVS.model.utils.loss import PerceptualEntropy
 from SVS.model.utils.SVSDataset import SVSCollator
-from SVS.model.utils.SVSDataset import SVSCollator_combine
 from SVS.model.utils.SVSDataset import SVSDataset
-from SVS.model.utils.SVSDataset import SVSDataset_combine
 from SVS.model.utils.transformer_optim import ScheduledOptim
 
 from SVS.model.utils.utils import collect_stats
@@ -169,97 +167,53 @@ def train(args):
         device = torch.device("cpu")
         logging.info("Warning: CPU is used")
 
-    if args.db_joint:
-        train_set = SVSDataset_combine(
-            align_root_path=args.train_align,
-            pitch_beat_root_path=args.train_pitch,
-            wav_root_path=args.train_wav,
-            char_max_len=args.char_max_len,
-            max_len=args.num_frames,
-            sr=args.sampling_rate,
-            preemphasis=args.preemphasis,
-            nfft=args.nfft,
-            frame_shift=args.frame_shift,
-            frame_length=args.frame_length,
-            n_mels=args.n_mels,
-            power=args.power,
-            max_db=args.max_db,
-            ref_db=args.ref_db,
-            sing_quality=args.sing_quality,
-            standard=args.standard,
-        )
+    train_set = SVSDataset(
+        align_root_path=args.train_align,
+        pitch_beat_root_path=args.train_pitch,
+        wav_root_path=args.train_wav,
+        char_max_len=args.char_max_len,
+        max_len=args.num_frames,
+        sr=args.sampling_rate,
+        preemphasis=args.preemphasis,
+        nfft=args.nfft,
+        frame_shift=args.frame_shift,
+        frame_length=args.frame_length,
+        n_mels=args.n_mels,
+        power=args.power,
+        max_db=args.max_db,
+        ref_db=args.ref_db,
+        sing_quality=args.sing_quality,
+        standard=args.standard,
+        db_joint=args.db_joint,
+    )
 
-        dev_set = SVSDataset_combine(
-            align_root_path=args.val_align,
-            pitch_beat_root_path=args.val_pitch,
-            wav_root_path=args.val_wav,
-            char_max_len=args.char_max_len,
-            max_len=args.num_frames,
-            sr=args.sampling_rate,
-            preemphasis=args.preemphasis,
-            nfft=args.nfft,
-            frame_shift=args.frame_shift,
-            frame_length=args.frame_length,
-            n_mels=args.n_mels,
-            power=args.power,
-            max_db=args.max_db,
-            ref_db=args.ref_db,
-            sing_quality=args.sing_quality,
-            standard=args.standard,
-        )
-        collate_fn_svs = SVSCollator_combine(
-            args.num_frames,
-            args.char_max_len,
-            args.use_asr_post,
-            args.phone_size,
-            args.n_mels,
-        )
-
-    else:
-        train_set = SVSDataset(
-            align_root_path=args.train_align,
-            pitch_beat_root_path=args.train_pitch,
-            wav_root_path=args.train_wav,
-            char_max_len=args.char_max_len,
-            max_len=args.num_frames,
-            sr=args.sampling_rate,
-            preemphasis=args.preemphasis,
-            nfft=args.nfft,
-            frame_shift=args.frame_shift,
-            frame_length=args.frame_length,
-            n_mels=args.n_mels,
-            power=args.power,
-            max_db=args.max_db,
-            ref_db=args.ref_db,
-            sing_quality=args.sing_quality,
-            standard=args.standard,
-        )
-
-        dev_set = SVSDataset(
-            align_root_path=args.val_align,
-            pitch_beat_root_path=args.val_pitch,
-            wav_root_path=args.val_wav,
-            char_max_len=args.char_max_len,
-            max_len=args.num_frames,
-            sr=args.sampling_rate,
-            preemphasis=args.preemphasis,
-            nfft=args.nfft,
-            frame_shift=args.frame_shift,
-            frame_length=args.frame_length,
-            n_mels=args.n_mels,
-            power=args.power,
-            max_db=args.max_db,
-            ref_db=args.ref_db,
-            sing_quality=args.sing_quality,
-            standard=args.standard,
-        )
-        collate_fn_svs = SVSCollator(
-            args.num_frames,
-            args.char_max_len,
-            args.use_asr_post,
-            args.phone_size,
-            args.n_mels,
-        )
+    dev_set = SVSDataset(
+        align_root_path=args.val_align,
+        pitch_beat_root_path=args.val_pitch,
+        wav_root_path=args.val_wav,
+        char_max_len=args.char_max_len,
+        max_len=args.num_frames,
+        sr=args.sampling_rate,
+        preemphasis=args.preemphasis,
+        nfft=args.nfft,
+        frame_shift=args.frame_shift,
+        frame_length=args.frame_length,
+        n_mels=args.n_mels,
+        power=args.power,
+        max_db=args.max_db,
+        ref_db=args.ref_db,
+        sing_quality=args.sing_quality,
+        standard=args.standard,
+        db_joint=args.db_joint,
+    )
+    collate_fn_svs = SVSCollator(
+        args.num_frames,
+        args.char_max_len,
+        args.use_asr_post,
+        args.phone_size,
+        args.n_mels,
+        args.db_joint
+    )
     train_loader = torch.utils.data.DataLoader(
         dataset=train_set,
         batch_size=args.batchsize,

@@ -119,6 +119,7 @@ class SVSCollator(object):
         use_asr_post=False,
         phone_size=68,
         n_mels=80,
+        db_joint=False,
     ):
         """init."""
         self.max_len = max_len
@@ -127,6 +128,7 @@ class SVSCollator(object):
         self.use_asr_post = use_asr_post
         self.phone_size = phone_size - 1
         self.n_mels = n_mels
+        self.db_joint = db_joint
 
     def __call__(self, batch):
         """call."""
@@ -144,6 +146,9 @@ class SVSCollator(object):
         pitch = np.zeros((batch_size, self.max_len))
         beat = np.zeros((batch_size, self.max_len))
         length_mask = np.zeros((batch_size, self.max_len))
+
+        if self.db_joint:
+            singer_id = [batch[i]["singer_id"] for i in range(batch_size)]
 
         if self.use_asr_post:
             phone = np.zeros((batch_size, self.max_len, self.phone_size))
@@ -187,6 +192,11 @@ class SVSCollator(object):
         if not self.use_asr_post:
             chars = torch.from_numpy(chars).unsqueeze(dim=-1).to(torch.int64)
             char_len_mask = torch.from_numpy(char_len_mask).long()
+        else:
+            chars = None
+            char_len_mask = None
+
+        if self.db_joint:
             return (
                 phone,
                 beat,
@@ -198,6 +208,7 @@ class SVSCollator(object):
                 chars,
                 char_len_mask,
                 mel,
+                singer_id,
             )
         else:
             return (
@@ -208,8 +219,8 @@ class SVSCollator(object):
                 real,
                 imag,
                 length_mask,
-                None,
-                None,
+                chars,
+                char_len_mask,
                 mel,
             )
 
@@ -235,6 +246,7 @@ class SVSDataset(Dataset):
         ref_db=20,
         sing_quality="conf/sing_quality.csv",
         standard=3,
+        db_joint=False,
     ):
         """init."""
         self.align_root_path = align_root_path
@@ -251,6 +263,7 @@ class SVSDataset(Dataset):
         self.power = power
         self.max_db = max_db
         self.ref_db = ref_db
+        self.db_joint = db_joint
         if standard > 0:
             print(standard)
             quality = _load_sing_quality(sing_quality, standard)
@@ -277,295 +290,65 @@ class SVSDataset(Dataset):
             phone = np.load(path)
         except Exception:
             print("error path {}".format(path))
-        beat_path = os.path.join(
-            self.pitch_beat_root_path,
-            str(int(self.filename_list[i][1:4])),
-            self.filename_list[i][4:-4] + "_beats.npy",
-        )
-        beat_numpy = np.load(beat_path)
-        beat_index = list(map(lambda x: int(x), beat_numpy))
-        beat = np.zeros(len(phone))
-        beat[beat_index] = 1
-        pitch_path = os.path.join(
-            self.pitch_beat_root_path,
-            str(int(self.filename_list[i][1:4])),
-            self.filename_list[i][4:-4] + "_pitch.npy",
-        )
-        pitch = np.load(pitch_path)
-        wav_path = os.path.join(
-            self.wav_root_path,
-            str(int(self.filename_list[i][1:4])),
-            self.filename_list[i][4:-4] + ".wav",
-        )
-
-        spectrogram, mel, phase = _get_spectrograms(
-            wav_path,
-            self.sr,
-            self.preemphasis,
-            self.nfft,
-            self.frame_shift,
-            self.frame_length,
-            self.max_db,
-            self.ref_db,
-            n_mels=self.n_mels,
-        )
-
-        # length check
-        if np.abs(len(phone) - np.shape(spectrogram)[0]) > 3:
-            print("error file: %s" % self.filename_list[i])
-            print(
-                "spectrum_size: {}, alignment_size: {}, "
-                "pitch_size: {}, beat_size: {}".format(
-                    np.shape(spectrogram)[0],
-                    len(phone),
-                    len(pitch),
-                    len(beat),
-                )
-            )
-        assert np.abs(len(phone) - np.shape(spectrogram)[0]) < 5
-        # for post condition
-        if len(phone.shape) > 1:
-            char, trimed_length = None, len(phone)
-        else:
-            char, trimed_length = _phone2char(phone[: self.max_len], self.char_max_len)
-        min_length = min(
-            len(phone),
-            np.shape(spectrogram)[0],
-            trimed_length,
-            len(pitch),
-            len(beat),
-        )
-        phone = phone[:min_length]
-        beat = beat[:min_length]
-        pitch = pitch[:min_length]
-        spectrogram = spectrogram[:min_length, :]
-        phase = phase[:min_length, :]
-
-        if mel is not None:
-            mel = mel[:min_length, :]
-
-        # print("char len: {}, phone len: {}, spectrom: {}"
-        # .format(len(char), len(phone), np.shape(spectrogram)[0]))
-        return {
-            "phone": phone,
-            "beat": beat,
-            "pitch": pitch,
-            "spec": spectrogram,
-            "char": char,
-            "phase": phase,
-            "mel": mel,
-        }
-
-
-# for combine dataset
-class SVSCollator_combine(object):
-    """SVSCollator."""
-
-    def __init__(
-        self,
-        max_len,
-        char_max_len=80,
-        use_asr_post=False,
-        phone_size=68,
-        n_mels=80,
-    ):
-        """init."""
-        self.max_len = max_len
-        # plus 1 for aligner to consider padding char
-        self.char_max_len = char_max_len + 1
-        self.use_asr_post = use_asr_post
-        self.phone_size = phone_size - 1
-        self.n_mels = n_mels
-
-    def __call__(self, batch):
-        """call."""
-        # phone, beat, pitch, spectrogram, char, phase, mel, singer_id
-
-        batch_size = len(batch)
-        # get spectrum dim
-        spec_dim = len(batch[0]["spec"][0])
-        len_list = [len(batch[i]["phone"]) for i in range(batch_size)]
-        spec = np.zeros((batch_size, self.max_len, spec_dim))
-        real = np.zeros((batch_size, self.max_len, spec_dim))
-        imag = np.zeros((batch_size, self.max_len, spec_dim))
-        if self.n_mels > 0:
-            mel = np.zeros((batch_size, self.max_len, self.n_mels))
-        pitch = np.zeros((batch_size, self.max_len))
-        beat = np.zeros((batch_size, self.max_len))
-        length_mask = np.zeros((batch_size, self.max_len))
-
-        singer_id = [batch[i]["singer_id"] for i in range(batch_size)]
-
-        if self.use_asr_post:
-            phone = np.zeros((batch_size, self.max_len, self.phone_size))
-        else:
-            # char_len_list=[len(batch[i]["char"]) for i in range(batch_size)]
-            phone = np.zeros((batch_size, self.max_len))
-            chars = np.zeros((batch_size, self.char_max_len))
-            char_len_mask = np.zeros((batch_size, self.char_max_len))
-
-        for i in range(batch_size):
-            length = min(len_list[i], self.max_len)
-            length_mask[i, :length] = np.arange(1, length + 1)
-            spec[i, :length, :] = batch[i]["spec"][:length]
-            real[i, :length, :] = batch[i]["phase"][:length].real
-            imag[i, :length, :] = batch[i]["phase"][:length].imag
-            pitch[i, :length] = batch[i]["pitch"][:length]
-            beat[i, :length] = batch[i]["beat"][:length]
-            if self.n_mels > 0:
-                mel[i, :length, :] = batch[i]["mel"][:length]
-
-            if self.use_asr_post:
-                phone[i, :length, :] = batch[i]["phone"][:length]
+        
+        if self.db_joint:
+            db_name = self.filename_list[i].split("_")[0]
+            if db_name == "hts":
+                singer_id = 0
+            elif db_name == "jsut":
+                singer_id = 1
+            elif db_name == "kiritan":
+                singer_id = 2
+            elif db_name == "natsume":
+                singer_id = 3
+            elif db_name == "pjs":
+                singer_id = 4
+            elif db_name == "ofuton":
+                singer_id = 5
+            elif db_name == "oniku":
+                singer_id = 6
             else:
-                char_leng = min(len(batch[i]["char"]), self.char_max_len)
-                phone[i, :length] = batch[i]["phone"][:length]
-                chars[i, :char_leng] = batch[i]["char"][:char_leng]
-                char_len_mask[i, :char_leng] = np.arange(1, char_leng + 1)
+                raise ValueError("ValueError exception thrown, No such dataset: ", db_name)
 
-        spec = torch.from_numpy(spec)
-        if self.n_mels > 0:
-            mel = torch.from_numpy(mel)
-        else:
-            mel = None
-        imag = torch.from_numpy(imag)
-        real = torch.from_numpy(real)
-        length_mask = torch.from_numpy(length_mask).long()
-        pitch = torch.from_numpy(pitch).unsqueeze(dim=-1).long()
-        beat = torch.from_numpy(beat).unsqueeze(dim=-1).long()
-        phone = torch.from_numpy(phone).unsqueeze(dim=-1).long()
-
-        if not self.use_asr_post:
-            chars = torch.from_numpy(chars).unsqueeze(dim=-1).to(torch.int64)
-            char_len_mask = torch.from_numpy(char_len_mask).long()
-            return (
-                phone,
-                beat,
-                pitch,
-                spec,
-                real,
-                imag,
-                length_mask,
-                chars,
-                char_len_mask,
-                mel,
-                singer_id,
+            beat_path = os.path.join(
+                self.pitch_beat_root_path,
+                self.filename_list[i][:-4] + "_beats.npy",
+            )
+            beat_numpy = np.load(beat_path)
+            beat_index = list(map(lambda x: int(x), beat_numpy))
+            beat = np.zeros(len(phone))
+            beat[beat_index] = 1
+            pitch_path = os.path.join(
+                self.pitch_beat_root_path,
+                self.filename_list[i][:-4] + "_pitch.npy",
+            )
+            pitch = np.load(pitch_path)
+            wav_path = os.path.join(
+                self.wav_root_path,
+                self.filename_list[i][:-4] + ".wav",
             )
         else:
-            return (
-                phone,
-                beat,
-                pitch,
-                spec,
-                real,
-                imag,
-                length_mask,
-                None,
-                None,
-                mel,
-                singer_id,
+            # path is different between combine-db <-> single db
+            beat_path = os.path.join(
+                self.pitch_beat_root_path,
+                str(int(self.filename_list[i][1:4])),
+                self.filename_list[i][4:-4] + "_beats.npy",
             )
-
-
-class SVSDataset_combine(Dataset):
-    """SVSDataset."""
-
-    def __init__(
-        self,
-        align_root_path,
-        pitch_beat_root_path,
-        wav_root_path,
-        char_max_len=80,
-        max_len=500,
-        sr=44100,
-        preemphasis=0.97,
-        nfft=2048,
-        frame_shift=0.03,
-        frame_length=0.06,
-        n_mels=80,
-        power=1.2,
-        max_db=100,
-        ref_db=20,
-        sing_quality="conf/sing_quality.csv",
-        standard=3,
-    ):
-        """init."""
-        self.align_root_path = align_root_path
-        self.pitch_beat_root_path = pitch_beat_root_path
-        self.wav_root_path = wav_root_path
-        self.char_max_len = char_max_len
-        self.max_len = max_len
-        self.sr = sr
-        self.preemphasis = preemphasis
-        self.nfft = nfft
-        self.frame_shift = int(frame_shift * sr)
-        self.frame_length = int(frame_length * sr)
-        self.n_mels = n_mels
-        self.power = power
-        self.max_db = max_db
-        self.ref_db = ref_db
-        if standard > 0:
-            print(standard)
-            quality = _load_sing_quality(sing_quality, standard)
-        else:
-            quality = None
-        # get file_list
-        self.filename_list = os.listdir(align_root_path)
-        # phone_list, beat_list, pitch_list, spectrogram_list = [], [], [], []
-        for filename in self.filename_list:
-            if quality is None:
-                break
-            if filename[-4:] != ".npy" or filename[:4] not in quality:
-                print("remove file {}".format(filename))
-                self.filename_list.remove(filename)
-
-    def __len__(self):
-        """len."""
-        return len(self.filename_list)
-
-    def __getitem__(self, i):
-        """getitem."""
-        path = os.path.join(self.align_root_path, self.filename_list[i])
-        try:
-            phone = np.load(path)
-        except Exception:
-            print("error path {}".format(path))
-
-        db_name = self.filename_list[i].split("_")[0]
-        if db_name == "hts":
-            singer_id = 0
-        elif db_name == "jsut":
-            singer_id = 1
-        elif db_name == "kiritan":
-            singer_id = 2
-        elif db_name == "natsume":
-            singer_id = 3
-        elif db_name == "pjs":
-            singer_id = 4
-        elif db_name == "ofuton":
-            singer_id = 5
-        elif db_name == "oniku":
-            singer_id = 6
-        else:
-            raise ValueError("ValueError exception thrown, No such dataset: ", db_name)
-
-        beat_path = os.path.join(
-            self.pitch_beat_root_path,
-            self.filename_list[i][:-4] + "_beats.npy",
-        )
-        beat_numpy = np.load(beat_path)
-        beat_index = list(map(lambda x: int(x), beat_numpy))
-        beat = np.zeros(len(phone))
-        beat[beat_index] = 1
-        pitch_path = os.path.join(
-            self.pitch_beat_root_path,
-            self.filename_list[i][:-4] + "_pitch.npy",
-        )
-        pitch = np.load(pitch_path)
-        wav_path = os.path.join(
-            self.wav_root_path,
-            self.filename_list[i][:-4] + ".wav",
-        )
+            beat_numpy = np.load(beat_path)
+            beat_index = list(map(lambda x: int(x), beat_numpy))
+            beat = np.zeros(len(phone))
+            beat[beat_index] = 1
+            pitch_path = os.path.join(
+                self.pitch_beat_root_path,
+                str(int(self.filename_list[i][1:4])),
+                self.filename_list[i][4:-4] + "_pitch.npy",
+            )
+            pitch = np.load(pitch_path)
+            wav_path = os.path.join(
+                self.wav_root_path,
+                str(int(self.filename_list[i][1:4])),
+                self.filename_list[i][4:-4] + ".wav",
+            )
 
         spectrogram, mel, phase = _get_spectrograms(
             wav_path,
@@ -615,13 +398,25 @@ class SVSDataset_combine(Dataset):
 
         # print("char len: {}, phone len: {}, spectrom: {}"
         # .format(len(char), len(phone), np.shape(spectrogram)[0]))
-        return {
-            "phone": phone,
-            "beat": beat,
-            "pitch": pitch,
-            "spec": spectrogram,
-            "char": char,
-            "phase": phase,
-            "mel": mel,
-            "singer_id": singer_id,
-        }
+        
+        if self.db_joint:
+            return {
+                "phone": phone,
+                "beat": beat,
+                "pitch": pitch,
+                "spec": spectrogram,
+                "char": char,
+                "phase": phase,
+                "mel": mel,
+                "singer_id": singer_id,
+            }
+        else:
+            return {
+                "phone": phone,
+                "beat": beat,
+                "pitch": pitch,
+                "spec": spectrogram,
+                "char": char,
+                "phase": phase,
+                "mel": mel,
+            }

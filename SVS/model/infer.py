@@ -30,9 +30,7 @@ from SVS.model.network import TransformerSVS
 from SVS.model.network import WaveRNN
 from SVS.model.utils.loss import MaskedLoss
 from SVS.model.utils.SVSDataset import SVSCollator
-from SVS.model.utils.SVSDataset import SVSCollator_combine
 from SVS.model.utils.SVSDataset import SVSDataset
-from SVS.model.utils.SVSDataset import SVSDataset_combine
 from SVS.model.utils.utils import AverageMeter
 from SVS.model.utils.utils import log_figure
 from SVS.model.utils.utils import log_mel
@@ -318,56 +316,33 @@ def infer(args):
     model.eval()
 
     # Decode
-    if args.db_joint:
-        test_set = SVSDataset_combine(
-            align_root_path=args.test_align,
-            pitch_beat_root_path=args.test_pitch,
-            wav_root_path=args.test_wav,
-            char_max_len=args.char_max_len,
-            max_len=args.num_frames,
-            sr=args.sampling_rate,
-            preemphasis=args.preemphasis,
-            nfft=args.nfft,
-            frame_shift=args.frame_shift,
-            frame_length=args.frame_length,
-            n_mels=args.n_mels,
-            power=args.power,
-            max_db=args.max_db,
-            ref_db=args.ref_db,
-            standard=args.standard,
-            sing_quality=args.sing_quality,
-        )
-        collate_fn_svs = SVSCollator_combine(
-            args.num_frames,
-            args.char_max_len,
-            args.use_asr_post,
-            args.phone_size,
-        )
-    else:
-        test_set = SVSDataset(
-            align_root_path=args.test_align,
-            pitch_beat_root_path=args.test_pitch,
-            wav_root_path=args.test_wav,
-            char_max_len=args.char_max_len,
-            max_len=args.num_frames,
-            sr=args.sampling_rate,
-            preemphasis=args.preemphasis,
-            nfft=args.nfft,
-            frame_shift=args.frame_shift,
-            frame_length=args.frame_length,
-            n_mels=args.n_mels,
-            power=args.power,
-            max_db=args.max_db,
-            ref_db=args.ref_db,
-            standard=args.standard,
-            sing_quality=args.sing_quality,
-        )
-        collate_fn_svs = SVSCollator(
-            args.num_frames,
-            args.char_max_len,
-            args.use_asr_post,
-            args.phone_size,
-        )
+    test_set = SVSDataset(
+        align_root_path=args.test_align,
+        pitch_beat_root_path=args.test_pitch,
+        wav_root_path=args.test_wav,
+        char_max_len=args.char_max_len,
+        max_len=args.num_frames,
+        sr=args.sampling_rate,
+        preemphasis=args.preemphasis,
+        nfft=args.nfft,
+        frame_shift=args.frame_shift,
+        frame_length=args.frame_length,
+        n_mels=args.n_mels,
+        power=args.power,
+        max_db=args.max_db,
+        ref_db=args.ref_db,
+        standard=args.standard,
+        sing_quality=args.sing_quality,
+        db_joint=args.db_joint,
+    )
+    collate_fn_svs = SVSCollator(
+        args.num_frames,
+        args.char_max_len,
+        args.use_asr_post,
+        args.phone_size,
+        args.n_mels,
+        args.db_joint,
+    )
     test_loader = torch.utils.data.DataLoader(
         dataset=test_set,
         batch_size=1,
