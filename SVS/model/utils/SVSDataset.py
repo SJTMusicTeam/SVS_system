@@ -393,7 +393,7 @@ class SVSCollator_combine(object):
         pitch = np.zeros((batch_size, self.max_len))
         beat = np.zeros((batch_size, self.max_len))
         length_mask = np.zeros((batch_size, self.max_len))
-        
+
         singer_id = [batch[i]["singer_id"] for i in range(batch_size)]
 
         if self.use_asr_post:
@@ -530,7 +530,7 @@ class SVSDataset_combine(Dataset):
             phone = np.load(path)
         except Exception:
             print("error path {}".format(path))
-        
+
         db_name = self.filename_list[i].split("_")[0]
         if db_name == "hts":
             singer_id = 0
@@ -547,9 +547,7 @@ class SVSDataset_combine(Dataset):
         elif db_name == "oniku":
             singer_id = 6
         else:
-            raise ValueError(
-                "ValueError exception thrown, No such dataset: ", db_name
-            )
+            raise ValueError("ValueError exception thrown, No such dataset: ", db_name)
 
         beat_path = os.path.join(
             self.pitch_beat_root_path,

@@ -470,6 +470,7 @@ class Encoder_Postnet(nn.Module):
 
         return out
 
+
 class Encoder_Postnet_combine(nn.Module):
     """Encoder Postnet."""
 
@@ -540,12 +541,17 @@ class Encoder_Postnet_combine(nn.Module):
         pos_out = self.fc_pos(torch.transpose(pos_encode, 0, 1))
         out = out + pos_out
 
-        singer_embed = self.emb_singer(singer_vec.squeeze(-1))  # [batch size, length, emb_size]
-        out = torch.cat((out, singer_embed), dim=2)     # [batch size, length, 2 * emb_size]
+        singer_embed = self.emb_singer(
+            singer_vec.squeeze(-1)
+        )  # [batch size, length, emb_size]
+        out = torch.cat(
+            (out, singer_embed), dim=2
+        )  # [batch size, length, 2 * emb_size]
 
         out = F.leaky_relu(self.fc_out(out))
 
         return out
+
 
 class Decoder_noGLU(nn.Module):
     """Decoder Network."""
@@ -794,6 +800,7 @@ class GLU_TransformerSVS(nn.Module):
 
         return output, att_weight, mel_output, mel_output2
 
+
 class GLU_TransformerSVS_combine(nn.Module):
     """Transformer Network."""
 
@@ -870,7 +877,9 @@ class GLU_TransformerSVS_combine(nn.Module):
     ):
         """forward."""
         encoder_out, text_phone = self.encoder(characters.squeeze(2), pos=pos_char)
-        post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat, singer_vec)
+        post_out = self.enc_postnet(
+            encoder_out, phone, text_phone, pitch, beat, singer_vec
+        )
         mel_output, att_weight = self.decoder(post_out, pos=pos_spec)
 
         if self.double_mel_loss:
@@ -1127,9 +1136,13 @@ class LSTMSVS_combine(nn.Module):
         else:
             out = self.input_embed(phone.squeeze(-1))
 
-        singer_embed = self.emb_singer(singer_vec.squeeze(-1))  # [batch size, length, emb_size]
-        out = torch.cat((out, singer_embed), dim=2)     # # [batch size, length, 2 * emb_size]
-        
+        singer_embed = self.emb_singer(
+            singer_vec.squeeze(-1)
+        )  # [batch size, length, emb_size]
+        out = torch.cat(
+            (out, singer_embed), dim=2
+        )  # # [batch size, length, 2 * emb_size]
+
         out = F.leaky_relu(out)
         out = F.leaky_relu(self.linear_wrapper(out))
         out, _ = self.phone_lstm(out)
@@ -1636,6 +1649,7 @@ class ConformerSVS_FULL(nn.Module):
 
         return output, None, mel_output, None
 
+
 class ConformerSVS_FULL_combine(nn.Module):
     """Conformer Transformer Network."""
 
@@ -1754,12 +1768,13 @@ class ConformerSVS_FULL_combine(nn.Module):
         encoder_out, text_phone = self.encoder(
             characters.squeeze(2), pos=pos_char, length=pos_spec
         )
-        post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat, singer_vec)
+        post_out = self.enc_postnet(
+            encoder_out, phone, text_phone, pitch, beat, singer_vec
+        )
         mel_output = self.decoder(post_out, pos=pos_spec)
         output = self.postnet(mel_output)
 
         return output, None, mel_output, None
-
 
 
 # Reproduce the DAR model from USTC

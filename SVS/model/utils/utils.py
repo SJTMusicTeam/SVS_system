@@ -56,7 +56,7 @@ def collect_stats(train_loader, args):
                 chars,
                 char_len_list,
                 mel,
-                singer_id
+                singer_id,
             ) = data_step
         else:
             (
@@ -161,11 +161,15 @@ def train_one_epoch(
                 chars,
                 char_len_list,
                 mel,
-                singer_id
+                singer_id,
             ) = data_step
 
-            singer_id = np.array(singer_id).reshape(np.shape(phone)[0], -1)     # [batch size, 1]
-            singer_vec = singer_id.repeat(np.shape(phone)[1], axis=1)           # [batch size, length]
+            singer_id = np.array(singer_id).reshape(
+                np.shape(phone)[0], -1
+            )  # [batch size, 1]
+            singer_vec = singer_id.repeat(
+                np.shape(phone)[1], axis=1
+            )  # [batch size, length]
             singer_vec = torch.from_numpy(singer_vec).to(device)
 
         else:
@@ -228,7 +232,9 @@ def train_one_epoch(
                 )
         elif args.model_type == "LSTM":
             if args.db_joint:
-                output, hidden, output_mel, output_mel2 = model(phone, pitch, beat, singer_vec)
+                output, hidden, output_mel, output_mel2 = model(
+                    phone, pitch, beat, singer_vec
+                )
             else:
                 output, hidden, output_mel, output_mel2 = model(phone, pitch, beat)
             att = None
@@ -421,11 +427,15 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                     chars,
                     char_len_list,
                     mel,
-                    singer_id
+                    singer_id,
                 ) = data_step
 
-                singer_id = np.array(singer_id).reshape(np.shape(phone)[0], -1)     # [batch size, 1]
-                singer_vec = singer_id.repeat(np.shape(phone)[1], axis=1)           # [batch size, length]
+                singer_id = np.array(singer_id).reshape(
+                    np.shape(phone)[0], -1
+                )  # [batch size, 1]
+                singer_vec = singer_id.repeat(
+                    np.shape(phone)[1], axis=1
+                )  # [batch size, length]
                 singer_vec = torch.from_numpy(singer_vec).to(device)
 
             else:
@@ -486,7 +496,9 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                     )
             elif args.model_type == "LSTM":
                 if args.db_joint:
-                    output, hidden, output_mel, output_mel2 = model(phone, pitch, beat, singer_vec)
+                    output, hidden, output_mel, output_mel2 = model(
+                        phone, pitch, beat, singer_vec
+                    )
                 else:
                     output, hidden, output_mel, output_mel2 = model(phone, pitch, beat)
                 att = None

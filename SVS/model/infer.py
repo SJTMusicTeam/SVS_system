@@ -195,7 +195,9 @@ def infer(args):
                 enc_normalize_before=args.enc_normalize_before,
                 enc_concat_after=args.enc_concat_after,
                 enc_positionwise_layer_type=args.enc_positionwise_layer_type,
-                enc_positionwise_conv_kernel_size=(args.enc_positionwise_conv_kernel_size),
+                enc_positionwise_conv_kernel_size=(
+                    args.enc_positionwise_conv_kernel_size
+                ),
                 enc_macaron_style=args.enc_macaron_style,
                 enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
                 enc_selfattention_layer_type=args.enc_selfattention_layer_type,
@@ -214,7 +216,9 @@ def infer(args):
                 dec_normalize_before=args.dec_normalize_before,
                 dec_concat_after=args.dec_concat_after,
                 dec_positionwise_layer_type=args.dec_positionwise_layer_type,
-                dec_positionwise_conv_kernel_size=(args.dec_positionwise_conv_kernel_size),
+                dec_positionwise_conv_kernel_size=(
+                    args.dec_positionwise_conv_kernel_size
+                ),
                 dec_macaron_style=args.dec_macaron_style,
                 dec_pos_enc_layer_type=args.dec_pos_enc_layer_type,
                 dec_selfattention_layer_type=args.dec_selfattention_layer_type,
@@ -241,7 +245,9 @@ def infer(args):
                 enc_normalize_before=args.enc_normalize_before,
                 enc_concat_after=args.enc_concat_after,
                 enc_positionwise_layer_type=args.enc_positionwise_layer_type,
-                enc_positionwise_conv_kernel_size=(args.enc_positionwise_conv_kernel_size),
+                enc_positionwise_conv_kernel_size=(
+                    args.enc_positionwise_conv_kernel_size
+                ),
                 enc_macaron_style=args.enc_macaron_style,
                 enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
                 enc_selfattention_layer_type=args.enc_selfattention_layer_type,
@@ -260,7 +266,9 @@ def infer(args):
                 dec_normalize_before=args.dec_normalize_before,
                 dec_concat_after=args.dec_concat_after,
                 dec_positionwise_layer_type=args.dec_positionwise_layer_type,
-                dec_positionwise_conv_kernel_size=(args.dec_positionwise_conv_kernel_size),
+                dec_positionwise_conv_kernel_size=(
+                    args.dec_positionwise_conv_kernel_size
+                ),
                 dec_macaron_style=args.dec_macaron_style,
                 dec_pos_enc_layer_type=args.dec_pos_enc_layer_type,
                 dec_selfattention_layer_type=args.dec_selfattention_layer_type,
@@ -438,11 +446,15 @@ def infer(args):
                     chars,
                     char_len_list,
                     mel,
-                    singer_id
+                    singer_id,
                 ) = data_step
 
-                singer_id = np.array(singer_id).reshape(np.shape(phone)[0], -1)     # [batch size, 1]
-                singer_vec = singer_id.repeat(np.shape(phone)[1], axis=1)           # [batch size, length]
+                singer_id = np.array(singer_id).reshape(
+                    np.shape(phone)[0], -1
+                )  # [batch size, 1]
+                singer_vec = singer_id.repeat(
+                    np.shape(phone)[1], axis=1
+                )  # [batch size, length]
                 singer_vec = torch.from_numpy(singer_vec).to(device)
 
             else:
@@ -502,7 +514,9 @@ def infer(args):
                     )
             elif args.model_type == "LSTM":
                 if args.db_joint:
-                    output, hidden, output_mel, output_mel2 = model(phone, pitch, beat, singer_vec)
+                    output, hidden, output_mel, output_mel2 = model(
+                        phone, pitch, beat, singer_vec
+                    )
                 else:
                     output, hidden, output_mel, output_mel2 = model(phone, pitch, beat)
                 att = None
