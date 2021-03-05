@@ -31,8 +31,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.init import xavier_uniform_
-from torchaudio.models.wavernn import UpsampleNetwork
 from typing import Union
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -285,13 +285,7 @@ class SA_Encoder(nn.Module):
     """SA_Encoder."""
 
     def __init__(
-        self,
-        phone_size,
-        embed_size,
-        hidden_size,
-        dropout,
-        num_blocks=3,
-        nheads=4,
+        self, phone_size, embed_size, hidden_size, dropout, num_blocks=3, nheads=4
     ):
         """init."""
         super(SA_Encoder, self).__init__()
@@ -1857,11 +1851,7 @@ class USTC_Prenet(nn.Module):
 
         if pad_length == 1:
             x = torch.cat(
-                (
-                    x,
-                    torch.zeros(batch_size, 1, self.dim_input).to(self.device),
-                ),
-                dim=1,
+                (x, torch.zeros(batch_size, 1, self.dim_input).to(self.device)), dim=1
             )
         else:
             pad_before_length = pad_length // 2
@@ -1988,7 +1978,6 @@ class USTC_SVS(nn.Module):
         )
 
         self.fc_linear = nn.Linear(uni_d_model, output_dim)
-
         self.output_dim = output_dim
         self.uni_d_model = uni_d_model
         self.device = device
@@ -2123,8 +2112,106 @@ def decode_mu_law(y, mu, from_labels=True):
     return x
 
 
+class MelResNet(nn.Module):
+    """MelResNet."""
+
+    def __init__(self, res_blocks, in_dims, compute_dims, res_out_dims, pad):
+        """Init."""
+        super().__init__()
+        k_size = pad * 2 + 1
+        self.conv_in = nn.Conv1d(in_dims, compute_dims, kernel_size=k_size, bias=False)
+        self.batch_norm = nn.BatchNorm1d(compute_dims)
+        self.layers = nn.ModuleList()
+        for i in range(res_blocks):
+            self.layers.append(ResBlock(compute_dims))
+        self.conv_out = nn.Conv1d(compute_dims, res_out_dims, kernel_size=1)
+
+    def forward(self, x):
+        """Forward."""
+        x = self.conv_in(x)
+        x = self.batch_norm(x)
+        x = F.relu(x)
+        for f in self.layers:
+            x = f(x)
+        x = self.conv_out(x)
+        return x
+
+
+class ResBlock(nn.Module):
+    """ResBlock."""
+
+    def __init__(self, dims):
+        """Init."""
+        super().__init__()
+        self.conv1 = nn.Conv1d(dims, dims, kernel_size=1, bias=False)
+        self.conv2 = nn.Conv1d(dims, dims, kernel_size=1, bias=False)
+        self.batch_norm1 = nn.BatchNorm1d(dims)
+        self.batch_norm2 = nn.BatchNorm1d(dims)
+
+    def forward(self, x):
+        """Forward."""
+        residual = x
+        x = self.conv1(x)
+        x = self.batch_norm1(x)
+        x = F.relu(x)
+        x = self.conv2(x)
+        x = self.batch_norm2(x)
+        return x + residual
+
+
+class Stretch2d(nn.Module):
+    """Stretch2d."""
+
+    def __init__(self, x_scale, y_scale):
+        """Init."""
+        super().__init__()
+        self.x_scale = x_scale
+        self.y_scale = y_scale
+
+    def forward(self, x):
+        """Forward."""
+        b, c, h, w = x.size()
+        x = x.unsqueeze(-1).unsqueeze(3)
+        x = x.repeat(1, 1, 1, self.y_scale, 1, self.x_scale)
+        return x.view(b, c, h * self.y_scale, w * self.x_scale)
+
+
+class UpsampleNetwork(nn.Module):
+    """UpsampleNetwork."""
+
+    def __init__(
+        self, feat_dims, upsample_scales, compute_dims, res_blocks, res_out_dims, pad
+    ):
+        """Init."""
+        super().__init__()
+        total_scale = np.cumproduct(upsample_scales)[-1]
+        self.indent = pad * total_scale
+        self.resnet = MelResNet(res_blocks, feat_dims, compute_dims, res_out_dims, pad)
+        self.resnet_stretch = Stretch2d(total_scale, 1)
+        self.up_layers = nn.ModuleList()
+        for scale in upsample_scales:
+            k_size = (1, scale * 2 + 1)
+            padding = (0, scale)
+            stretch = Stretch2d(scale, 1)
+            conv = nn.Conv2d(1, 1, kernel_size=k_size, padding=padding, bias=False)
+            conv.weight.data.fill_(1.0 / k_size[1])
+            self.up_layers.append(stretch)
+            self.up_layers.append(conv)
+
+    def forward(self, m):
+        """Forward."""
+        aux = self.resnet(m).unsqueeze(1)
+        aux = self.resnet_stretch(aux)
+        aux = aux.squeeze(1)
+        m = m.unsqueeze(1)
+        for f in self.up_layers:
+            m = f(m)
+        m = m.squeeze(1)[:, :, self.indent : -self.indent]
+        return m.transpose(1, 2), aux.transpose(1, 2)
+
+
 class WaveRNN(nn.Module):
-    """Wavernn."""
+    """WaveRNN."""
 
     def __init__(
         self,
@@ -2154,7 +2241,6 @@ class WaveRNN(nn.Module):
 
         # List of rnns to call `flatten_parameters()` on
         self._to_flatten = []
-
         self.rnn_dims = rnn_dims
         self.aux_dims = res_out_dims // 4
         self.hop_length = hop_length
@@ -2182,7 +2268,6 @@ class WaveRNN(nn.Module):
     def forward(self, x, mels):
         """Forward."""
         device = next(self.parameters()).device  # use same device as parameters
-
         # Although we `_flatten_parameters()` on init, when using DataParallel
         # the model gets replicated, making it no longer guaranteed that the
         # weights are contiguous in GPU memory. Hence, we must call it again
@@ -2218,7 +2303,9 @@ class WaveRNN(nn.Module):
         x = F.relu(self.fc2(x))
         return self.fc3(x)
 
-    def generate(self, mels, batched, target, overlap, mu_law):
+    def generate(
+        self, mels, save_path: Union[str, Path], batched, target, overlap, mu_law
+    ):
         """Generate."""
         self.eval()
 
@@ -2257,7 +2344,7 @@ class WaveRNN(nn.Module):
                 a1_t, a2_t, a3_t, a4_t = (a[:, i, :] for a in aux_split)
 
                 x = torch.cat([x, m_t, a1_t], dim=1)
-                x = self.I_line(x)
+                x = self.line(x)
                 h1 = rnn1(x, h1)
 
                 x = x + h1
@@ -2285,7 +2372,7 @@ class WaveRNN(nn.Module):
                     posterior = F.softmax(logits, dim=1)
                     distrib = torch.distributions.Categorical(posterior)
 
-                    sample = 2 * distrib.sample().float() / (self.n_classes - 1.0) - 1.0
+                    sample = 2 * distrib.sample().float() / (self.n_classes - 1.0) - 1
                     output.append(sample)
                     x = sample.unsqueeze(-1)
                 else:
@@ -2299,7 +2386,7 @@ class WaveRNN(nn.Module):
             output = decode_mu_law(output, self.n_classes, False)
 
         if batched:
-            output = self.xfade_and_unfold(output, overlap)
+            output = self.xfade_and_unfold(output, target, overlap)
         else:
             output = output[0]
 
@@ -2309,8 +2396,6 @@ class WaveRNN(nn.Module):
         output[-20 * self.hop_length :] *= fade_out
 
         self.train()
-
-        output = output.astype(np.float32)
 
         return output
 
@@ -2378,7 +2463,7 @@ class WaveRNN(nn.Module):
 
         return folded
 
-    def xfade_and_unfold(self, y, overlap):
+    def xfade_and_unfold(self, y, target, overlap):
         """Apply a crossfade and unfolds into a 1d array.
 
         Args:
@@ -2386,27 +2471,20 @@ class WaveRNN(nn.Module):
                             shape=(num_folds, target + 2 * overlap)
                             dtype=np.float64
             overlap (int) : Timesteps for both xfade and rnn warmup
-
         Return:
             (ndarry) : audio samples in a 1d array
                        shape=(total_len)
                        dtype=np.float64
-
         Details:
             y = [[seq1],
                  [seq2],
                  [seq3]]
-
             Apply a gain envelope at both ends of the sequences
-
             y = [[seq1_in, seq1_target, seq1_out],
                  [seq2_in, seq2_target, seq2_out],
                  [seq3_in, seq3_target, seq3_out]]
-
             Stagger and add up the groups of samples:
-
             [seq1_in, seq1_target, (seq1_out + seq2_in), seq2_target, ...]
-
         """
         num_folds, length = y.shape
         target = length - 2 * overlap
@@ -2487,7 +2565,6 @@ def sample_from_discretized_mix_logistic(y, log_scale_min=None):
         log_scale_min (float): Log scale minimum value
     Returns:
         Tensor: sample in range of [-1, 1].
-
     """
     if log_scale_min is None:
         log_scale_min = float(np.log(1e-14))

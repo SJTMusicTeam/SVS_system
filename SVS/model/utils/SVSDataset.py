@@ -19,6 +19,7 @@ import logging
 import numpy as np
 import os
 import random
+from SVS.model.utils.utils import melspectrogram
 import torch
 from torch.utils.data import Dataset
 
@@ -48,7 +49,14 @@ def _get_spectrograms(
     if sr != require_sr:
         y = librosa.resample(y, sr, require_sr)
 
-    # Preemphasis
+    if n_mels > 0:
+        # mel_basis = librosa.filters.mel(require_sr, n_fft, n_mels)
+        # mel = np.dot(mel_basis, mag)  # (n_mels, t)
+        # mel = 20 * np.log10(np.maximum(1e-5, mel))
+        # mel = np.clip((mel - ref_db + max_db) / max_db, 1e-8, 1)
+        # mel = mel.T.astype(np.float32)
+        mel = melspectrogram(y, n_fft, hop_length, win_length, sr, n_mels)
+
     y = np.append(y[0], y[1:] - preemphasis * y[:-1])
 
     # stft
@@ -59,13 +67,6 @@ def _get_spectrograms(
     # magnitude spectrogram
     mag, phase = librosa.magphase(linear)
     # mag = np.abs(linear)  # (1+n_fft//2, T)
-
-    if n_mels > 0:
-        mel_basis = librosa.filters.mel(require_sr, n_fft, n_mels)
-        mel = np.dot(mel_basis, mag)  # (n_mels, t)
-        mel = 20 * np.log10(np.maximum(1e-5, mel))
-        mel = np.clip((mel - ref_db + max_db) / max_db, 1e-8, 1)
-        mel = mel.T.astype(np.float32)
 
     # to decibel
     mag = 20 * np.log10(np.maximum(1e-5, mag))
@@ -196,7 +197,7 @@ class SVSCollator(object):
                 pitch[i, :length] = batch[i]["pitch"][:length]
                 beat[i, :length] = batch[i]["beat"][:length]
                 if self.n_mels > 0:
-                    mel[i, :length, :] = batch[i]["mel"][:length]
+                    mel[i, :length] = batch[i]["mel"][:length]
 
                 if self.use_asr_post:
                     phone[i, :length, :] = batch[i]["phone"][:length]
@@ -208,6 +209,7 @@ class SVSCollator(object):
 
         spec = torch.from_numpy(spec)
         if self.n_mels > 0:
+            mel = np.array(mel).astype(np.float64)
             mel = torch.from_numpy(mel)
         else:
             mel = None
@@ -399,10 +401,7 @@ class SVSDataset(Dataset):
             logging.info(
                 "spectrum_size: {}, alignment_size: {}, "
                 "pitch_size: {}, beat_size: {}".format(
-                    np.shape(spectrogram)[0],
-                    len(phone),
-                    len(pitch),
-                    len(beat),
+                    np.shape(spectrogram)[0], len(phone), len(pitch), len(beat)
                 )
             )
         assert np.abs(len(phone) - np.shape(spectrogram)[0]) <= 15
@@ -412,11 +411,7 @@ class SVSDataset(Dataset):
         else:
             char, trimed_length = _phone2char(phone[: self.max_len], self.char_max_len)
         min_length = min(
-            len(phone),
-            np.shape(spectrogram)[0],
-            trimed_length,
-            len(pitch),
-            len(beat),
+            len(phone), np.shape(spectrogram)[0], trimed_length, len(pitch), len(beat)
         )
         phone = phone[:min_length]
         beat = beat[:min_length]
@@ -425,7 +420,7 @@ class SVSDataset(Dataset):
         phase = phase[:min_length, :]
 
         if mel is not None:
-            mel = mel[:min_length, :]
+            mel = mel[:, :min_length].T
 
         # print("char len: {}, phone len: {}, spectrom: {}"
         # .format(len(char), len(phone), np.shape(spectrogram)[0]))

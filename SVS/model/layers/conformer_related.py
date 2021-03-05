@@ -34,12 +34,7 @@ class ConvolutionModule(nn.Module):
         assert (kernel_size - 1) % 2 == 0
 
         self.pointwise_conv1 = nn.Conv1d(
-            channels,
-            2 * channels,
-            kernel_size=1,
-            stride=1,
-            padding=0,
-            bias=bias,
+            channels, 2 * channels, kernel_size=1, stride=1, padding=0, bias=bias
         )
         self.depthwise_conv = nn.Conv1d(
             channels,
@@ -52,12 +47,7 @@ class ConvolutionModule(nn.Module):
         )
         self.norm = nn.BatchNorm1d(channels)
         self.pointwise_conv2 = nn.Conv1d(
-            channels,
-            channels,
-            kernel_size=1,
-            stride=1,
-            padding=0,
-            bias=bias,
+            channels, channels, kernel_size=1, stride=1, padding=0, bias=bias
         )
         self.activation = activation
 
@@ -987,8 +977,7 @@ class Conformer_block(torch.nn.Module):
             )
         elif isinstance(input_layer, torch.nn.Module):
             self.embed = torch.nn.Sequential(
-                input_layer,
-                pos_enc_class(attention_dim, positional_dropout_rate),
+                input_layer, pos_enc_class(attention_dim, positional_dropout_rate)
             )
         elif input_layer is None:
             self.embed = torch.nn.Sequential(
@@ -1048,11 +1037,7 @@ class Conformer_block(torch.nn.Module):
 
         # convolution module definition
         convolution_layer = ConvolutionModule
-        convolution_layer_args = (
-            attention_dim,
-            cnn_module_kernel,
-            activation,
-        )
+        convolution_layer_args = (attention_dim, cnn_module_kernel, activation)
 
         self.encoders = repeat(
             num_blocks,

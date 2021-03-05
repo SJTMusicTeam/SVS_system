@@ -18,13 +18,14 @@ normalize: True
 double_mel_loss: False
 # perceptual_loss: 1e-2
 
+
 accumulation_steps: 1
 auto_select_gpu: False
 gpu_id: 1
 
 max_epochs: 150
 
-batchsize: 10
+batchsize: 5
 num_workers: 5
 
 mask_free: False
@@ -34,8 +35,8 @@ nfft: 2048
 feat_dim: 1025
 n_mels: 80
 
-frame_length: 0.06
-frame_shift: 0.03
+frame_length: 0.05
+frame_shift: 0.0125
 
 hidden_size: 256
 embedding_size: 256
@@ -50,3 +51,18 @@ seed: 777
 train_step_log: 20
 dev_step_log: 2
 
+# vocoder parameters
+voc_rnn_dims: 512
+voc_fc_dims: 512
+voc_bits: 9
+voc_pad: 2
+# voc_upsample_factors: (5, 5, 11)
+voc_upsample_factors_0: 5
+voc_upsample_factors_1: 5
+voc_upsample_factors_2: 11
+voc_compute_dims: 128
+voc_res_out_dims: 128
+voc_res_blocks: 10
+hop_length: 275
+voc_mode: "MOL"
+wavernn_voc_model: downloads/model/wavernn/latest_weights.pyt

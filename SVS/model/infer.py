@@ -367,10 +367,7 @@ def infer(args):
     if args.n_mels > 0:
         mel_losses = AverageMeter()
         mcd_metric = AverageMeter()
-        f0_distortion_metric, vuv_error_metric = (
-            AverageMeter(),
-            AverageMeter(),
-        )
+        f0_distortion_metric, vuv_error_metric = (AverageMeter(), AverageMeter())
         if args.double_mel_loss:
             double_mel_losses = AverageMeter()
     model.eval()
@@ -387,25 +384,26 @@ def infer(args):
         voc_model = WaveRNN(
             rnn_dims=args.voc_rnn_dims,
             fc_dims=args.voc_fc_dims,
-            bits=args.bits,
+            bits=args.voc_bits,
             pad=args.voc_pad,
-            upsample_factors=args.voc_upsample_factors,
+            upsample_factors=(
+                args.voc_upsample_factors_0,
+                args.voc_upsample_factors_1,
+                args.voc_upsample_factors_2,
+            ),
             feat_dims=args.n_mels,
             compute_dims=args.voc_compute_dims,
             res_out_dims=args.voc_res_out_dims,
             res_blocks=args.voc_res_blocks,
             hop_length=args.hop_length,
-            sample_rate=args.sample_rate,
-            mode="MOL",
+            sample_rate=args.sampling_rate,
+            mode=args.voc_mode,
         ).to(device)
 
-        voc_model.load("./weights/wavernn/latest_weights.pyt")
+        voc_model.load(args.wavernn_voc_model)
 
     with torch.no_grad():
-        for (
-            step,
-            data_step,
-        ) in enumerate(test_loader, 1):
+        for (step, data_step) in enumerate(test_loader, 1):
             if args.db_joint:
                 (
                     phone,
@@ -497,21 +495,11 @@ def infer(args):
                 att = None
             elif args.model_type == "PureTransformer":
                 output, att, output_mel, output_mel2 = model(
-                    chars,
-                    phone,
-                    pitch,
-                    beat,
-                    pos_char=char_len_list,
-                    pos_spec=length,
+                    chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
                 )
             elif args.model_type == "Conformer":
                 output, att, output_mel, output_mel2 = model(
-                    chars,
-                    phone,
-                    pitch,
-                    beat,
-                    pos_char=char_len_list,
-                    pos_spec=length,
+                    chars, phone, pitch, beat, pos_char=char_len_list, pos_spec=length
                 )
             elif args.model_type == "Comformer_full":
                 if args.db_joint:
@@ -539,28 +527,34 @@ def infer(args):
             if args.normalize:
                 sepc_normalizer = GlobalMVN(args.stats_file)
                 mel_normalizer = GlobalMVN(args.stats_mel_file)
+                output_mel_normalizer = GlobalMVN(args.stats_mel_file)
                 spec, _ = sepc_normalizer(spec, length)
                 mel, _ = mel_normalizer(mel, length)
 
-            spec_loss = criterion(output, spec, length_mask)
             if args.n_mels > 0:
+                spec_loss = 0
                 mel_loss = criterion(output_mel, mel, length_mel_mask)
+                mel_losses.update(mel_loss.item(), phone.size(0))
             else:
+                spec_loss = criterion(output, spec, length_mask)
                 mel_loss = 0
+                spec_losses.update(spec_loss.item(), phone.size(0))
 
-            final_loss = mel_loss + spec_loss
+            if args.vocoder_category == "wavernn":
+                final_loss = mel_loss
+            else:
+                final_loss = mel_loss + spec_loss
 
             losses.update(final_loss.item(), phone.size(0))
-            spec_losses.update(spec_loss.item(), phone.size(0))
-            if args.n_mels > 0:
-                mel_losses.update(mel_loss.item(), phone.size(0))
 
             # normalize inverse stage
             if args.normalize and args.stats_file:
                 output, _ = sepc_normalizer.inverse(output, length)
                 # spec,_ = sepc_normalizer.inverse(spec,length)
+                mel, _ = mel_normalizer.inverse(mel, length)
+                output_mel, _ = output_mel_normalizer.inverse(output_mel, length)
 
-            (mcd_value, length_sum,) = Metrics.Calculate_melcd_fromLinearSpectrum(
+            (mcd_value, length_sum) = Metrics.Calculate_melcd_fromLinearSpectrum(
                 output, spec_origin, length, args
             )
             (
@@ -609,10 +603,7 @@ def infer(args):
                 out_log = (
                     "step {}:train_loss{:.4f};"
                     "spec_loss{:.4f};mcd_value{:.4f};".format(
-                        step,
-                        losses.avg,
-                        spec_losses.avg,
-                        mcd_metric.avg,
+                        step, losses.avg, spec_losses.avg, mcd_metric.avg
                     )
                 )
                 if args.perceptual_loss > 0:
@@ -639,9 +630,7 @@ def infer(args):
     out_log += (
         " f0_rmse_value {:.4f} Hz, "
         "vuv_error_value {:.4f} %, F0_CORR {:.4f}; ".format(
-            np.sqrt(f0_distortion_metric.avg),
-            vuv_error_metric.avg * 100,
-            f0_corr,
+            np.sqrt(f0_distortion_metric.avg), vuv_error_metric.avg * 100, f0_corr
         )
     )
     logging.info("{} time: {:.2f}s".format(out_log, end_t_test - start_t_test))
