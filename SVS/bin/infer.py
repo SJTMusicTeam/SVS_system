@@ -54,6 +54,12 @@ if __name__ == "__main__":
         help="Combine multiple datasets & add singer embedding",
     )
     parser.add_argument(
+        "--random_crop",
+        type=bool,
+        default=False,
+        help="Random crop on frame length, cut follow num_frames",
+    )
+    parser.add_argument(
         "--char_max_len", default=100, type=int, help="max length for character"
     )
     parser.add_argument(
