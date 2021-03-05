@@ -60,9 +60,14 @@ if __name__ == "__main__":
         "--random_crop",
         type=bool,
         default=False,
-        help="Random crop on frame length, cut follow num_frames",
+        help="Random crop on frame length, cut follow [crop_min_length, num_frames]",
     )
-
+    parser.add_argument(
+        "--crop_min_length",
+        type=int,
+        default=100,
+        help="random crop length belongs to [crop_min_length, num_frames]",
+    )
     parser.add_argument(
         "--max_epochs", default=20, type=int, help="Max. number of epochs to train"
     )

@@ -343,6 +343,7 @@ def infer(args):
         args.n_mels,
         args.db_joint,
         args.random_crop,
+        args.crop_min_length,
     )
     test_loader = torch.utils.data.DataLoader(
         dataset=test_set,

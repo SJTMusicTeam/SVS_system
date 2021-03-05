@@ -209,6 +209,7 @@ def train(args):
         args.n_mels,
         args.db_joint,
         args.random_crop,
+        args.crop_min_length,
     )
     train_loader = torch.utils.data.DataLoader(
         dataset=train_set,
