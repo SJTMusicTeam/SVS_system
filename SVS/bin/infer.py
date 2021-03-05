@@ -60,6 +60,12 @@ if __name__ == "__main__":
         help="Random crop on frame length, cut follow num_frames",
     )
     parser.add_argument(
+        "--crop_min_length",
+        type=int,
+        default=100,
+        help="random crop length belongs to [crop_min_length, num_frames]",
+    )
+    parser.add_argument(
         "--char_max_len", default=100, type=int, help="max length for character"
     )
     parser.add_argument(
