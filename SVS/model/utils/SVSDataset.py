@@ -158,21 +158,21 @@ class SVSCollator(object):
             pitch[i, :length] = batch[i]["pitch"][:length]
             beat[i, :length] = batch[i]["beat"][:length]
             if self.n_mels > 0:
-                # mel[i, :length, :] = batch[i]["mel"][:length]
-                if mel[i, :length, :].shape == batch[i]["mel"][:length].shape:
-                    mel[i, :length, :] = batch[i]["mel"][:length]
-                else:
-                    print("There is a wrong data, batch: {} ".format(i + 1))
-                    print(
-                        "mel[i, :length, :].shape: {}, ".format(
-                            mel[i, :length, :].shape
-                        )
-                    )
-                    print(
-                        "batch[i]['mel'][:length].shape: {} ".format(
-                            batch[i]["mel"][:length].shape
-                        )
-                    )
+                mel[i, :length] = batch[i]["mel"][:length]
+                # if mel[i, :length, :].shape == batch[i]["mel"][:length].shape:
+                #     mel[i, :length] = batch[i]["mel"][:length]
+                # else:
+                #     print("There is a wrong data, batch: {} ".format(i + 1))
+                #     print(
+                #         "mel[i, :length, :].shape: {}, ".format(
+                #             mel[i, :length, :].shape
+                #         )
+                #     )
+                #     print(
+                #         "batch[i]['mel'][:length].shape: {} ".format(
+                #             batch[i]["mel"][:length].shape
+                #         )
+                #     )
 
             if self.use_asr_post:
                 phone[i, :length, :] = batch[i]["phone"][:length]
@@ -335,7 +335,7 @@ class SVSDataset(Dataset):
         phase = phase[:min_length, :]
 
         if mel is not None:
-            mel = mel[:min_length, :].T
+            mel = mel[:, :min_length].T
 
         # print("char len: {}, phone len: {}, spectrom: {}"
         # .format(len(char), len(phone), np.shape(spectrogram)[0]))
