@@ -12,6 +12,7 @@ ngpu=1
 raw_data_dir=downloads
 expdir=exp/2_1_rnn_norm
 download_wavernn_vocoder=True
+vocoder=wavernn
 
 # Set bash to 'debug' mode, it will exit on :
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
@@ -76,7 +77,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
       --model_save_dir ${expdir} \
       --stats_file ${expdir}/feats_stats.npz \
       --stats_mel_file ${expdir}/feats_mel_stats.npz \
-      --vocoder_category wavernn \
+      --vocoder_category ${vocoder} \
       --wavernn_voc_model ${expdir}/model/wavernn/latest_weights.pyt
   else
     ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
@@ -102,7 +103,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       --model_file ${expdir}/epoch_loss_102.pth.tar \
       --stats_file ${expdir}/feats_stats.npz \
       --stats_mel_file ${expdir}/feats_mel_stats.npz \
-      --vocoder_category wavernn \
+      --vocoder_category ${vocoder} \
       --wavernn_voc_model ${expdir}/model/wavernn/latest_weights.pyt
   else
     ${cuda_cmd} -gpu ${ngpu} ${expdir}/svs_infer.log \
