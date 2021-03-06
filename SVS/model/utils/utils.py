@@ -334,8 +334,11 @@ def train_one_epoch(
                     output_mel = output_mel_normalizer.inverse(output_mel, length)
 
                 if args.vocoder_category == "wavernn":
-                    for i in range(output_mel[0].shape[0]):
-                        one_batch_output_mel = output_mel[0][i].unsqueeze(0)
+                    # Kiritan’s output_mel is a tuple type and needs to be preprocessed
+                    if isinstance(output_mel, tuple):
+                        output_mel = output_mel[0]
+                    for i in range(output_mel.shape[0]):
+                        one_batch_output_mel = output_mel[i].unsqueeze(0)
                         one_batch_mel = mel[i].unsqueeze(0)
                         log_mel(
                             step,
