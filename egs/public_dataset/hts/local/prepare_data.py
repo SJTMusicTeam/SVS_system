@@ -233,7 +233,7 @@ if __name__ == "__main__":
         "--window_size", type=int, default=60, help="window size in miliseconds"
     )
     parser.add_argument(
-        "--shift_size", type=int, default=30, help="shift size in miliseconds"
+        "--shift_size", type=float, default=30, help="shift size in miliseconds"
     )
     parser.add_argument("--sr", type=int, default=48000)
     parser.add_argument("--sil", type=str, default="pau")

@@ -334,8 +334,11 @@ def train_one_epoch(
                     output_mel = output_mel_normalizer.inverse(output_mel, length)
 
                 if args.vocoder_category == "wavernn":
-                    for i in range(output_mel[0].shape[0]):
-                        one_batch_output_mel = output_mel[0][i].unsqueeze(0)
+                    # Kiritan’s output_mel is a tuple type and needs to be preprocessed
+                    if isinstance(output_mel, tuple):
+                        output_mel = output_mel[0]
+                    for i in range(output_mel.shape[0]):
+                        one_batch_output_mel = output_mel[i].unsqueeze(0)
                         one_batch_mel = mel[i].unsqueeze(0)
                         log_mel(
                             step,
@@ -916,34 +919,34 @@ def log_mel(step, output_mel, ori_mel, att, length, save_dir, args, voc_model):
     ori_mel = ori_mel[:, :length, :]
     ori_mel = ori_mel.transpose(1, 2)
 
-    wav = voc_model.generate(output_mel, save_dir, False, 11000, 550, True)
-    wav_true = voc_model.generate(ori_mel, save_dir, False, 11000, 550, True)
-
-    if librosa.__version__ < "0.8.0":
-        librosa.output.write_wav(
-            os.path.join(save_dir, "{}.wav".format(step)), wav, args.sampling_rate
-        )
-        librosa.output.write_wav(
-            os.path.join(save_dir, "{}_true.wav".format(step)),
-            wav_true,
-            args.sampling_rate,
-        )
-    else:
-        # librosa > 0.8 remove librosa.output.write_wav module
-        sf.write(
-            os.path.join(save_dir, "{}.wav".format(step)),
-            wav,
-            args.sampling_rate,
-            format="wav",
-            subtype="PCM_24",
-        )
-        sf.write(
-            os.path.join(save_dir, "{}_true.wav".format(step)),
-            wav_true,
-            args.sampling_rate,
-            format="wav",
-            subtype="PCM_24",
-        )
+    # wav = voc_model.generate(output_mel, save_dir, False, 11000, 550, True)
+    # wav_true = voc_model.generate(ori_mel, save_dir, False, 11000, 550, True)
+    #
+    # if librosa.__version__ < "0.8.0":
+    #     librosa.output.write_wav(
+    #         os.path.join(save_dir, "{}.wav".format(step)), wav, args.sampling_rate
+    #     )
+    #     librosa.output.write_wav(
+    #         os.path.join(save_dir, "{}_true.wav".format(step)),
+    #         wav_true,
+    #         args.sampling_rate,
+    #     )
+    # else:
+    #     # librosa > 0.8 remove librosa.output.write_wav module
+    #     sf.write(
+    #         os.path.join(save_dir, "{}.wav".format(step)),
+    #         wav,
+    #         args.sampling_rate,
+    #         format="wav",
+    #         subtype="PCM_24",
+    #     )
+    #     sf.write(
+    #         os.path.join(save_dir, "{}_true.wav".format(step)),
+    #         wav_true,
+    #         args.sampling_rate,
+    #         format="wav",
+    #         subtype="PCM_24",
+    #     )
 
     output_mel = output_mel.squeeze(0)
     ori_mel = ori_mel.squeeze(0)

@@ -231,10 +231,10 @@ if __name__ == "__main__":
     parser.add_argument("labdir", type=str, help="label data directory")
     parser.add_argument("outdir", type=str, help="output directory")
     parser.add_argument(
-        "--window_size", type=int, default=50, help="window size in miliseconds"
+        "--window_size", type=int, default=60, help="window size in miliseconds"
     )
     parser.add_argument(
-        "--shift_size", type=float, default=12.5, help="shift size in miliseconds"
+        "--shift_size", type=float, default=30, help="shift size in miliseconds"
     )
     parser.add_argument("--sr", type=int, default=22050)
     parser.add_argument("--sil", type=str, default="pau")

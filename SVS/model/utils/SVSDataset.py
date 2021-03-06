@@ -56,6 +56,7 @@ def _get_spectrograms(
         # mel = np.clip((mel - ref_db + max_db) / max_db, 1e-8, 1)
         # mel = mel.T.astype(np.float32)
         mel = melspectrogram(y, n_fft, hop_length, win_length, sr, n_mels)
+        mel = mel.T.astype(np.float32)
 
     y = np.append(y[0], y[1:] - preemphasis * y[:-1])
 
@@ -344,21 +345,18 @@ class SVSDataset(Dataset):
                 )
 
             beat_path = os.path.join(
-                self.pitch_beat_root_path,
-                self.filename_list[i][:-4] + "_beats.npy",
+                self.pitch_beat_root_path, self.filename_list[i][:-4] + "_beats.npy"
             )
             beat_numpy = np.load(beat_path)
             beat_index = list(map(lambda x: int(x), beat_numpy))
             beat = np.zeros(len(phone))
             beat[beat_index] = 1
             pitch_path = os.path.join(
-                self.pitch_beat_root_path,
-                self.filename_list[i][:-4] + "_pitch.npy",
+                self.pitch_beat_root_path, self.filename_list[i][:-4] + "_pitch.npy"
             )
             pitch = np.load(pitch_path)
             wav_path = os.path.join(
-                self.wav_root_path,
-                self.filename_list[i][:-4] + ".wav",
+                self.wav_root_path, self.filename_list[i][:-4] + ".wav"
             )
         else:
             # path is different between combine-db <-> single db
@@ -420,7 +418,7 @@ class SVSDataset(Dataset):
         phase = phase[:min_length, :]
 
         if mel is not None:
-            mel = mel[:, :min_length].T
+            mel = mel[:min_length, :]
 
         # print("char len: {}, phone len: {}, spectrom: {}"
         # .format(len(char), len(phone), np.shape(spectrogram)[0]))
