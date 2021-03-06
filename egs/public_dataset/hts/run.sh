@@ -6,11 +6,13 @@
 . ./cmd.sh || exit 1;
 
 
-stage=0
+stage=3
 stop_stage=100
 ngpu=1
 raw_data_dir=downloads
 expdir=exp/rnn
+download_wavernn_vocoder=True
+vocoder=wavernn
 
 # Set bash to 'debug' mode, it will exit on :
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
@@ -37,9 +39,18 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   echo " Stage1: data preprocessing "
   echo ============================
 
-  python local/prepare_data.py ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/raw ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/labels/mono data \
+  if [ ${download_wavernn_vocoder} = True ]; then
+    wget -nc https://raw.githubusercontent.com/pppku/model_zoo/main/wavernn/latest_weights.pyt -P ${expdir}/model/wavernn
+    python local/prepare_data.py ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/raw ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/labels/mono data \
+      --label_type r --wav_extention raw \
+      --window_size 50 \
+      --shift_size 12.5
+  else
+    python local/prepare_data.py ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/raw ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/labels/mono data \
     --label_type r --wav_extention raw
+  fi
   ./local/train_dev_test_split.sh data train dev test
+
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then 
@@ -63,13 +74,26 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   echo " Stage3: train "
   echo ===============
 
-  ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_train.log \
-  train.py \
-    -c conf/train_rnn.yaml \
-    --gpu_id 0 \
-    --model_save_dir ${expdir} \
-    --stats_file ${expdir}/feats_stats.npz \
-    --stats_mel_file ${expdir}/feats_mel_stats.npz
+  if [ ${download_wavernn_vocoder} = True ]; then
+    ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_train.log \
+    train.py \
+      -c conf/train_rnn.yaml \
+      --gpu_id 0 \
+      --model_save_dir ${expdir} \
+      --stats_file ${expdir}/feats_stats.npz \
+      --stats_mel_file ${expdir}/feats_mel_stats.npz \
+      --vocoder_category ${vocoder} \
+      --wavernn_voc_model ${expdir}/model/wavernn/latest_weights.pyt
+  else
+    ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_train.log \
+    train.py \
+      -c conf/train_rnn.yaml \
+      --gpu_id 0 \
+      --model_save_dir ${expdir} \
+      --stats_file ${expdir}/feats_stats.npz \
+      --stats_mel_file ${expdir}/feats_mel_stats.npz
+  fi
+
 
 fi
 
@@ -81,6 +105,16 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
 
   ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_infer.log \
   infer.py -c conf/infer_rnn.yaml
+
+  if [ ${download_wavernn_vocoder} = True ]; then
+    ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_infer.log \
+    infer.py -c conf/infer_rnn.yaml \
+      --vocoder_category ${vocoder} \
+      --wavernn_voc_model ${expdir}/model/wavernn/latest_weights.pyt
+  else
+    ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_infer.log \
+    infer.py -c conf/infer_rnn.yaml
+  fi
 
 fi
 

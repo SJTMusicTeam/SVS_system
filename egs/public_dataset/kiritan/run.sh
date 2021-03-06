@@ -6,7 +6,7 @@
 . ./cmd.sh || exit 1;
 
 
-stage=0
+stage=3
 stop_stage=100
 ngpu=1
 raw_data_dir=downloads
@@ -39,12 +39,15 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   echo " Stage1: data preprocessing "
   echo ============================
 
-  python local/prepare_data.py ${raw_data_dir}/kiritan_singing/wav ${raw_data_dir}/kiritan_singing/mono_label data
-  ./local/train_dev_test_split.sh data train dev test
-
   if [ ${download_wavernn_vocoder} = True ]; then
     wget -nc https://raw.githubusercontent.com/pppku/model_zoo/main/wavernn/latest_weights.pyt -P ${expdir}/model/wavernn
+    python local/prepare_data.py ${raw_data_dir}/kiritan_singing/wav ${raw_data_dir}/kiritan_singing/mono_label data \
+      --window_size 50 \
+      --shift_size 12.5
+  else
+    python local/prepare_data.py ${raw_data_dir}/kiritan_singing/wav ${raw_data_dir}/kiritan_singing/mono_label data
   fi
+  ./local/train_dev_test_split.sh data train dev test
 
 fi
 
