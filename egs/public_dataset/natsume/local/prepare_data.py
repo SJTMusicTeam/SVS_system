@@ -215,9 +215,7 @@ def process(args):
             )
 
             sf.write(
-                os.path.join(song_wav, name) + ".wav",
-                seg_signal,
-                samplerate=args.sr,
+                os.path.join(song_wav, name) + ".wav", seg_signal, samplerate=args.sr
             )
             print("saved {}".format(os.path.join(song_wav, name) + ".wav"))
         index += 1

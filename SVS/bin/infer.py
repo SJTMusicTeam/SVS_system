@@ -17,17 +17,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import yamlargparse
+import jsonargparse
 import logging
 from SVS.model.infer import infer
 
 if __name__ == "__main__":
-    parser = yamlargparse.ArgumentParser(description="SVS training")
+    parser = jsonargparse.ArgumentParser(description="SVS training")
     parser.add_argument(
         "-c",
         "--config",
         help="config file path",
-        action=yamlargparse.ActionConfigFile,
+        action=jsonargparse.ActionConfigFile,
     )
     parser.add_argument("--test_align", help="alignment data dir used for validation.")
     parser.add_argument("--test_pitch", help="pitch data dir used for validation.")
@@ -42,10 +42,7 @@ if __name__ == "__main__":
         help="Type of model (New_Transformer or GLU_Transformer or LSTM)",
     )
     parser.add_argument(
-        "--num_frames",
-        default=500,
-        type=int,
-        help="number of frames in one utterance",
+        "--num_frames", default=500, type=int, help="number of frames in one utterance"
     )
     parser.add_argument(
         "--db_joint",
@@ -86,9 +83,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--decode_sample", default=-1, type=int, help="samples to decode"
     )
-    parser.add_argument("--frame_length", default=0.06, type=float)
-    parser.add_argument("--frame_shift", default=0.03, type=float)
-    parser.add_argument("--sampling_rate", default=44100, type=int)
+    parser.add_argument("--frame_length", default=0.05, type=float)
+    parser.add_argument("--frame_shift", default=0.0125, type=float)
+    parser.add_argument("--sampling_rate", default=22050, type=int)
     parser.add_argument("--preemphasis", default=0.97, type=float)
     parser.add_argument("--n_mels", default=80, type=int)
     parser.add_argument("--power", default=1.2, type=float)
@@ -176,16 +173,21 @@ if __name__ == "__main__":
     parser.add_argument("--dec_dropout", default=0.1, type=float)
 
     parser.add_argument("--double_mel_loss", default=False, type=float)
+
     parser.add_argument("--vocoder_category", default="griffin", type=str)
-    parser.add_argument("--hop_length", default=672, type=int)
-    parser.add_argument("--voc_mode", default="MOL", type=str)
-    parser.add_argument("--voc_upsample_factors", default=(6, 7, 16), type=tuple)
     parser.add_argument("--voc_rnn_dims", default=512, type=int)
     parser.add_argument("--voc_fc_dims", default=512, type=int)
+    parser.add_argument("--voc_bits", default=9, type=int)
+    parser.add_argument("--voc_pad", default=2, type=int)
+    parser.add_argument("--voc_upsample_factors_0", default=5, type=int)
+    parser.add_argument("--voc_upsample_factors_1", default=5, type=int)
+    parser.add_argument("--voc_upsample_factors_2", default=11, type=int)
     parser.add_argument("--voc_compute_dims", default=128, type=int)
     parser.add_argument("--voc_res_out_dims", default=128, type=int)
-    parser.add_argument("--voc_blocks", default=10, type=int)
-    parser.add_argument("--voc_pad", default=2, type=int)
+    parser.add_argument("--voc_res_blocks", default=10, type=int)
+    parser.add_argument("--hop_length", default=275, type=int)
+    parser.add_argument("--voc_mode", default="MOL", type=str)
+    parser.add_argument("--wavernn_voc_model", help="wavernn model used for training.")
 
     args = parser.parse_args()
 

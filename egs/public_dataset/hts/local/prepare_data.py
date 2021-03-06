@@ -213,9 +213,7 @@ def process(args):
             )
 
             sf.write(
-                os.path.join(song_wav, name) + ".wav",
-                seg_signal,
-                samplerate=args.sr,
+                os.path.join(song_wav, name) + ".wav", seg_signal, samplerate=args.sr
             )
             print("saved {}".format(os.path.join(song_wav, name) + ".wav"))
         index += 1
@@ -235,7 +233,7 @@ if __name__ == "__main__":
         "--window_size", type=int, default=60, help="window size in miliseconds"
     )
     parser.add_argument(
-        "--shift_size", type=int, default=30, help="shift size in miliseconds"
+        "--shift_size", type=float, default=30, help="shift size in miliseconds"
     )
     parser.add_argument("--sr", type=int, default=48000)
     parser.add_argument("--sil", type=str, default="pau")

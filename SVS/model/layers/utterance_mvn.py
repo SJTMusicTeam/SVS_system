@@ -22,10 +22,7 @@ class UtteranceMVN(nn.Module):
     """UtteranceMVN."""
 
     def __init__(
-        self,
-        norm_means: bool = True,
-        norm_vars: bool = True,
-        eps: float = 1.0e-20,
+        self, norm_means: bool = True, norm_vars: bool = True, eps: float = 1.0e-20
     ):
         """init."""
         super().__init__()
@@ -48,11 +45,7 @@ class UtteranceMVN(nn.Module):
 
         """
         return utterance_mvn(
-            x,
-            ilens,
-            norm_means=self.norm_means,
-            norm_vars=self.norm_vars,
-            eps=self.eps,
+            x, ilens, norm_means=self.norm_means, norm_vars=self.norm_vars, eps=self.eps
         )
 
 

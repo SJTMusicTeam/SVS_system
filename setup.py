@@ -34,11 +34,7 @@ requirements = {
         # frontend related
         "torch_complex",
     ],
-    "recipe": [
-        "resampy",
-        "museval>=0.2.1",
-        "mir-eval>=0.6",
-    ],
+    "recipe": ["resampy", "museval>=0.2.1", "mir-eval>=0.6"],
     "setup": ["numpy", "pytest-runner"],
     "test": [
         "pytest>=3.3.0",
