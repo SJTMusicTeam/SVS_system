@@ -919,34 +919,34 @@ def log_mel(step, output_mel, ori_mel, att, length, save_dir, args, voc_model):
     ori_mel = ori_mel[:, :length, :]
     ori_mel = ori_mel.transpose(1, 2)
 
-    # wav = voc_model.generate(output_mel, save_dir, False, 11000, 550, True)
-    # wav_true = voc_model.generate(ori_mel, save_dir, False, 11000, 550, True)
-    #
-    # if librosa.__version__ < "0.8.0":
-    #     librosa.output.write_wav(
-    #         os.path.join(save_dir, "{}.wav".format(step)), wav, args.sampling_rate
-    #     )
-    #     librosa.output.write_wav(
-    #         os.path.join(save_dir, "{}_true.wav".format(step)),
-    #         wav_true,
-    #         args.sampling_rate,
-    #     )
-    # else:
-    #     # librosa > 0.8 remove librosa.output.write_wav module
-    #     sf.write(
-    #         os.path.join(save_dir, "{}.wav".format(step)),
-    #         wav,
-    #         args.sampling_rate,
-    #         format="wav",
-    #         subtype="PCM_24",
-    #     )
-    #     sf.write(
-    #         os.path.join(save_dir, "{}_true.wav".format(step)),
-    #         wav_true,
-    #         args.sampling_rate,
-    #         format="wav",
-    #         subtype="PCM_24",
-    #     )
+    wav = voc_model.generate(output_mel, save_dir, False, 11000, 550, True)
+    wav_true = voc_model.generate(ori_mel, save_dir, False, 11000, 550, True)
+
+    if librosa.__version__ < "0.8.0":
+        librosa.output.write_wav(
+            os.path.join(save_dir, "{}.wav".format(step)), wav, args.sampling_rate
+        )
+        librosa.output.write_wav(
+            os.path.join(save_dir, "{}_true.wav".format(step)),
+            wav_true,
+            args.sampling_rate,
+        )
+    else:
+        # librosa > 0.8 remove librosa.output.write_wav module
+        sf.write(
+            os.path.join(save_dir, "{}.wav".format(step)),
+            wav,
+            args.sampling_rate,
+            format="wav",
+            subtype="PCM_24",
+        )
+        sf.write(
+            os.path.join(save_dir, "{}_true.wav".format(step)),
+            wav_true,
+            args.sampling_rate,
+            format="wav",
+            subtype="PCM_24",
+        )
 
     output_mel = output_mel.squeeze(0)
     ori_mel = ori_mel.squeeze(0)
