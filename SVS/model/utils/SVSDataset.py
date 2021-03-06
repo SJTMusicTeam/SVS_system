@@ -16,7 +16,8 @@ limitations under the License.
 
 import librosa
 import logging
-from math import log2, pow
+from math import log2
+from math import pow
 import numpy as np
 import os
 import random
