@@ -57,6 +57,7 @@ def collect_stats(train_loader, args):
                 char_len_list,
                 mel,
                 singer_id,
+                semitone,
             ) = data_step
         else:
             (
@@ -70,6 +71,7 @@ def collect_stats(train_loader, args):
                 chars,
                 char_len_list,
                 mel,
+                semitone,
             ) = data_step
         # print(f"spec.shape: {spec.shape},length.shape:
         # {length.shape}, mel.shape: {mel.shape}")
@@ -162,6 +164,7 @@ def train_one_epoch(
                 char_len_list,
                 mel,
                 singer_id,
+                semitone,
             ) = data_step
 
             singer_id = np.array(singer_id).reshape(
@@ -184,10 +187,13 @@ def train_one_epoch(
                 chars,
                 char_len_list,
                 mel,
+                semitone,
             ) = data_step
         phone = phone.to(device)
         beat = beat.to(device)
         pitch = pitch.to(device).float()
+        if semitone is not None:
+            semitone = semitone.to(device).float()
         spec = spec.to(device).float()
         if mel is not None:
             mel = mel.to(device).float()
@@ -207,6 +213,9 @@ def train_one_epoch(
             char_len_list = char_len_list.to(device)
         else:
             phone = phone.float()
+
+        if args.Hz2semitone:
+            pitch = semitone
 
         # output = [batch size, num frames, feat_dim]
         # output_mel = [batch size, num frames, n_mels dimension]
@@ -428,6 +437,7 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                     char_len_list,
                     mel,
                     singer_id,
+                    semitone,
                 ) = data_step
 
                 singer_id = np.array(singer_id).reshape(
@@ -450,11 +460,14 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                     chars,
                     char_len_list,
                     mel,
+                    semitone,
                 ) = data_step
 
             phone = phone.to(device)
             beat = beat.to(device)
             pitch = pitch.to(device).float()
+            if semitone is not None:
+                semitone = semitone.to(device).float()
             spec = spec.to(device).float()
             if mel is not None:
                 mel = mel.to(device).float()
@@ -473,6 +486,9 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                 char_len_list = char_len_list.to(device)
             else:
                 phone = phone.float()
+
+            if args.Hz2semitone:
+                pitch = semitone
 
             if args.model_type == "GLU_Transformer":
                 if args.db_joint:

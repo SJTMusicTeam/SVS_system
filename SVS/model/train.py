@@ -185,6 +185,8 @@ def train(args):
         sing_quality=args.sing_quality,
         standard=args.standard,
         db_joint=args.db_joint,
+        Hz2semitone=args.Hz2semitone,
+        semitone_path=args.semitone_path,
     )
 
     dev_set = SVSDataset(
@@ -205,6 +207,8 @@ def train(args):
         sing_quality=args.sing_quality,
         standard=args.standard,
         db_joint=args.db_joint,
+        Hz2semitone=args.Hz2semitone,
+        semitone_path=args.semitone_path,
     )
     collate_fn_svs = SVSCollator(
         args.num_frames,
@@ -215,6 +219,7 @@ def train(args):
         args.db_joint,
         args.random_crop,
         args.crop_min_length,
+        args.Hz2semitone,
     )
     train_loader = torch.utils.data.DataLoader(
         dataset=train_set,
@@ -258,6 +263,8 @@ def train(args):
                 n_mels=args.n_mels,
                 double_mel_loss=args.double_mel_loss,
                 local_gaussian=args.local_gaussian,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
                 device=device,
             )
         else:
@@ -273,6 +280,8 @@ def train(args):
                 n_mels=args.n_mels,
                 double_mel_loss=args.double_mel_loss,
                 local_gaussian=args.local_gaussian,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
                 device=device,
             )
     elif args.model_type == "LSTM":
@@ -287,6 +296,8 @@ def train(args):
                 d_output=args.feat_dim,
                 n_mels=args.n_mels,
                 double_mel_loss=args.double_mel_loss,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
                 device=device,
                 use_asr_post=args.use_asr_post,
             )
@@ -300,6 +311,8 @@ def train(args):
                 d_output=args.feat_dim,
                 n_mels=args.n_mels,
                 double_mel_loss=args.double_mel_loss,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
                 device=device,
                 use_asr_post=args.use_asr_post,
             )
@@ -360,6 +373,8 @@ def train(args):
             double_mel_loss=args.double_mel_loss,
             local_gaussian=args.local_gaussian,
             dec_dropout=args.dec_dropout,
+            Hz2semitone=args.Hz2semitone,
+            semitone_size=args.semitone_size,
             device=device,
         )
     elif args.model_type == "Comformer_full":
@@ -412,6 +427,8 @@ def train(args):
                 dec_use_cnn_module=args.dec_use_cnn_module,
                 dec_cnn_module_kernel=args.dec_cnn_module_kernel,
                 dec_padding_idx=args.dec_padding_idx,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
                 device=device,
             )
         else:
@@ -462,6 +479,8 @@ def train(args):
                 dec_use_cnn_module=args.dec_use_cnn_module,
                 dec_cnn_module_kernel=args.dec_cnn_module_kernel,
                 dec_padding_idx=args.dec_padding_idx,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
                 device=device,
             )
 

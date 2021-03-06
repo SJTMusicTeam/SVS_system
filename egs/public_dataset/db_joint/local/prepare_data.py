@@ -4,6 +4,29 @@
 import argparse
 import numpy as np
 import os
+from SVS.model.utils.SVSDataset import _Hz2Semitone
+
+
+def get_semitone_txt(args):
+
+    semitone_list = []
+
+    for split in ["train", "dev", "test"]:
+        song_pitch_beat = os.path.join(args.outdir, "pitch_beat_extraction", split)
+        filename_list = os.listdir(song_pitch_beat)
+        for filename in filename_list:
+            if filename.split("_")[-1] == "pitch.npy":
+                pitch_path = os.path.join(song_pitch_beat, filename)
+                f0_array = np.load(pitch_path)
+                for f0 in f0_array:
+                    semitone = _Hz2Semitone(f0)
+                    if semitone not in semitone_list:
+                        semitone_list.append(semitone)
+
+    with open(os.path.join(args.outdir, "semitone_set.txt"), "w") as f:
+        for semitone_id, semitone in enumerate(semitone_list):
+            f.write(str(semitone_id) + " " + semitone)
+            f.write("\n")
 
 
 def process(args):
@@ -143,4 +166,6 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
     process(args)
+    get_semitone_txt(args)

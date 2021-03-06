@@ -16,6 +16,7 @@ limitations under the License.
 
 import librosa
 import logging
+from math import log2, pow
 import numpy as np
 import os
 import random
@@ -110,6 +111,21 @@ def _phone2char(phones, char_max_len):
     return chars, phones_index
 
 
+def _Hz2Semitone(freq):
+    """_Hz2Semitone."""
+    A4 = 440
+    C0 = A4 * pow(2, -4.75)
+    name = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+
+    if freq == 0:
+        return "Sil"  # silence
+    else:
+        h = round(12 * log2(freq / C0))
+        octave = h // 12
+        n = h % 12
+        return name[n] + str(octave)
+
+
 class SVSCollator(object):
     """SVSCollator."""
 
@@ -123,6 +139,7 @@ class SVSCollator(object):
         db_joint=False,
         random_crop=False,
         crop_min_length=100,
+        Hz2semitone=False,
     ):
         """init."""
         self.max_len = max_len
@@ -134,6 +151,7 @@ class SVSCollator(object):
         self.db_joint = db_joint
         self.random_crop = random_crop
         self.crop_min_length = crop_min_length
+        self.Hz2semitone = Hz2semitone
 
         assert crop_min_length <= max_len
 
@@ -153,6 +171,7 @@ class SVSCollator(object):
         pitch = np.zeros((batch_size, self.max_len))
         beat = np.zeros((batch_size, self.max_len))
         length_mask = np.zeros((batch_size, self.max_len))
+        semitone = np.zeros((batch_size, self.max_len))
 
         if self.db_joint:
             singer_id = [batch[i]["singer_id"] for i in range(batch_size)]
@@ -181,6 +200,12 @@ class SVSCollator(object):
                 imag[i, :crop_length, :] = batch[i]["phase"][index_begin:index_end].imag
                 pitch[i, :crop_length] = batch[i]["pitch"][index_begin:index_end]
                 beat[i, :crop_length] = batch[i]["beat"][index_begin:index_end]
+
+                if self.Hz2semitone:
+                    semitone[i, :crop_length] = batch[i]["semitone"][
+                        index_begin:index_end
+                    ]
+
                 if self.n_mels > 0:
                     mel[i, :crop_length, :] = batch[i]["mel"][index_begin:index_end]
 
@@ -201,6 +226,10 @@ class SVSCollator(object):
                 imag[i, :length, :] = batch[i]["phase"][:length].imag
                 pitch[i, :length] = batch[i]["pitch"][:length]
                 beat[i, :length] = batch[i]["beat"][:length]
+
+                if self.Hz2semitone:
+                    semitone[i, :length] = batch[i]["semitone"][:length]
+
                 if self.n_mels > 0:
                     mel[i, :length, :] = batch[i]["mel"][:length]
 
@@ -231,6 +260,11 @@ class SVSCollator(object):
             chars = None
             char_len_mask = None
 
+        if self.Hz2semitone:
+            semitone = torch.from_numpy(semitone).unsqueeze(dim=-1).long()
+        else:
+            semitone = None
+
         if self.db_joint:
             return (
                 phone,
@@ -244,6 +278,7 @@ class SVSCollator(object):
                 char_len_mask,
                 mel,
                 singer_id,
+                semitone,
             )
         else:
             return (
@@ -257,6 +292,7 @@ class SVSCollator(object):
                 chars,
                 char_len_mask,
                 mel,
+                semitone,
             )
 
 
@@ -282,6 +318,8 @@ class SVSDataset(Dataset):
         sing_quality="conf/sing_quality.csv",
         standard=3,
         db_joint=False,
+        Hz2semitone=False,
+        semitone_path="data/semitone_set.txt",
     ):
         """init."""
         self.align_root_path = align_root_path
@@ -299,6 +337,14 @@ class SVSDataset(Dataset):
         self.max_db = max_db
         self.ref_db = ref_db
         self.db_joint = db_joint
+        self.Hz2semitone = Hz2semitone
+
+        if Hz2semitone:
+            semitone_dict = (
+                open(semitone_path, "r").read().split("\n")[:-1]
+            )  # the last line is "\n"
+            self.semitone_list = [semitone.split(" ")[1] for semitone in semitone_dict]
+
         if standard > 0:
             print(standard)
             quality = _load_sing_quality(sing_quality, standard)
@@ -433,6 +479,11 @@ class SVSDataset(Dataset):
         if mel is not None:
             mel = mel[:min_length, :]
 
+        if self.Hz2semitone:
+            semitone = [self.semitone_list.index(_Hz2Semitone(f0)) for f0 in pitch]
+        else:
+            semitone = None
+
         # print("char len: {}, phone len: {}, spectrom: {}"
         # .format(len(char), len(phone), np.shape(spectrogram)[0]))
         # logging.info(min_length)
@@ -447,6 +498,7 @@ class SVSDataset(Dataset):
                 "phase": phase,
                 "mel": mel,
                 "singer_id": singer_id,
+                "semitone": semitone,
             }
         else:
             return {
@@ -457,4 +509,5 @@ class SVSDataset(Dataset):
                 "char": char,
                 "phase": phase,
                 "mel": mel,
+                "semitone": semitone,
             }

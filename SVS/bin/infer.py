@@ -17,17 +17,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import jsonargparse
+import yamlargparse
 import logging
 from SVS.model.infer import infer
 
 if __name__ == "__main__":
-    parser = jsonargparse.ArgumentParser(description="SVS training")
+    parser = yamlargparse.ArgumentParser(description="SVS training")
     parser.add_argument(
         "-c",
         "--config",
         help="config file path",
-        action=jsonargparse.ActionConfigFile,
+        action=yamlargparse.ActionConfigFile,
     )
     parser.add_argument("--test_align", help="alignment data dir used for validation.")
     parser.add_argument("--test_pitch", help="pitch data dir used for validation.")
@@ -64,6 +64,18 @@ if __name__ == "__main__":
         type=int,
         default=100,
         help="random crop length belongs to [crop_min_length, num_frames]",
+    )
+    parser.add_argument(
+        "--Hz2semitone",
+        type=bool,
+        default=False,
+        help="Transfer f0 value into semitone",
+    )
+    parser.add_argument(
+        "--semitone_size",
+        type=int,
+        default=59,
+        help="Semitone size of your dataset, can be found in data/semitone_set.txt",
     )
     parser.add_argument(
         "--char_max_len", default=100, type=int, help="max length for character"
