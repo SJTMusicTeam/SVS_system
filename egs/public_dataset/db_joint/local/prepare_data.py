@@ -4,8 +4,8 @@
 import argparse
 import numpy as np
 import os
-from SVS.model.utils.SVSDataset import _Hz2Semitone
 from SVS.model.utils.SVSDataset import _full_semitone_list
+from SVS.model.utils.SVSDataset import _Hz2Semitone
 
 
 def get_semitone_txt(args):

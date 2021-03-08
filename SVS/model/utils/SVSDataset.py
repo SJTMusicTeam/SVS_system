@@ -240,11 +240,11 @@ def _pitch_shift(f0_array, semitone_list):
         flag_right = True
 
     # decide shift direction
-    if flag_left == True and flag_right == True:
+    if flag_left is True and flag_right is True:
         shift_side = random.randint(0, 1)  # 0 - left, 1 - right
-    elif flag_left == True:
+    elif flag_left is True:
         shift_side = 0
-    elif flag_right == True:
+    elif flag_right is True:
         shift_side = 1
     else:
         shift_side = -1
