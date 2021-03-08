@@ -180,6 +180,11 @@ def train(args):
         sing_quality=args.sing_quality,
         standard=args.standard,
         db_joint=args.db_joint,
+        Hz2semitone=args.Hz2semitone,
+        semitone_min=args.semitone_min,
+        semitone_max=args.semitone_max,
+        phone_shift_size=args.phone_shift_size,
+        semitone_shift=args.semitone_shift,
     )
 
     dev_set = SVSDataset(
@@ -200,8 +205,13 @@ def train(args):
         sing_quality=args.sing_quality,
         standard=args.standard,
         db_joint=args.db_joint,
+        Hz2semitone=args.Hz2semitone,
+        semitone_min=args.semitone_min,
+        semitone_max=args.semitone_max,
+        phone_shift_size=-1,
+        semitone_shift=False,
     )
-    collate_fn_svs = SVSCollator(
+    collate_fn_svs_train = SVSCollator(
         args.num_frames,
         args.char_max_len,
         args.use_asr_post,
@@ -210,13 +220,25 @@ def train(args):
         args.db_joint,
         args.random_crop,
         args.crop_min_length,
+        args.Hz2semitone,
+    )
+    collate_fn_svs_val = SVSCollator(
+        args.num_frames,
+        args.char_max_len,
+        args.use_asr_post,
+        args.phone_size,
+        args.n_mels,
+        args.db_joint,
+        False,  # random crop
+        -1,  # crop_min_length
+        args.Hz2semitone,
     )
     train_loader = torch.utils.data.DataLoader(
         dataset=train_set,
         batch_size=args.batchsize,
         shuffle=True,
         num_workers=args.num_workers,
-        collate_fn=collate_fn_svs,
+        collate_fn=collate_fn_svs_train,
         pin_memory=True,
     )
     dev_loader = torch.utils.data.DataLoader(
@@ -224,7 +246,7 @@ def train(args):
         batch_size=args.batchsize,
         shuffle=False,
         num_workers=args.num_workers,
-        collate_fn=collate_fn_svs,
+        collate_fn=collate_fn_svs_val,
         pin_memory=True,
     )
 
@@ -253,6 +275,8 @@ def train(args):
                 n_mels=args.n_mels,
                 double_mel_loss=args.double_mel_loss,
                 local_gaussian=args.local_gaussian,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
                 device=device,
             )
         else:
@@ -268,6 +292,8 @@ def train(args):
                 n_mels=args.n_mels,
                 double_mel_loss=args.double_mel_loss,
                 local_gaussian=args.local_gaussian,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
                 device=device,
             )
     elif args.model_type == "LSTM":
@@ -282,6 +308,8 @@ def train(args):
                 d_output=args.feat_dim,
                 n_mels=args.n_mels,
                 double_mel_loss=args.double_mel_loss,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
                 device=device,
                 use_asr_post=args.use_asr_post,
             )
@@ -295,6 +323,8 @@ def train(args):
                 d_output=args.feat_dim,
                 n_mels=args.n_mels,
                 double_mel_loss=args.double_mel_loss,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
                 device=device,
                 use_asr_post=args.use_asr_post,
             )
@@ -355,6 +385,8 @@ def train(args):
             double_mel_loss=args.double_mel_loss,
             local_gaussian=args.local_gaussian,
             dec_dropout=args.dec_dropout,
+            Hz2semitone=args.Hz2semitone,
+            semitone_size=args.semitone_size,
             device=device,
         )
     elif args.model_type == "Comformer_full":
@@ -407,6 +439,8 @@ def train(args):
                 dec_use_cnn_module=args.dec_use_cnn_module,
                 dec_cnn_module_kernel=args.dec_cnn_module_kernel,
                 dec_padding_idx=args.dec_padding_idx,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
                 device=device,
             )
         else:
@@ -457,6 +491,8 @@ def train(args):
                 dec_use_cnn_module=args.dec_use_cnn_module,
                 dec_cnn_module_kernel=args.dec_cnn_module_kernel,
                 dec_padding_idx=args.dec_padding_idx,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
                 device=device,
             )
 

@@ -19,6 +19,7 @@ limitations under the License.
 # import sys
 # sys.path.append("/Users/jiatongshi/projects/svs_system/SVS_system")
 
+# import logging
 import math
 import numpy as np
 from pathlib import Path
@@ -401,11 +402,15 @@ class Conformer_Encoder(nn.Module):
 class Encoder_Postnet(nn.Module):
     """Encoder Postnet."""
 
-    def __init__(self, embed_size):
+    def __init__(self, embed_size, semitone_size=59, Hz2semitone=False):
         """init."""
         super(Encoder_Postnet, self).__init__()
 
-        self.fc_pitch = nn.Linear(1, embed_size)
+        self.Hz2semitone = Hz2semitone
+        if self.Hz2semitone:
+            self.emb_pitch = nn.Embedding(semitone_size, embed_size)
+        else:
+            self.fc_pitch = nn.Linear(1, embed_size)
         # Remember! embed_size must be even!!
         self.fc_pos = nn.Linear(embed_size, embed_size)
         # only 0 and 1 two possibilities
@@ -450,7 +455,10 @@ class Encoder_Postnet(nn.Module):
 
         aligner_out = self.aligner(encoder_out, align_phone, text_phone)
 
-        pitch = self.fc_pitch(pitch)
+        if self.Hz2semitone:
+            pitch = self.emb_pitch(pitch.squeeze(-1))
+        else:
+            pitch = self.fc_pitch(pitch)
         out = aligner_out + pitch
 
         beats = self.emb_beats(beats.squeeze(2))
@@ -467,11 +475,15 @@ class Encoder_Postnet(nn.Module):
 class Encoder_Postnet_combine(nn.Module):
     """Encoder Postnet."""
 
-    def __init__(self, embed_size, singer_size):
+    def __init__(self, embed_size, singer_size, semitone_size=59, Hz2semitone=False):
         """init."""
         super(Encoder_Postnet_combine, self).__init__()
 
-        self.fc_pitch = nn.Linear(1, embed_size)
+        self.Hz2semitone = Hz2semitone
+        if self.Hz2semitone:
+            self.emb_pitch = nn.Embedding(semitone_size, embed_size)
+        else:
+            self.fc_pitch = nn.Linear(1, embed_size)
         # Remember! embed_size must be even!!
         self.fc_pos = nn.Linear(embed_size, embed_size)
         # only 0 and 1 two possibilities
@@ -524,7 +536,10 @@ class Encoder_Postnet_combine(nn.Module):
 
         aligner_out = self.aligner(encoder_out, align_phone, text_phone)
 
-        pitch = self.fc_pitch(pitch)
+        if self.Hz2semitone:
+            pitch = self.emb_pitch(pitch.squeeze(-1))
+        else:
+            pitch = self.fc_pitch(pitch)
         out = aligner_out + pitch
 
         beats = self.emb_beats(beats.squeeze(2))
@@ -724,6 +739,8 @@ class GLU_TransformerSVS(nn.Module):
         n_mels=-1,
         double_mel_loss=True,
         local_gaussian=False,
+        semitone_size=59,
+        Hz2semitone=False,
         device="cuda",
     ):
         """init."""
@@ -737,7 +754,7 @@ class GLU_TransformerSVS(nn.Module):
             num_layers=1,
             glu_kernel=3,
         )
-        self.enc_postnet = Encoder_Postnet(embed_size)
+        self.enc_postnet = Encoder_Postnet(embed_size, semitone_size, Hz2semitone)
 
         self.use_mel = n_mels > 0
         if self.use_mel:
@@ -811,6 +828,8 @@ class GLU_TransformerSVS_combine(nn.Module):
         n_mels=-1,
         double_mel_loss=True,
         local_gaussian=False,
+        semitone_size=59,
+        Hz2semitone=False,
         device="cuda",
     ):
         """init."""
@@ -824,7 +843,9 @@ class GLU_TransformerSVS_combine(nn.Module):
             num_layers=1,
             glu_kernel=3,
         )
-        self.enc_postnet = Encoder_Postnet_combine(embed_size, singer_size)
+        self.enc_postnet = Encoder_Postnet_combine(
+            embed_size, singer_size, semitone_size, Hz2semitone
+        )
 
         self.use_mel = n_mels > 0
         if self.use_mel:
@@ -899,6 +920,8 @@ class LSTMSVS(nn.Module):
         dropout=0.1,
         device="cuda",
         use_asr_post=False,
+        semitone_size=59,
+        Hz2semitone=False,
     ):
         """init."""
         super(LSTMSVS, self).__init__()
@@ -935,7 +958,11 @@ class LSTMSVS(nn.Module):
             dropout=dropout,
         )
 
-        self.fc_pitch = nn.Linear(1, d_model)
+        self.Hz2semitone = Hz2semitone
+        if self.Hz2semitone:
+            self.emb_pitch = nn.Embedding(semitone_size, d_model)
+        else:
+            self.fc_pitch = nn.Linear(1, d_model)
         self.linear_wrapper3 = nn.Linear(d_model * 2, d_model)
         self.pitch_lstm = nn.LSTM(
             input_size=d_model,
@@ -996,7 +1023,10 @@ class LSTMSVS(nn.Module):
         out, _ = self.pos_lstm(out)
         out = F.leaky_relu(self.linear_wrapper3(out))
 
-        pitch = F.leaky_relu(self.fc_pitch(pitch))
+        if self.Hz2semitone:
+            pitch = F.leaky_relu(self.emb_pitch(pitch.squeeze(-1)))
+        else:
+            pitch = F.leaky_relu(self.fc_pitch(pitch))
         out = pitch + out
         out, _ = self.pitch_lstm(out)
         out = F.leaky_relu(self.linear_wrapper4(out))
@@ -1041,6 +1071,8 @@ class LSTMSVS_combine(nn.Module):
         dropout=0.1,
         device="cuda",
         use_asr_post=False,
+        semitone_size=59,
+        Hz2semitone=False,
     ):
         """init."""
         super(LSTMSVS_combine, self).__init__()
@@ -1078,7 +1110,11 @@ class LSTMSVS_combine(nn.Module):
             dropout=dropout,
         )
 
-        self.fc_pitch = nn.Linear(1, d_model)
+        self.Hz2semitone = Hz2semitone
+        if self.Hz2semitone:
+            self.emb_pitch = nn.Embedding(semitone_size, d_model)
+        else:
+            self.fc_pitch = nn.Linear(1, d_model)
         self.linear_wrapper3 = nn.Linear(d_model * 2, d_model)
         self.pitch_lstm = nn.LSTM(
             input_size=d_model,
@@ -1147,7 +1183,10 @@ class LSTMSVS_combine(nn.Module):
         out, _ = self.pos_lstm(out)
         out = F.leaky_relu(self.linear_wrapper3(out))
 
-        pitch = F.leaky_relu(self.fc_pitch(pitch))
+        if self.Hz2semitone:
+            pitch = F.leaky_relu(self.emb_pitch(pitch.squeeze(-1)))
+        else:
+            pitch = F.leaky_relu(self.fc_pitch(pitch))
         out = pitch + out
         out, _ = self.pitch_lstm(out)
         out = F.leaky_relu(self.linear_wrapper4(out))
@@ -1435,6 +1474,8 @@ class ConformerSVS(nn.Module):
         enc_cnn_module_kernel=31,
         enc_padding_idx=-1,
         device="cuda",
+        semitone_size=59,
+        Hz2semitone=False,
     ):
         """init."""
         super(ConformerSVS, self).__init__()
@@ -1461,7 +1502,7 @@ class ConformerSVS(nn.Module):
             cnn_module_kernel=enc_cnn_module_kernel,
             padding_idx=enc_padding_idx,
         )
-        self.enc_postnet = Encoder_Postnet(embed_size)
+        self.enc_postnet = Encoder_Postnet(embed_size, semitone_size, Hz2semitone)
 
         self.use_mel = n_mels > 0
         if self.use_mel:
@@ -1568,6 +1609,8 @@ class ConformerSVS_FULL(nn.Module):
         dec_cnn_module_kernel=31,
         dec_padding_idx=-1,
         device="cuda",
+        semitone_size=59,
+        Hz2semitone=False,
     ):
         """init."""
         super(ConformerSVS_FULL, self).__init__()
@@ -1594,7 +1637,7 @@ class ConformerSVS_FULL(nn.Module):
             cnn_module_kernel=enc_cnn_module_kernel,
             padding_idx=enc_padding_idx,
         )
-        self.enc_postnet = Encoder_Postnet(embed_size)
+        self.enc_postnet = Encoder_Postnet(embed_size, semitone_size, Hz2semitone)
 
         self.decoder = Conformer_Decoder(
             embed_size,
@@ -1692,6 +1735,8 @@ class ConformerSVS_FULL_combine(nn.Module):
         dec_cnn_module_kernel=31,
         dec_padding_idx=-1,
         device="cuda",
+        semitone_size=59,
+        Hz2semitone=False,
     ):
         """init."""
         super(ConformerSVS_FULL_combine, self).__init__()
@@ -1718,7 +1763,9 @@ class ConformerSVS_FULL_combine(nn.Module):
             cnn_module_kernel=enc_cnn_module_kernel,
             padding_idx=enc_padding_idx,
         )
-        self.enc_postnet = Encoder_Postnet_combine(embed_size, singer_size)
+        self.enc_postnet = Encoder_Postnet_combine(
+            embed_size, singer_size, semitone_size, Hz2semitone
+        )
 
         self.decoder = Conformer_Decoder(
             embed_size,

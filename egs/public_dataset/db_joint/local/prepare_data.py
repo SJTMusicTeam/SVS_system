@@ -4,6 +4,46 @@
 import argparse
 import numpy as np
 import os
+from SVS.model.utils.SVSDataset import _full_semitone_list
+from SVS.model.utils.SVSDataset import _Hz2Semitone
+
+
+def get_semitone_txt(args):
+
+    semitone_list = []
+
+    f0_min = 20000
+    f0_max = 0
+
+    for split in ["train", "dev", "test"]:
+        song_pitch_beat = os.path.join(args.outdir, "pitch_beat_extraction", split)
+        filename_list = os.listdir(song_pitch_beat)
+        for filename in filename_list:
+            if filename.split("_")[-1] == "pitch.npy":
+                pitch_path = os.path.join(song_pitch_beat, filename)
+                f0_array = np.load(pitch_path)
+                for f0 in f0_array:
+                    semitone = _Hz2Semitone(f0)
+                    if semitone not in semitone_list:
+                        semitone_list.append(semitone)
+
+                    if f0 != 0 and f0 < f0_min:
+                        f0_min = f0
+                    elif f0 > f0_max:
+                        f0_max = f0
+
+    print(f"f0_min: {f0_min}, semitone_min: {_Hz2Semitone(f0_min)}")
+    print(f"f0_max: {f0_max}, semitone_max: {_Hz2Semitone(f0_max)}")
+
+    full_semitone_list = _full_semitone_list(_Hz2Semitone(f0_min), _Hz2Semitone(f0_max))
+
+    print(f"semitone_size: {len(full_semitone_list)}")
+
+    with open(os.path.join(args.outdir, "semitone_set.txt"), "w") as f:
+        f.write(f"f0_min: {f0_min}, semitone_min: {_Hz2Semitone(f0_min)}\n")
+        f.write(f"f0_max: {f0_max}, semitone_max: {_Hz2Semitone(f0_max)}\n")
+        f.write(f"full_semitone_list: {full_semitone_list}\n")
+        f.write(f"semitone_size: {len(full_semitone_list)}")
 
 
 def process(args):
@@ -143,4 +183,6 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    process(args)
+
+    # process(args)
+    get_semitone_txt(args)

@@ -24,7 +24,10 @@ from SVS.model.infer import infer
 if __name__ == "__main__":
     parser = jsonargparse.ArgumentParser(description="SVS training")
     parser.add_argument(
-        "-c", "--config", help="config file path", action=jsonargparse.ActionConfigFile
+        "-c",
+        "--config",
+        help="config file path",
+        action=jsonargparse.ActionConfigFile,
     )
     parser.add_argument("--test_align", help="alignment data dir used for validation.")
     parser.add_argument("--test_pitch", help="pitch data dir used for validation.")
@@ -48,16 +51,28 @@ if __name__ == "__main__":
         help="Combine multiple datasets & add singer embedding",
     )
     parser.add_argument(
-        "--random_crop",
+        "--Hz2semitone",
         type=bool,
         default=False,
-        help="Random crop on frame length, cut follow num_frames",
+        help="Transfer f0 value into semitone",
     )
     parser.add_argument(
-        "--crop_min_length",
+        "--semitone_size",
         type=int,
-        default=100,
-        help="random crop length belongs to [crop_min_length, num_frames]",
+        default=59,
+        help="Semitone size of your dataset, can be found in data/semitone_set.txt",
+    )
+    parser.add_argument(
+        "--semitone_min",
+        type=str,
+        default="F_1",
+        help="Minimum semitone of your dataset, can be found in data/semitone_set.txt",
+    )
+    parser.add_argument(
+        "--semitone_max",
+        type=str,
+        default="D_6",
+        help="Maximum semitone of your dataset, can be found in data/semitone_set.txt",
     )
     parser.add_argument(
         "--char_max_len", default=100, type=int, help="max length for character"

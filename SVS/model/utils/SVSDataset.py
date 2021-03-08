@@ -16,6 +16,8 @@ limitations under the License.
 
 import librosa
 import logging
+from math import log2
+from math import pow
 import numpy as np
 import os
 import random
@@ -112,6 +114,167 @@ def _phone2char(phones, char_max_len):
     return chars, phones_index
 
 
+def _Hz2Semitone(freq):
+    """_Hz2Semitone."""
+    A4 = 440
+    C0 = A4 * pow(2, -4.75)
+    name = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+
+    if freq == 0:
+        return "Sil"  # silence
+    else:
+        h = round(12 * log2(freq / C0))
+        octave = h // 12
+        n = h % 12
+        return name[n] + "_" + str(octave)
+
+
+def _full_semitone_list(semitone_min, semitone_max):
+    """_full_semitone_list."""
+    name = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+
+    name_min, octave_min = semitone_min.split("_")
+    name_max, octave_max = semitone_max.split("_")
+
+    assert octave_min <= octave_max
+
+    res = ["Sil"]
+    flag_insert = 0
+    for octave in range(int(octave_min), int(octave_max) + 1):
+        for res_name in name:
+            if res_name == name_min and octave == int(octave_min):
+                flag_insert = 1
+            elif res_name == name_max and octave == int(octave_max):
+                res.append(res_name + "_" + str(octave))
+                flag_insert = 0
+                break
+            if flag_insert == 1:
+                res.append(res_name + "_" + str(octave))
+
+    return res
+
+
+def _calculate_phone_element_freq(phone_array):
+    """Return the phone list and freq of given phone_array."""
+    phone_list = [
+        phone_array[index]
+        for index in range(len(phone_array))
+        if index == 0 or phone_array[index] != phone_array[index - 1]
+    ]
+    phone_freq = []
+
+    begin_index = 0
+    for phone in phone_list:
+        freq = 0
+        for index in range(begin_index, len(phone_array)):
+            if phone_array[index] == phone:
+                freq += 1
+            else:
+                phone_freq.append(freq)
+                begin_index = index
+                break
+    phone_freq.append(freq)
+
+    assert len(phone_list) == len(phone_freq)
+
+    return phone_list, phone_freq
+
+
+def _phone_shift(phone_array, phone_shift_size):
+
+    phone_list, phone_freq = _calculate_phone_element_freq(phone_array)
+
+    shift_side = random.randint(0, 1)  # 0 - left, 1 - right
+    # do phone shift augment
+    for index in range(len(phone_freq)):
+
+        shift_size = random.randint(1, phone_shift_size)
+        flag_shift = 1 if random.random() > 0.5 else 0
+
+        if flag_shift:
+            if phone_freq[index] > 2 * shift_size:
+
+                if shift_side == 0 and index != 0:
+                    # left shift
+                    phone_freq[index] -= shift_size
+                    phone_freq[index - 1] += shift_size
+                elif shift_side == 1 and index != len(phone_freq) - 1:
+                    # right shift
+                    phone_freq[index] -= shift_size
+                    phone_freq[index + 1] += shift_size
+
+    # reconstruct phone array based on its freq
+    res = []
+    for index in range(len(phone_freq)):
+        for freq in range(phone_freq[index]):
+            res.append(phone_list[index])
+    res = np.array(res)
+
+    assert len(res) == len(phone_array)
+
+    return res
+
+
+def _pitch_shift(f0_array, semitone_list):
+
+    f0_list = [f0 for f0 in f0_array if f0 != 0]
+
+    if len(f0_list) == 0:
+        # no shift
+        return [semitone_list.index(_Hz2Semitone(f0)) for f0 in f0_array]
+
+    f0_min = np.min(f0_list)
+    f0_max = np.max(f0_list)
+
+    semitone_min = _Hz2Semitone(f0_min)
+    semitone_max = _Hz2Semitone(f0_max)
+
+    index_min = semitone_list.index(semitone_min)
+    index_max = semitone_list.index(semitone_max)
+
+    flag_left, flag_right = False, False
+    if index_min - 12 >= 1:
+        flag_left = True
+    if index_max + 12 <= len(semitone_list) - 1:
+        flag_right = True
+
+    # decide shift direction
+    if flag_left is True and flag_right is True:
+        shift_side = random.randint(0, 1)  # 0 - left, 1 - right
+    elif flag_left is True:
+        shift_side = 0
+    elif flag_right is True:
+        shift_side = 1
+    else:
+        shift_side = -1
+
+    # decide whether to shift
+    flag_shift = 1 if random.random() > 0.5 else 0
+
+    if shift_side == -1 or flag_shift == 0:
+        # no shift
+        return [semitone_list.index(_Hz2Semitone(f0)) for f0 in f0_array]
+    else:
+        if shift_side == 0:
+            # left shift
+            res = []
+            for f0 in f0_array:
+                if f0 == 0:
+                    res.append(semitone_list.index(_Hz2Semitone(f0)))
+                else:
+                    res.append(semitone_list.index(_Hz2Semitone(f0)) - 12)
+            return res
+        elif shift_side == 1:
+            # right shift
+            res = []
+            for f0 in f0_array:
+                if f0 == 0:
+                    res.append(semitone_list.index(_Hz2Semitone(f0)))
+                else:
+                    res.append(semitone_list.index(_Hz2Semitone(f0)) + 12)
+            return res
+
+
 class SVSCollator(object):
     """SVSCollator."""
 
@@ -125,6 +288,7 @@ class SVSCollator(object):
         db_joint=False,
         random_crop=False,
         crop_min_length=100,
+        Hz2semitone=False,
     ):
         """init."""
         self.max_len = max_len
@@ -136,6 +300,7 @@ class SVSCollator(object):
         self.db_joint = db_joint
         self.random_crop = random_crop
         self.crop_min_length = crop_min_length
+        self.Hz2semitone = Hz2semitone
 
         assert crop_min_length <= max_len
 
@@ -155,6 +320,7 @@ class SVSCollator(object):
         pitch = np.zeros((batch_size, self.max_len))
         beat = np.zeros((batch_size, self.max_len))
         length_mask = np.zeros((batch_size, self.max_len))
+        semitone = np.zeros((batch_size, self.max_len))
 
         if self.db_joint:
             singer_id = [batch[i]["singer_id"] for i in range(batch_size)]
@@ -183,6 +349,12 @@ class SVSCollator(object):
                 imag[i, :crop_length, :] = batch[i]["phase"][index_begin:index_end].imag
                 pitch[i, :crop_length] = batch[i]["pitch"][index_begin:index_end]
                 beat[i, :crop_length] = batch[i]["beat"][index_begin:index_end]
+
+                if self.Hz2semitone:
+                    semitone[i, :crop_length] = batch[i]["semitone"][
+                        index_begin:index_end
+                    ]
+
                 if self.n_mels > 0:
                     mel[i, :crop_length, :] = batch[i]["mel"][index_begin:index_end]
 
@@ -203,6 +375,10 @@ class SVSCollator(object):
                 imag[i, :length, :] = batch[i]["phase"][:length].imag
                 pitch[i, :length] = batch[i]["pitch"][:length]
                 beat[i, :length] = batch[i]["beat"][:length]
+
+                if self.Hz2semitone:
+                    semitone[i, :length] = batch[i]["semitone"][:length]
+
                 if self.n_mels > 0:
                     mel[i, :length] = batch[i]["mel"][:length]
 
@@ -234,6 +410,11 @@ class SVSCollator(object):
             chars = None
             char_len_mask = None
 
+        if self.Hz2semitone:
+            semitone = torch.from_numpy(semitone).unsqueeze(dim=-1).long()
+        else:
+            semitone = None
+
         if self.db_joint:
             return (
                 phone,
@@ -247,6 +428,7 @@ class SVSCollator(object):
                 char_len_mask,
                 mel,
                 singer_id,
+                semitone,
             )
         else:
             return (
@@ -260,6 +442,7 @@ class SVSCollator(object):
                 chars,
                 char_len_mask,
                 mel,
+                semitone,
             )
 
 
@@ -285,6 +468,11 @@ class SVSDataset(Dataset):
         sing_quality="conf/sing_quality.csv",
         standard=3,
         db_joint=False,
+        Hz2semitone=False,
+        semitone_min="F_1",
+        semitone_max="D_6",
+        phone_shift_size=-1,
+        semitone_shift=False,
     ):
         """init."""
         self.align_root_path = align_root_path
@@ -302,6 +490,13 @@ class SVSDataset(Dataset):
         self.max_db = max_db
         self.ref_db = ref_db
         self.db_joint = db_joint
+        self.Hz2semitone = Hz2semitone
+        self.phone_shift_size = phone_shift_size
+        self.semitone_shift = semitone_shift
+
+        if Hz2semitone:
+            self.semitone_list = _full_semitone_list(semitone_min, semitone_max)
+
         if standard > 0:
             print(standard)
             quality = _load_sing_quality(sing_quality, standard)
@@ -326,6 +521,10 @@ class SVSDataset(Dataset):
         path = os.path.join(self.align_root_path, self.filename_list[i])
         try:
             phone = np.load(path)
+            # phone shift augment
+            if self.phone_shift_size != -1:
+                assert self.phone_shift_size == 1 or self.phone_shift_size == 2
+                phone = _phone_shift(phone, self.phone_shift_size)
         except Exception:
             print("error path {}".format(path))
 
@@ -426,6 +625,13 @@ class SVSDataset(Dataset):
         if mel is not None:
             mel = mel[:min_length, :]
 
+        if self.Hz2semitone:
+            semitone = [self.semitone_list.index(_Hz2Semitone(f0)) for f0 in pitch]
+            if self.semitone_shift:
+                semitone = _pitch_shift(pitch, self.semitone_list)
+        else:
+            semitone = None
+
         # print("char len: {}, phone len: {}, spectrom: {}"
         # .format(len(char), len(phone), np.shape(spectrogram)[0]))
         # logging.info(min_length)
@@ -440,6 +646,7 @@ class SVSDataset(Dataset):
                 "phase": phase,
                 "mel": mel,
                 "singer_id": singer_id,
+                "semitone": semitone,
             }
         else:
             return {
@@ -450,4 +657,5 @@ class SVSDataset(Dataset):
                 "char": char,
                 "phase": phase,
                 "mel": mel,
+                "semitone": semitone,
             }

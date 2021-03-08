@@ -24,7 +24,10 @@ from SVS.model.train import train
 if __name__ == "__main__":
     parser = jsonargparse.ArgumentParser(description="SVS training")
     parser.add_argument(
-        "-c", "--config", help="config file path", action=jsonargparse.ActionConfigFile
+        "-c",
+        "--config",
+        help="config file path",
+        action=jsonargparse.ActionConfigFile,
     )
     parser.add_argument("--train_align", help="alignment data dir used for training.")
     parser.add_argument("--train_pitch", help="pitch data dir used for training.")
@@ -69,7 +72,46 @@ if __name__ == "__main__":
         help="random crop length belongs to [crop_min_length, num_frames]",
     )
     parser.add_argument(
-        "--max_epochs", default=20, type=int, help="Max. number of epochs to train"
+        "--Hz2semitone",
+        type=bool,
+        default=False,
+        help="Transfer f0 value into semitone",
+    )
+    parser.add_argument(
+        "--semitone_size",
+        type=int,
+        default=59,
+        help="Semitone size of your dataset, can be found in data/semitone_set.txt",
+    )
+    parser.add_argument(
+        "--semitone_min",
+        type=str,
+        default="F_1",
+        help="Minimum semitone of your dataset, can be found in data/semitone_set.txt",
+    )
+    parser.add_argument(
+        "--semitone_max",
+        type=str,
+        default="D_6",
+        help="Maximum semitone of your dataset, can be found in data/semitone_set.txt",
+    )
+    parser.add_argument(
+        "--phone_shift_size",
+        type=int,
+        default=-1,
+        help="Shift size of phone augmentation, -1 means no augment",
+    )
+    parser.add_argument(
+        "--semitone_shift",
+        type=bool,
+        default=False,
+        help="semitone index shift 12 in limited interval, False means no augment",
+    )
+    parser.add_argument(
+        "--max_epochs",
+        default=20,
+        type=int,
+        help="Max. number of epochs to train",
     )
     parser.add_argument("--lr", default=0.001, type=float)
 

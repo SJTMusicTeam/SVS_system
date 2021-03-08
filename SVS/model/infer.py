@@ -69,6 +69,8 @@ def infer(args):
                 n_mels=args.n_mels,
                 double_mel_loss=args.double_mel_loss,
                 local_gaussian=args.local_gaussian,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
                 device=device,
             )
         else:
@@ -84,6 +86,8 @@ def infer(args):
                 n_mels=args.n_mels,
                 double_mel_loss=args.double_mel_loss,
                 local_gaussian=args.local_gaussian,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
                 device=device,
             )
     elif args.model_type == "LSTM":
@@ -98,6 +102,8 @@ def infer(args):
                 d_output=args.feat_dim,
                 n_mels=args.n_mels,
                 double_mel_loss=args.double_mel_loss,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
                 device=device,
                 use_asr_post=args.use_asr_post,
             )
@@ -111,6 +117,8 @@ def infer(args):
                 d_output=args.feat_dim,
                 n_mels=args.n_mels,
                 double_mel_loss=args.double_mel_loss,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
                 device=device,
                 use_asr_post=args.use_asr_post,
             )
@@ -172,6 +180,8 @@ def infer(args):
             double_mel_loss=args.double_mel_loss,
             local_gaussian=args.local_gaussian,
             dec_dropout=args.dec_dropout,
+            Hz2semitone=args.Hz2semitone,
+            semitone_size=args.semitone_size,
             device=device,
         )
     elif args.model_type == "Comformer_full":
@@ -224,6 +234,8 @@ def infer(args):
                 dec_use_cnn_module=args.dec_use_cnn_module,
                 dec_cnn_module_kernel=args.dec_cnn_module_kernel,
                 dec_padding_idx=args.dec_padding_idx,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
                 device=device,
             )
         else:
@@ -274,6 +286,8 @@ def infer(args):
                 dec_use_cnn_module=args.dec_use_cnn_module,
                 dec_cnn_module_kernel=args.dec_cnn_module_kernel,
                 dec_padding_idx=args.dec_padding_idx,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
                 device=device,
             )
     else:
@@ -334,6 +348,11 @@ def infer(args):
         standard=args.standard,
         sing_quality=args.sing_quality,
         db_joint=args.db_joint,
+        Hz2semitone=args.Hz2semitone,
+        semitone_min=args.semitone_min,
+        semitone_max=args.semitone_max,
+        phone_shift_size=-1,
+        semitone_shift=False,
     )
     collate_fn_svs = SVSCollator(
         args.num_frames,
@@ -342,8 +361,9 @@ def infer(args):
         args.phone_size,
         args.n_mels,
         args.db_joint,
-        args.random_crop,
-        args.crop_min_length,
+        False,  # random crop
+        -1,  # crop_min_length
+        args.Hz2semitone,
     )
     test_loader = torch.utils.data.DataLoader(
         dataset=test_set,
@@ -418,6 +438,7 @@ def infer(args):
                     char_len_list,
                     mel,
                     singer_id,
+                    semitone,
                 ) = data_step
 
                 singer_id = np.array(singer_id).reshape(
@@ -440,11 +461,14 @@ def infer(args):
                     chars,
                     char_len_list,
                     mel,
+                    semitone,
                 ) = data_step
 
             phone = phone.to(device)
             beat = beat.to(device)
             pitch = pitch.to(device).float()
+            if semitone is not None:
+                semitone = semitone.to(device)
             spec = spec.to(device).float()
             mel = mel.to(device).float()
             real = real.to(device).float()
@@ -462,6 +486,9 @@ def infer(args):
                 char_len_list = char_len_list.to(device)
             else:
                 phone = phone.float()
+
+            if args.Hz2semitone:
+                pitch = semitone
 
             if args.model_type == "GLU_Transformer":
                 if args.db_joint:
