@@ -128,6 +128,7 @@ def _Hz2Semitone(freq):
         n = h % 12
         return name[n] + "_" + str(octave)
 
+
 def _full_semitone_list(semitone_min, semitone_max):
     """_full_semitone_list."""
     name = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
@@ -139,25 +140,30 @@ def _full_semitone_list(semitone_min, semitone_max):
 
     res = ["Sil"]
     flag_insert = 0
-    for octave in range(int(octave_min), int(octave_max)+1):
+    for octave in range(int(octave_min), int(octave_max) + 1):
         for res_name in name:
             if res_name == name_min and octave == int(octave_min):
                 flag_insert = 1
             elif res_name == name_max and octave == int(octave_max):
-                res.append(res_name+"_"+str(octave))
+                res.append(res_name + "_" + str(octave))
                 flag_insert = 0
                 break
             if flag_insert == 1:
-                res.append(res_name+"_"+str(octave))
-    
+                res.append(res_name + "_" + str(octave))
+
     return res
 
+
 def _calculate_phone_element_freq(phone_array):
-    '''
-        return the phone list and freq of given phone_array.
-    '''
-    
-    phone_list = [ phone_array[index] for index in range(len(phone_array)) if index == 0 or phone_array[index] != phone_array[index-1] ]
+    """
+    return the phone list and freq of given phone_array.
+    """
+
+    phone_list = [
+        phone_array[index]
+        for index in range(len(phone_array))
+        if index == 0 or phone_array[index] != phone_array[index - 1]
+    ]
     phone_freq = []
 
     begin_index = 0
@@ -176,11 +182,12 @@ def _calculate_phone_element_freq(phone_array):
 
     return phone_list, phone_freq
 
+
 def _phone_shift(phone_array, phone_shift_size):
 
     phone_list, phone_freq = _calculate_phone_element_freq(phone_array)
 
-    shift_side = random.randint(0, 1)       # 0 - left, 1 - right
+    shift_side = random.randint(0, 1)  # 0 - left, 1 - right
     # do phone shift augment
     for index in range(len(phone_freq)):
 
@@ -198,14 +205,14 @@ def _phone_shift(phone_array, phone_shift_size):
                     # right shift
                     phone_freq[index] -= shift_size
                     phone_freq[index + 1] += shift_size
-    
+
     # reconstruct phone array based on its freq
     res = []
     for index in range(len(phone_freq)):
         for freq in range(phone_freq[index]):
             res.append(phone_list[index])
     res = np.array(res)
-    
+
     assert len(res) == len(phone_array)
 
     return res

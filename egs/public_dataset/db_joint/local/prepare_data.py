@@ -26,12 +26,12 @@ def get_semitone_txt(args):
                     semitone = _Hz2Semitone(f0)
                     if semitone not in semitone_list:
                         semitone_list.append(semitone)
-                    
+
                     if f0 != 0 and f0 < f0_min:
                         f0_min = f0
                     elif f0 > f0_max:
                         f0_max = f0
-    
+
     print(f"f0_min: {f0_min}, semitone_min: {_Hz2Semitone(f0_min)}")
     print(f"f0_max: {f0_max}, semitone_max: {_Hz2Semitone(f0_max)}")
 
