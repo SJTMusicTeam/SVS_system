@@ -181,7 +181,9 @@ def train(args):
         standard=args.standard,
         db_joint=args.db_joint,
         Hz2semitone=args.Hz2semitone,
-        semitone_path=args.semitone_path,
+        semitone_min=args.semitone_min,
+        semitone_max=args.semitone_max,
+        phone_shift_size=args.phone_shift_size,
     )
 
     dev_set = SVSDataset(
@@ -203,7 +205,9 @@ def train(args):
         standard=args.standard,
         db_joint=args.db_joint,
         Hz2semitone=args.Hz2semitone,
-        semitone_path=args.semitone_path,
+        semitone_min=args.semitone_min,
+        semitone_max=args.semitone_max,
+        phone_shift_size=args.phone_shift_size,
     )
     collate_fn_svs = SVSCollator(
         args.num_frames,

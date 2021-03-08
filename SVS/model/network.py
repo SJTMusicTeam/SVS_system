@@ -19,6 +19,7 @@ limitations under the License.
 # import sys
 # sys.path.append("/Users/jiatongshi/projects/svs_system/SVS_system")
 
+import logging
 import math
 import numpy as np
 from pathlib import Path
@@ -406,7 +407,7 @@ class Encoder_Postnet(nn.Module):
         super(Encoder_Postnet, self).__init__()
 
         self.Hz2semitone = Hz2semitone
-        if self.Hz2semiton:
+        if self.Hz2semitone:
             self.emb_pitch = nn.Embedding(semitone_size, embed_size)
         else:
             self.fc_pitch = nn.Linear(1, embed_size)
@@ -454,8 +455,8 @@ class Encoder_Postnet(nn.Module):
 
         aligner_out = self.aligner(encoder_out, align_phone, text_phone)
 
-        if self.Hz2semiton:
-            pitch = self.emb_pitch(pitch)
+        if self.Hz2semitone:
+            pitch = self.emb_pitch(pitch.squeeze(-1))
         else:
             pitch = self.fc_pitch(pitch)
         out = aligner_out + pitch
@@ -479,7 +480,7 @@ class Encoder_Postnet_combine(nn.Module):
         super(Encoder_Postnet_combine, self).__init__()
 
         self.Hz2semitone = Hz2semitone
-        if self.Hz2semiton:
+        if self.Hz2semitone:
             self.emb_pitch = nn.Embedding(semitone_size, embed_size)
         else:
             self.fc_pitch = nn.Linear(1, embed_size)
@@ -535,8 +536,8 @@ class Encoder_Postnet_combine(nn.Module):
 
         aligner_out = self.aligner(encoder_out, align_phone, text_phone)
 
-        if self.Hz2semiton:
-            pitch = self.emb_pitch(pitch)
+        if self.Hz2semitone:
+            pitch = self.emb_pitch(pitch.squeeze(-1))
         else:
             pitch = self.fc_pitch(pitch)
         out = aligner_out + pitch
@@ -1023,7 +1024,7 @@ class LSTMSVS(nn.Module):
         out = F.leaky_relu(self.linear_wrapper3(out))
 
         if self.Hz2semitone:
-            pitch = F.leaky_relu(self.emb_pitch(pitch))
+            pitch = F.leaky_relu(self.emb_pitch(pitch.squeeze(-1)))
         else:
             pitch = F.leaky_relu(self.fc_pitch(pitch))
         out = pitch + out
@@ -1183,7 +1184,7 @@ class LSTMSVS_combine(nn.Module):
         out = F.leaky_relu(self.linear_wrapper3(out))
 
         if self.Hz2semitone:
-            pitch = F.leaky_relu(self.emb_pitch(pitch))
+            pitch = F.leaky_relu(self.emb_pitch(pitch.squeeze(-1)))
         else:
             pitch = F.leaky_relu(self.fc_pitch(pitch))
         out = pitch + out

@@ -84,6 +84,24 @@ if __name__ == "__main__":
         help="Semitone size of your dataset, can be found in data/semitone_set.txt",
     )
     parser.add_argument(
+        "--semitone_min",
+        type=str,
+        default="F_1",
+        help="Minimum semitone of your dataset, can be found in data/semitone_set.txt",
+    )
+    parser.add_argument(
+        "--semitone_max",
+        type=str,
+        default="D_6",
+        help="Maximum semitone of your dataset, can be found in data/semitone_set.txt",
+    )
+    parser.add_argument(
+        "--phone_shift_size",
+        type=int,
+        default=-1,
+        help="Shift size of phone augmentation, -1 means no augment",
+    )
+    parser.add_argument(
         "--max_epochs",
         default=20,
         type=int,

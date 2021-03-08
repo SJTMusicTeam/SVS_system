@@ -349,7 +349,9 @@ def infer(args):
         sing_quality=args.sing_quality,
         db_joint=args.db_joint,
         Hz2semitone=args.Hz2semitone,
-        semitone_path=args.semitone_path,
+        semitone_min=args.semitone_min,
+        semitone_max=args.semitone_max,
+        phone_shift_size=args.phone_shift_size,
     )
     collate_fn_svs = SVSCollator(
         args.num_frames,
@@ -465,7 +467,7 @@ def infer(args):
             beat = beat.to(device)
             pitch = pitch.to(device).float()
             if semitone is not None:
-                semitone = semitone.to(device).float()
+                semitone = semitone.to(device)
             spec = spec.to(device).float()
             mel = mel.to(device).float()
             real = real.to(device).float()

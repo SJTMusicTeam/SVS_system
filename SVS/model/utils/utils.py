@@ -177,7 +177,7 @@ def train_one_epoch(
         beat = beat.to(device)
         pitch = pitch.to(device).float()
         if semitone is not None:
-            semitone = semitone.to(device).float()
+            semitone = semitone.to(device)
         spec = spec.to(device).float()
         if mel is not None:
             mel = mel.to(device).float()
@@ -451,7 +451,7 @@ def validate(
             beat = beat.to(device)
             pitch = pitch.to(device).float()
             if semitone is not None:
-                semitone = semitone.to(device).float()
+                semitone = semitone.to(device)
             spec = spec.to(device).float()
             if mel is not None:
                 mel = mel.to(device).float()
