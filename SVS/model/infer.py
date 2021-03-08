@@ -351,7 +351,8 @@ def infer(args):
         Hz2semitone=args.Hz2semitone,
         semitone_min=args.semitone_min,
         semitone_max=args.semitone_max,
-        phone_shift_size=args.phone_shift_size,
+        phone_shift_size=-1,
+        semitone_shift=False,
     )
     collate_fn_svs = SVSCollator(
         args.num_frames,
@@ -360,8 +361,8 @@ def infer(args):
         args.phone_size,
         args.n_mels,
         args.db_joint,
-        args.random_crop,
-        args.crop_min_length,
+        False,                      # random crop
+        -1,                         # crop_min_length
         args.Hz2semitone,
     )
     test_loader = torch.utils.data.DataLoader(

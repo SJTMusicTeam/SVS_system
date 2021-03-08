@@ -51,18 +51,6 @@ if __name__ == "__main__":
         help="Combine multiple datasets & add singer embedding",
     )
     parser.add_argument(
-        "--random_crop",
-        type=bool,
-        default=False,
-        help="Random crop on frame length, cut follow num_frames",
-    )
-    parser.add_argument(
-        "--crop_min_length",
-        type=int,
-        default=100,
-        help="random crop length belongs to [crop_min_length, num_frames]",
-    )
-    parser.add_argument(
         "--Hz2semitone",
         type=bool,
         default=False,
@@ -85,12 +73,6 @@ if __name__ == "__main__":
         type=str,
         default="D_6",
         help="Maximum semitone of your dataset, can be found in data/semitone_set.txt",
-    )
-    parser.add_argument(
-        "--phone_shift_size",
-        type=int,
-        default=-1,
-        help="Shift size of phone augmentation, -1 means no augment",
     )
     parser.add_argument(
         "--char_max_len", default=100, type=int, help="max length for character"

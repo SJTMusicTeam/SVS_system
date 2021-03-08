@@ -102,6 +102,12 @@ if __name__ == "__main__":
         help="Shift size of phone augmentation, -1 means no augment",
     )
     parser.add_argument(
+        "--semitone_shift",
+        type=bool,
+        default=False,
+        help="semitone index shift 12 in limited interval, False means no augment",
+    )
+    parser.add_argument(
         "--max_epochs",
         default=20,
         type=int,

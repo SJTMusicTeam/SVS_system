@@ -155,9 +155,7 @@ def _full_semitone_list(semitone_min, semitone_max):
 
 
 def _calculate_phone_element_freq(phone_array):
-    """
-    return the phone list and freq of given phone_array.
-    """
+    """return the phone list and freq of given phone_array."""
 
     phone_list = [
         phone_array[index]
@@ -216,6 +214,66 @@ def _phone_shift(phone_array, phone_shift_size):
     assert len(res) == len(phone_array)
 
     return res
+
+
+def _pitch_shift(f0_array, semitone_list):
+
+    f0_list = [f0 for f0 in f0_array if f0 != 0]
+
+    if len(f0_list) == 0:
+        # no shift
+        return [semitone_list.index(_Hz2Semitone(f0)) for f0 in f0_array]
+
+    f0_min = np.min(f0_list)
+    f0_max = np.max(f0_list)
+
+    semitone_min = _Hz2Semitone(f0_min)
+    semitone_max = _Hz2Semitone(f0_max)
+
+    index_min = semitone_list.index(semitone_min)
+    index_max = semitone_list.index(semitone_max)
+
+    flag_left, flag_right = False, False
+    if index_min - 12 >= 1:
+        flag_left = True
+    if index_max + 12 <= len(semitone_list) - 1:
+        flag_right = True
+
+    # decide shift direction
+    if flag_left == True and flag_right == True:
+        shift_side = random.randint(0, 1)  # 0 - left, 1 - right
+    elif flag_left == True:
+        shift_side = 0
+    elif flag_right == True:
+        shift_side = 1
+    else:
+        shift_side = -1
+
+    # decide whether to shift
+    flag_shift = 1 if random.random() > 0.5 else 0
+
+    if shift_side == -1 or flag_shift == 0:
+        # no shift
+        return [semitone_list.index(_Hz2Semitone(f0)) for f0 in f0_array]
+    else:
+        if shift_side == 0:
+            # left shift
+            res = []
+            for f0 in f0_array:
+                if f0 == 0:
+                    res.append(semitone_list.index(_Hz2Semitone(f0)))
+                else:
+                    res.append(semitone_list.index(_Hz2Semitone(f0)) - 12)
+            return res
+        elif shift_side == 1:
+            # right shift
+            res = []
+            for f0 in f0_array:
+                if f0 == 0:
+                    res.append(semitone_list.index(_Hz2Semitone(f0)))
+                else:
+                    res.append(semitone_list.index(_Hz2Semitone(f0)) + 12)
+            return res
 
 
 class SVSCollator(object):
@@ -415,6 +473,7 @@ class SVSDataset(Dataset):
         semitone_min="F_1",
         semitone_max="D_6",
         phone_shift_size=-1,
+        semitone_shift=False,
     ):
         """init."""
         self.align_root_path = align_root_path
@@ -434,6 +493,7 @@ class SVSDataset(Dataset):
         self.db_joint = db_joint
         self.Hz2semitone = Hz2semitone
         self.phone_shift_size = phone_shift_size
+        self.semitone_shift = semitone_shift
 
         if Hz2semitone:
             self.semitone_list = _full_semitone_list(semitone_min, semitone_max)
@@ -568,6 +628,8 @@ class SVSDataset(Dataset):
 
         if self.Hz2semitone:
             semitone = [self.semitone_list.index(_Hz2Semitone(f0)) for f0 in pitch]
+            if self.semitone_shift:
+                semitone = _pitch_shift(pitch, self.semitone_list)
         else:
             semitone = None
 

@@ -184,6 +184,7 @@ def train(args):
         semitone_min=args.semitone_min,
         semitone_max=args.semitone_max,
         phone_shift_size=args.phone_shift_size,
+        semitone_shift=args.semitone_shift,
     )
 
     dev_set = SVSDataset(
@@ -207,9 +208,10 @@ def train(args):
         Hz2semitone=args.Hz2semitone,
         semitone_min=args.semitone_min,
         semitone_max=args.semitone_max,
-        phone_shift_size=args.phone_shift_size,
+        phone_shift_size=-1,
+        semitone_shift=False,
     )
-    collate_fn_svs = SVSCollator(
+    collate_fn_svs_train = SVSCollator(
         args.num_frames,
         args.char_max_len,
         args.use_asr_post,
@@ -220,12 +222,23 @@ def train(args):
         args.crop_min_length,
         args.Hz2semitone,
     )
+    collate_fn_svs_val = SVSCollator(
+        args.num_frames,
+        args.char_max_len,
+        args.use_asr_post,
+        args.phone_size,
+        args.n_mels,
+        args.db_joint,
+        False,                      # random crop
+        -1,                         # crop_min_length
+        args.Hz2semitone,
+    )
     train_loader = torch.utils.data.DataLoader(
         dataset=train_set,
         batch_size=args.batchsize,
         shuffle=True,
         num_workers=args.num_workers,
-        collate_fn=collate_fn_svs,
+        collate_fn=collate_fn_svs_train,
         pin_memory=True,
     )
     dev_loader = torch.utils.data.DataLoader(
@@ -233,7 +246,7 @@ def train(args):
         batch_size=args.batchsize,
         shuffle=False,
         num_workers=args.num_workers,
-        collate_fn=collate_fn_svs,
+        collate_fn=collate_fn_svs_val,
         pin_memory=True,
     )
 
