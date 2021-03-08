@@ -155,8 +155,7 @@ def _full_semitone_list(semitone_min, semitone_max):
 
 
 def _calculate_phone_element_freq(phone_array):
-    """return the phone list and freq of given phone_array."""
-
+    """Return the phone list and freq of given phone_array."""
     phone_list = [
         phone_array[index]
         for index in range(len(phone_array))
