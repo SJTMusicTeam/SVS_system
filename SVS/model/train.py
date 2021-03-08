@@ -229,8 +229,8 @@ def train(args):
         args.phone_size,
         args.n_mels,
         args.db_joint,
-        False,                      # random crop
-        -1,                         # crop_min_length
+        False,  # random crop
+        -1,  # crop_min_length
         args.Hz2semitone,
     )
     train_loader = torch.utils.data.DataLoader(
