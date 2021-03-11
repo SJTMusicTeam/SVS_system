@@ -41,6 +41,9 @@ def collect_stats(train_loader, args):
     print("get in collect stats", flush=True)
     count, sum, sum_square = 0, 0, 0
     count_mel, sum_mel, sum_square_mel = 0, 0, 0
+    count_pw_f0, sum_pw_f0, sum_square_pw_f0 = 0, 0, 0
+    count_pw_sp, sum_pw_sp, sum_square_pw_sp = 0, 0, 0
+    count_pw_ap, sum_pw_ap, sum_square_pw_ap = 0, 0, 0
     for (
         step,
         (
@@ -76,26 +79,95 @@ def collect_stats(train_loader, args):
             sum_mel += seq.sum(0)
             sum_square_mel += (seq ** 2).sum(0)
             count_mel += len(seq)
+
+        if args.vocoder_category == "pyworld":
+
+            for i, seq in enumerate(pw_f0.cpu().numpy()):
+                seq_length = torch.max(length[i])
+                seq = seq[:seq_length]
+                sum_pw_f0 += seq.sum(0)
+                sum_square_pw_f0 += (seq ** 2).sum(0)
+                count_pw_f0 += len(seq)
+
+            for i, seq in enumerate(pw_sp.cpu().numpy()):
+                seq_length = torch.max(length[i])
+                seq = seq[:seq_length]
+                sum_pw_sp += seq.sum(0)
+                sum_square_pw_sp += (seq ** 2).sum(0)
+                count_pw_sp += len(seq)
+
+            for i, seq in enumerate(pw_ap.cpu().numpy()):
+                seq_length = torch.max(length[i])
+                seq = seq[:seq_length]
+                sum_pw_ap += seq.sum(0)
+                sum_square_pw_ap += (seq ** 2).sum(0)
+                count_pw_ap += len(seq)
+
     assert count_mel == count
-    dirnames = [
-        os.path.dirname(args.stats_file),
-        os.path.dirname(args.stats_mel_file),
-    ]
-    for name in dirnames:
-        if not os.path.exists(name):
-            os.makedirs(name)
-    np.savez(
-        args.stats_file,
-        count=count,
-        sum=sum,
-        sum_square=sum_square,
-    )
-    np.savez(
-        args.stats_mel_file,
-        count=count_mel,
-        sum=sum_mel,
-        sum_square=sum_square_mel,
-    )
+
+    if args.vocoder_category == "pyworld":
+        dirnames = [
+            os.path.dirname(args.stats_file),
+            os.path.dirname(args.stats_mel_file),
+            os.path.dirname(args.stats_f0_file),
+            os.path.dirname(args.stats_sp_file),
+            os.path.dirname(args.stats_ap_file),
+        ]
+        for name in dirnames:
+            if not os.path.exists(name):
+                os.makedirs(name)
+        np.savez(
+            args.stats_file,
+            count=count,
+            sum=sum,
+            sum_square=sum_square,
+        )
+        np.savez(
+            args.stats_mel_file,
+            count=count_mel,
+            sum=sum_mel,
+            sum_square=sum_square_mel,
+        )
+
+        np.savez(
+            args.stats_f0_file,
+            count=count_pw_f0,
+            sum=sum_pw_f0,
+            sum_square=sum_square_pw_f0,
+        )
+        np.savez(
+            args.stats_sp_file,
+            count=count_pw_sp,
+            sum=sum_pw_sp,
+            sum_square=sum_square_pw_sp,
+        )
+        np.savez(
+            args.stats_ap_file,
+            count=count_pw_ap,
+            sum=sum_pw_ap,
+            sum_square=sum_square_pw_ap,
+        )
+
+    else:
+        dirnames = [
+            os.path.dirname(args.stats_file),
+            os.path.dirname(args.stats_mel_file),
+        ]
+        for name in dirnames:
+            if not os.path.exists(name):
+                os.makedirs(name)
+        np.savez(
+            args.stats_file,
+            count=count,
+            sum=sum,
+            sum_square=sum_square,
+        )
+        np.savez(
+            args.stats_mel_file,
+            count=count_mel,
+            sum=sum_mel,
+            sum_square=sum_square_mel,
+        )
 
 
 def train_one_epoch(
@@ -234,21 +306,32 @@ def train_one_epoch(
             att = None
 
         spec_origin = spec.clone()
-        mel_origin = mel.clone()
+        if args.n_mels > 0 and args.vocoder_category != "pyworld":
+            mel_origin = mel.clone()
         if args.vocoder_category == "pyworld":
             pw_f0_origin = pw_f0.clone()
             pw_sp_origin = pw_sp.clone()
             pw_ap_origin = pw_ap.clone()
         if args.normalize:
             sepc_normalizer = GlobalMVN(args.stats_file)
-            mel_normalizer = GlobalMVN(args.stats_mel_file)
             spec, _ = sepc_normalizer(spec, length)
-            mel, _ = mel_normalizer(mel, length)
+            if args.vocoder_category == "pyworld":
+                pw_f0_normalizer = GlobalMVN(args.stats_f0_file)
+                pw_sp_normalizer = GlobalMVN(args.stats_sp_file)
+                pw_ap_normalizer = GlobalMVN(args.stats_ap_file)
+                pw_f0, _ = pw_f0_normalizer(pw_f0, length)
+                pw_sp, _ = pw_sp_normalizer(pw_sp, length)
+                pw_ap, _ = pw_ap_normalizer(pw_ap, length)
+            else:
+                mel_normalizer = GlobalMVN(args.stats_mel_file)
+                mel, _ = mel_normalizer(mel, length)
+
 
         if args.model_type == "USTC_DAR" and args.vocoder_category != "pyworld":
             spec_loss = 0
         elif args.vocoder_category == "pyworld":
-            pw_loss = criterion(output, torch.cat((pw_f0_origin,pw_ap_origin,pw_sp_origin), dim=2), length_mask_pw)
+            label_pw = torch.cat((pw_f0, pw_ap, pw_sp), dim=2)
+            pw_loss = criterion(output, label_pw, length_mask_pw)
             spec_loss = pw_loss
         else:
             spec_loss = criterion(output, spec, length_mask)
@@ -318,8 +401,31 @@ def train_one_epoch(
                     step, losses.avg, spec_losses.avg
                 )
             elif args.vocoder_category == "pyworld":
-                # if args.normalize and args.stats_file:
-                #     output, _ = sepc_normalizer.inverse(output, length)
+                # length_temp = np.max(length.cpu().detach().numpy()[0])
+                length_temp = length
+                output = output.cpu().detach().numpy()
+                out_pw_f0 = output[:,:,:1]
+                out_pw_ap = output[:,:,1:args.feat_dim+1]
+                out_pw_sp = output[:,:,args.feat_dim+1:args.feat_dim*2+1]
+                if args.normalize and args.stats_file:
+                    # out_pw_f0 = out_pw_f0.reshape(-1)
+                    out_pw_f0 = torch.from_numpy(out_pw_f0.astype(np.float)).to(device).float()
+                    out_pw_sp = torch.from_numpy(out_pw_sp.astype(np.float)).to(device).float()
+                    out_pw_ap = torch.from_numpy(out_pw_ap.astype(np.float)).to(device).float()
+                    # print("#################################################")
+                    # print(out_pw_f0.size())
+                    # print(length_temp)
+                    # print("#################################################")
+                    out_pw_f0, _ = pw_f0_normalizer.inverse(out_pw_f0, length_temp)
+                    out_pw_sp, _ = pw_sp_normalizer.inverse(out_pw_sp, length_temp)
+                    out_pw_ap, _ = pw_ap_normalizer.inverse(out_pw_ap, length_temp)
+                    out_pw_f0 = out_pw_f0.cpu().detach().numpy()
+                    out_pw_sp = out_pw_sp.cpu().detach().numpy()
+                    out_pw_ap = out_pw_ap.cpu().detach().numpy()
+                    output[:,:,:1] = out_pw_f0
+                    output[:,:,1:args.feat_dim+1] = out_pw_ap
+                    output[:,:,args.feat_dim+1:args.feat_dim*2+1] = out_pw_sp
+                    output = output[0]
                 log_figure_pw(step, output, pw_f0_origin, pw_sp_origin, pw_ap_origin, att, length, log_save_dir, args)
                 out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
                     step, losses.avg, spec_losses.avg
@@ -466,21 +572,31 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                 att = None
 
             spec_origin = spec.clone()
-            mel_origin = mel.clone()
+            if args.n_mels > 0 and args.vocoder_category != "pyworld":
+                mel_origin = mel.clone()
             if args.vocoder_category == "pyworld":
                 pw_f0_origin = pw_f0.clone()
                 pw_sp_origin = pw_sp.clone()
                 pw_ap_origin = pw_ap.clone()
             if args.normalize:
-                sepc_normalizer = GlobalMVN(args.stats_file)
-                mel_normalizer = GlobalMVN(args.stats_mel_file)
-                spec, _ = sepc_normalizer(spec, length)
-                mel, _ = mel_normalizer(mel, length)
+                if args.vocoder_category == "pyworld":
+                    pw_f0_normalizer = GlobalMVN(args.stats_f0_file)
+                    pw_sp_normalizer = GlobalMVN(args.stats_sp_file)
+                    pw_ap_normalizer = GlobalMVN(args.stats_ap_file)
+                    pw_f0, _ = pw_f0_normalizer(pw_f0, length)
+                    pw_sp, _ = pw_sp_normalizer(pw_sp, length)
+                    pw_ap, _ = pw_ap_normalizer(pw_ap, length)  
+                else:
+                    sepc_normalizer = GlobalMVN(args.stats_file)
+                    mel_normalizer = GlobalMVN(args.stats_mel_file)
+                    spec, _ = sepc_normalizer(spec, length)
+                    mel, _ = mel_normalizer(mel, length)
 
             if args.model_type == "USTC_DAR" and args.vocoder_category != "pyworld":
                 spec_loss = 0
             elif args.vocoder_category == "pyworld":
-                pw_loss = criterion(output, torch.cat((pw_f0_origin,pw_ap_origin,pw_sp_origin), dim=2), length_mask_pw)
+                label_pw = torch.cat((pw_f0, pw_ap, pw_sp), dim=2)
+                pw_loss = criterion(output, label_pw, length_mask_pw)                
                 spec_loss = pw_loss
             else:
                 spec_loss = criterion(output, spec, length_mask)
@@ -527,7 +643,26 @@ def validate(dev_loader, model, device, criterion, perceptual_entropy, epoch, ar
                     1,
                 )  # FIX ME! Calculate_melcd_fromMelSpectrum
             elif args.vocoder_category == "pyworld":
-                output = output
+                length_temp = length
+                output = output.cpu().detach().numpy()
+                out_pw_f0 = output[:,:,:1]
+                out_pw_ap = output[:,:,1:args.feat_dim+1]
+                out_pw_sp = output[:,:,args.feat_dim+1:args.feat_dim*2+1]
+                if args.normalize and args.stats_file:
+                    # out_pw_f0 = out_pw_f0.reshape(-1)
+                    out_pw_f0 = torch.from_numpy(out_pw_f0.astype(np.float)).to(device).float()
+                    out_pw_sp = torch.from_numpy(out_pw_sp.astype(np.float)).to(device).float()
+                    out_pw_ap = torch.from_numpy(out_pw_ap.astype(np.float)).to(device).float()
+                    out_pw_f0, _ = pw_f0_normalizer.inverse(out_pw_f0, length_temp)
+                    out_pw_sp, _ = pw_sp_normalizer.inverse(out_pw_sp, length_temp)
+                    out_pw_ap, _ = pw_ap_normalizer.inverse(out_pw_ap, length_temp)
+                    out_pw_f0 = out_pw_f0.cpu().detach().numpy()
+                    out_pw_sp = out_pw_sp.cpu().detach().numpy()
+                    out_pw_ap = out_pw_ap.cpu().detach().numpy()
+                    output[:,:,:1] = out_pw_f0
+                    output[:,:,1:args.feat_dim+1] = out_pw_ap
+                    output[:,:,args.feat_dim+1:args.feat_dim*2+1] = out_pw_sp
+                    output = output[0]
                 mcd_value, length_sum = (
                     0,
                     1,
@@ -954,16 +1089,44 @@ def log_figure_pw(step, output, pw_f0_ture, pw_sp_ture, pw_ap_ture, att, length,
     """log_figure."""
     # only get one sample from a batch
     # save wav and plot spectrogram
-    output = output.cpu().detach().numpy()[0]
+    # output = output.cpu().detach().numpy()[0]
     length = np.max(length.cpu().detach().numpy()[0])
     pw_f0_ture = pw_f0_ture.cpu().detach().numpy()[0]
     pw_sp_ture = pw_sp_ture.cpu().detach().numpy()[0]
     pw_ap_ture = pw_ap_ture.cpu().detach().numpy()[0]
     # output = output[:length]
 
-    pw_f0 = output[:,:1]
-    pw_ap = output[:,1:args.feat_dim+1]
-    pw_sp = output[:,args.feat_dim+1:args.feat_dim*2+1]
+    pw_f0 = output[:length,:1]
+    pw_ap = output[:length,1:args.feat_dim+1]
+    pw_sp = output[:length,args.feat_dim+1:args.feat_dim*2+1]
+    pw_f0_ture = pw_f0_ture[:length,:]
+    pw_sp_ture = pw_sp_ture[:length,:]
+    pw_ap_ture = pw_ap_ture[:length,:]
+
+    plt.subplot(1, 2, 1)
+    specshow(pw_f0.T)
+    plt.title("prediction")
+    plt.subplot(1, 2, 2)
+    specshow(pw_f0_ture.T)
+    plt.title("ground_truth")
+    plt.savefig(os.path.join(save_dir, "{}_pw_f0.png".format(step)))
+
+    plt.subplot(1, 2, 1)
+    specshow(pw_ap.T)
+    plt.title("prediction")
+    plt.subplot(1, 2, 2)
+    specshow(pw_ap_ture.T)
+    plt.title("ground_truth")
+    plt.savefig(os.path.join(save_dir, "{}_pw_ap.png".format(step)))
+
+    plt.subplot(1, 2, 1)
+    specshow(pw_sp.T)
+    plt.title("prediction")
+    plt.subplot(1, 2, 2)
+    specshow(pw_sp_ture.T)
+    plt.title("ground_truth")
+    plt.savefig(os.path.join(save_dir, "{}_pw_sp.png".format(step)))
+
 
     pw_f0 = pw_f0.reshape(-1)
     pw_f0_ture = pw_f0_ture.reshape(-1)
