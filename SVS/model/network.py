@@ -761,7 +761,6 @@ class LSTMSVS(nn.Module):
         # Remember! embed_size must be even!!
         assert embed_size % 2 == 0
         self.fc_pos = nn.Linear(d_model, d_model)
-if args
         self.pos_lstm = nn.LSTM(
             input_size=d_model,
             hidden_size=d_model,
