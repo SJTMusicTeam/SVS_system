@@ -26,6 +26,7 @@ from SVS.model.network import GLU_TransformerSVS_combine
 from SVS.model.network import GRUSVS_gs
 from SVS.model.network import LSTMSVS
 from SVS.model.network import LSTMSVS_combine
+from SVS.model.network import RNN_Discriminator
 from SVS.model.network import TransformerSVS
 from SVS.model.network import USTC_SVS
 from SVS.model.network import WaveRNN
@@ -43,10 +44,12 @@ from SVS.model.utils.utils import collect_stats
 from SVS.model.utils.utils import save_model
 from SVS.model.utils.utils import train_one_epoch
 from SVS.model.utils.utils import validate
+from SVS.model.utils.utils import train_one_epoch_discriminator
 
 import sys
 import time
 import torch
+from torch import nn
 
 
 def count_parameters(model):
@@ -809,3 +812,159 @@ def train(args):
 
     if args.use_tfboard:
         logger.close()
+
+def train_discriminator(args):
+    """train_discriminator."""
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+
+    if torch.cuda.is_available() and args.auto_select_gpu is True:
+        cvd = use_single_gpu()
+        logging.info(f"GPU {cvd} is used")
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        # torch.backends.cudnn.enabled = False
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    elif torch.cuda.is_available() and args.auto_select_gpu is False:
+        torch.cuda.set_device(args.gpu_id)
+        logging.info(f"GPU {args.gpu_id} is used")
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        # torch.backends.cudnn.enabled = False
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    else:
+        device = torch.device("cpu")
+        logging.info("Warning: CPU is used")
+
+    train_set = SVSDataset(
+        align_root_path=args.train_align,
+        pitch_beat_root_path=args.train_pitch,
+        wav_root_path=args.train_wav,
+        char_max_len=args.char_max_len,
+        max_len=args.num_frames,
+        sr=args.sampling_rate,
+        preemphasis=args.preemphasis,
+        nfft=args.nfft,
+        frame_shift=args.frame_shift,
+        frame_length=args.frame_length,
+        n_mels=args.n_mels,
+        power=args.power,
+        max_db=args.max_db,
+        ref_db=args.ref_db,
+        sing_quality=args.sing_quality,
+        standard=args.standard,
+        db_joint=args.db_joint,
+        Hz2semitone=args.Hz2semitone,
+        semitone_min=args.semitone_min,
+        semitone_max=args.semitone_max,
+        phone_shift_size=-1,
+        semitone_shift=False,
+    )
+
+    dev_set = SVSDataset(
+        align_root_path=args.val_align,
+        pitch_beat_root_path=args.val_pitch,
+        wav_root_path=args.val_wav,
+        char_max_len=args.char_max_len,
+        max_len=args.num_frames,
+        sr=args.sampling_rate,
+        preemphasis=args.preemphasis,
+        nfft=args.nfft,
+        frame_shift=args.frame_shift,
+        frame_length=args.frame_length,
+        n_mels=args.n_mels,
+        power=args.power,
+        max_db=args.max_db,
+        ref_db=args.ref_db,
+        sing_quality=args.sing_quality,
+        standard=args.standard,
+        db_joint=args.db_joint,
+        Hz2semitone=args.Hz2semitone,
+        semitone_min=args.semitone_min,
+        semitone_max=args.semitone_max,
+        phone_shift_size=-1,
+        semitone_shift=False,
+    )
+    collate_fn_svs_train = SVSCollator(
+        args.num_frames,
+        args.char_max_len,
+        args.use_asr_post,
+        args.phone_size,
+        args.n_mels,
+        args.db_joint,
+        args.random_crop,
+        args.crop_min_length,
+        args.Hz2semitone,
+    )
+    collate_fn_svs_val = SVSCollator(
+        args.num_frames,
+        args.char_max_len,
+        args.use_asr_post,
+        args.phone_size,
+        args.n_mels,
+        args.db_joint,
+        False,  # random crop
+        -1,  # crop_min_length
+        args.Hz2semitone,
+    )
+    train_loader = torch.utils.data.DataLoader(
+        dataset=train_set,
+        batch_size=args.batchsize,
+        shuffle=True,
+        num_workers=args.num_workers,
+        collate_fn=collate_fn_svs_train,
+        pin_memory=True,
+    )
+    dev_loader = torch.utils.data.DataLoader(
+        dataset=dev_set,
+        batch_size=args.batchsize,
+        shuffle=False,
+        num_workers=args.num_workers,
+        collate_fn=collate_fn_svs_val,
+        pin_memory=True,
+    )
+
+    assert (
+        args.feat_dim == dev_set[0]["spec"].shape[1]
+        or args.feat_dim == dev_set[0]["mel"].shape[1]
+    )
+
+    if args.collect_stats:
+        collect_stats(train_loader, args)
+        logging.info("collect_stats finished !")
+        quit()
+
+    # init model
+    model = RNN_Discriminator(embed_size=128, d_model=128, hidden_size=128,
+                 num_layers=2, n_specs=1025, singer_size=7, phone_size=43, simitone_size=59,
+                 dropout=0.1, bidirectional=True, device=device)
+    logging.info(f"{model}")
+    model = model.to(device)
+    logging.info(f"The model has {count_parameters(model):,} trainable parameters")
+
+    # setup optimizer
+    if args.optimizer == "adam":
+        optimizer = torch.optim.Adam(
+            model.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1e-09
+        )
+    else:
+        raise ValueError("Not Support Optimizer")
+
+    loss = nn.CrossEntropyLoss(reduction='sum')
+
+    # 
+    for epoch in range(0, 1 + args.max_epochs):
+        """Train Stage"""
+        start_t_train = time.time()
+        train_info = train_one_epoch_discriminator(
+            train_loader,
+            model,
+            device,
+            optimizer,
+            loss,
+            epoch,
+            args,
+        )
+        end_t_train = time.time()

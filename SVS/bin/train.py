@@ -17,17 +17,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import jsonargparse
+import yamlargparse
 import logging
 from SVS.model.train import train
+from SVS.model.train import train_discriminator
 
 if __name__ == "__main__":
-    parser = jsonargparse.ArgumentParser(description="SVS training")
+    parser = yamlargparse.ArgumentParser(description="SVS training")
     parser.add_argument(
         "-c",
         "--config",
         help="config file path",
-        action=jsonargparse.ActionConfigFile,
+        action=yamlargparse.ActionConfigFile,
     )
     parser.add_argument("--train_align", help="alignment data dir used for training.")
     parser.add_argument("--train_pitch", help="pitch data dir used for training.")
@@ -272,9 +273,27 @@ if __name__ == "__main__":
         help="how many learning_steps use lr_decay",
     )
 
+    # Disciminator related
+    
+    parser.add_argument(
+        "--train_mode",
+        default="generator",
+        type=str,
+        help="Which part of NN need to be trained, [generator, discriminator, combine]",
+    )
+
     args = parser.parse_args()
 
     logging.getLogger().setLevel(logging.INFO)
     logging.info(f"{args}")
 
-    train(args)
+    if args.train_mode == "generator":
+        train(args)
+    elif args.train_mode == "discriminator":
+        train_discriminator(args)
+    elif args.train_mode == "combine":
+        logging.info("Need to be finished !")
+    else:
+        raise ValueError(
+            "ValueError exception thrown, No such train_mode: ", args.train_mode
+        )
