@@ -45,6 +45,7 @@ from SVS.model.utils.utils import save_model
 from SVS.model.utils.utils import train_one_epoch
 from SVS.model.utils.utils import validate
 from SVS.model.utils.utils import train_one_epoch_discriminator
+from SVS.model.utils.utils import validate_one_epoch_discriminator
 
 import sys
 import time
@@ -89,7 +90,7 @@ def Auto_save_model(
 
     else:
         sorted_dict_keys = sorted(epoch_to_save.keys(), reverse=True)
-        select_loss = sorted_dict_keys[0]  # smallest spec_loss of saved models
+        select_loss = sorted_dict_keys[0]  # biggest spec_loss of saved models
         if dev_info[save_loss_select] < select_loss:
             epoch_to_save[dev_info[save_loss_select]] = epoch
             logging.info(f"### - {save_loss_select} - ###")
@@ -954,7 +955,10 @@ def train_discriminator(args):
 
     loss = nn.CrossEntropyLoss(reduction='sum')
 
-    # 
+    # Training
+    total_loss_epoch_to_save = {}
+    total_loss_counter = 0
+    
     for epoch in range(0, 1 + args.max_epochs):
         """Train Stage"""
         start_t_train = time.time()
@@ -968,3 +972,64 @@ def train_discriminator(args):
             args,
         )
         end_t_train = time.time()
+
+        out_log = "Train epoch: {:04d}, ".format(epoch)
+        if args.optimizer == "noam":
+            out_log += "lr: {:.6f}, ".format(optimizer._optimizer.param_groups[0]["lr"])
+        elif args.optimizer == "adam":
+            out_log += "lr: {:.6f}, ".format(optimizer.param_groups[0]["lr"])
+
+        out_log += "loss: {:.4f}, singer_loss: {:.4f}, phone_loss: {:.4f}, semitone_loss: {:.4f} \n".format(
+                train_info["loss"], train_info["singer_loss"], train_info["phone_loss"], train_info["semitone_loss"]
+            )
+        out_log += "singer_accuracy: {:.4f}%, phone_accuracy: {:.4f}%, semitone_accuracy: {:.4f}% ".format(
+                train_info["singer_accuracy"] * 100, train_info["phone_accuracy"] * 100, train_info["semitone_accuracy"] * 100
+            )
+        
+        logging.info("{} time: {:.2f}s".format(out_log, end_t_train - start_t_train))
+
+        """Dev Stage"""
+        torch.backends.cudnn.enabled = False  # 莫名的bug，关掉才可以跑
+
+        # start_t_dev = time.time()
+        dev_info = validate_one_epoch_discriminator(
+            dev_loader,
+            model,
+            device,
+            loss,
+            epoch,
+            args,
+        )
+        end_t_dev = time.time()
+
+        dev_log = "Dev epoch: {:04d} ".format(epoch)
+        dev_log += "loss: {:.4f}, singer_loss: {:.4f}, phone_loss: {:.4f}, semitone_loss: {:.4f} \n".format(
+                dev_info["loss"], dev_info["singer_loss"], dev_info["phone_loss"], dev_info["semitone_loss"]
+            )
+        dev_log += "singer_accuracy: {:.4f}%, phone_accuracy: {:.4f}%, semitone_accuracy: {:.4f}% ".format(
+                dev_info["singer_accuracy"] * 100, dev_info["phone_accuracy"] * 100, dev_info["semitone_accuracy"] * 100
+            )
+        logging.info("{} time: {:.2f}s".format(dev_log, end_t_dev - start_t_train))
+
+        sys.stdout.flush()
+
+        torch.backends.cudnn.enabled = True
+
+        """Save model Stage"""
+        if not os.path.exists(args.model_save_dir):
+            os.makedirs(args.model_save_dir)
+
+        (total_loss_counter, total_loss_epoch_to_save) = Auto_save_model(
+            args,
+            epoch,
+            model,
+            optimizer,
+            train_info,
+            dev_info,
+            None,   # logger
+            total_loss_counter,
+            total_loss_epoch_to_save,
+            save_loss_select="loss",
+        )
+
+        
