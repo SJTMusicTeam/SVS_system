@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
+# Copyright 2021 Columbia University (author: Xun Lin)
+# Update on Jan 3rd, 2021
+
+# cd egs/public_dataset/oniku_kurumi_utagoe_db
+# os.getcwd()
+
+# The unit of time notation for phoneme labels is 100ns for this dataset
+
 
 import argparse
 import librosa
@@ -118,7 +125,6 @@ def load_label(label_file, s_type="s", sr=48000, frame_shift=0.03, sil="pau"):
 
 
 def process(args):
-
     f0_max = 1100.0
     f0_min = 50.0
 
@@ -126,7 +132,15 @@ def process(args):
 
     hop_length = int(args.sr * frame_shift)
 
-    lab_list = os.listdir(args.labdir)
+    # lab_list = os.listdir(args.labdir)
+    lab_list = [
+        os.path.join(name, name + ".lab")
+        for name in os.listdir(args.labdir)
+        if os.path.isdir(os.path.join(args.labdir, name))
+    ]
+
+    lab_list.sort()
+
     phone_set = []
     idscp = {}
     index = 1
@@ -214,7 +228,9 @@ def process(args):
             )
 
             sf.write(
-                os.path.join(song_wav, name) + ".wav", seg_signal, samplerate=args.sr
+                os.path.join(song_wav, name) + ".wav",
+                seg_signal,
+                samplerate=args.sr,
             )
             print("saved {}".format(os.path.join(song_wav, name) + ".wav"))
         index += 1
