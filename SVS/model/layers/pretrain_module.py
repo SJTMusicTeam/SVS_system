@@ -240,13 +240,7 @@ class MultiheadAttention(nn.Module):
         self.attn_dropout = nn.Dropout(p=0.1)
 
     def forward(
-        self,
-        key,
-        value,
-        query,
-        mask=None,
-        query_mask=None,
-        gaussian_factor=None,
+        self, key, value, query, mask=None, query_mask=None, gaussian_factor=None
     ):
         """forward."""
         # Get attention score

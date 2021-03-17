@@ -20,11 +20,15 @@ import numpy as np
 import os
 from SVS.model.network import ConformerSVS
 from SVS.model.network import ConformerSVS_FULL
+from SVS.model.network import ConformerSVS_FULL_combine
 from SVS.model.network import GLU_TransformerSVS
+from SVS.model.network import GLU_TransformerSVS_combine
 from SVS.model.network import GRUSVS_gs
 from SVS.model.network import LSTMSVS
+from SVS.model.network import LSTMSVS_combine
 from SVS.model.network import TransformerSVS
 from SVS.model.network import USTC_SVS
+from SVS.model.network import WaveRNN
 
 from SVS.model.utils.gpu_util import use_single_gpu
 from SVS.model.utils.loss import cal_psd2bark_dict
@@ -82,23 +86,19 @@ def Auto_save_model(
 
     else:
         sorted_dict_keys = sorted(epoch_to_save.keys(), reverse=True)
-        select_loss = sorted_dict_keys[0]  # smallest spec_loss of saved models
+        select_loss = sorted_dict_keys[0]  # biggest spec_loss of saved models
         if dev_info[save_loss_select] < select_loss:
             epoch_to_save[dev_info[save_loss_select]] = epoch
             logging.info(f"### - {save_loss_select} - ###")
             logging.info(
                 "add epoch: {:04d}, {}={:.4f}".format(
-                    epoch,
-                    save_loss_select,
-                    dev_info[save_loss_select],
+                    epoch, save_loss_select, dev_info[save_loss_select]
                 )
             )
 
             if os.path.exists(
                 "{}/epoch_{}_{}.pth.tar".format(
-                    args.model_save_dir,
-                    save_loss_select,
-                    epoch_to_save[select_loss],
+                    args.model_save_dir, save_loss_select, epoch_to_save[select_loss]
                 )
             ):
                 os.remove(
@@ -114,9 +114,7 @@ def Auto_save_model(
 
             logging.info(
                 "delete epoch: {:04d}, {}={:.4f}".format(
-                    epoch_to_save[select_loss],
-                    save_loss_select,
-                    select_loss,
+                    epoch_to_save[select_loss], save_loss_select, select_loss
                 )
             )
             epoch_to_save.pop(select_loss)
@@ -186,6 +184,12 @@ def train(args):
             ref_db=args.ref_db,
             sing_quality=args.sing_quality,
             standard=args.standard,
+            db_joint=args.db_joint,
+            Hz2semitone=args.Hz2semitone,
+            semitone_min=args.semitone_min,
+            semitone_max=args.semitone_max,
+            phone_shift_size=args.phone_shift_size,
+            semitone_shift=args.semitone_shift,
         )
 
         dev_set = SVSDataset(
@@ -209,13 +213,19 @@ def train(args):
             ref_db=args.ref_db,
             sing_quality=args.sing_quality,
             standard=args.standard,
+            db_joint=args.db_joint,
+            Hz2semitone=args.Hz2semitone,
+            semitone_min=args.semitone_min,
+            semitone_max=args.semitone_max,
+            phone_shift_size=-1,
+            semitone_shift=False,
         )
     else:
         train_set = SVSDataset(
             align_root_path=args.train_align,
             pitch_beat_root_path=args.train_pitch,
             wav_root_path=args.train_wav,
-            pw_f0_root_path=None,
+            pw_f0_root_path=None
             pw_sp_root_path=None,
             pw_ap_root_path=None,
             vocoder_category=args.vocoder_category,
@@ -232,6 +242,12 @@ def train(args):
             ref_db=args.ref_db,
             sing_quality=args.sing_quality,
             standard=args.standard,
+            db_joint=args.db_joint,
+            Hz2semitone=args.Hz2semitone,
+            semitone_min=args.semitone_min,
+            semitone_max=args.semitone_max,
+            phone_shift_size=args.phone_shift_size,
+            semitone_shift=args.semitone_shift,
         )
 
         dev_set = SVSDataset(
@@ -255,8 +271,14 @@ def train(args):
             ref_db=args.ref_db,
             sing_quality=args.sing_quality,
             standard=args.standard,
+            db_joint=args.db_joint,
+            Hz2semitone=args.Hz2semitone,
+            semitone_min=args.semitone_min,
+            semitone_max=args.semitone_max,
+            phone_shift_size=-1,
+            semitone_shift=False,
         )
-    collate_fn_svs = SVSCollator(
+    collate_fn_svs_train = SVSCollator(
         args.num_frames,
         args.vocoder_category,
         args.char_max_len,
@@ -264,13 +286,28 @@ def train(args):
         args.phone_size,
         args.n_mels,
         args.feat_dim,
+        args.db_joint,
+        args.random_crop,
+        args.crop_min_length,
+        args.Hz2semitone,
+    )
+    collate_fn_svs_val = SVSCollator(
+        args.num_frames,
+        args.char_max_len,
+        args.use_asr_post,
+        args.phone_size,
+        args.n_mels,
+        args.db_joint,
+        False,  # random crop
+        -1,  # crop_min_length
+        args.Hz2semitone,
     )
     train_loader = torch.utils.data.DataLoader(
         dataset=train_set,
         batch_size=args.batchsize,
         shuffle=True,
         num_workers=args.num_workers,
-        collate_fn=collate_fn_svs,
+        collate_fn=collate_fn_svs_train,
         pin_memory=True,
     )
     dev_loader = torch.utils.data.DataLoader(
@@ -278,9 +315,10 @@ def train(args):
         batch_size=args.batchsize,
         shuffle=False,
         num_workers=args.num_workers,
-        collate_fn=collate_fn_svs,
+        collate_fn=collate_fn_svs_val,
         pin_memory=True,
     )
+
     assert (
         args.feat_dim == dev_set[0]["spec"].shape[1]
         or args.feat_dim == dev_set[0]["mel"].shape[1]
@@ -292,49 +330,115 @@ def train(args):
         quit()
     # prepare model
     if args.model_type == "GLU_Transformer":
-        model = GLU_TransformerSVS(
-            phone_size=args.phone_size,
-            embed_size=args.embedding_size,
-            hidden_size=args.hidden_size,
-            glu_num_layers=args.glu_num_layers,
-            dropout=args.dropout,
-            output_dim=args.feat_dim,
-            dec_nhead=args.dec_nhead,
-            dec_num_block=args.dec_num_block,
-            n_mels=args.n_mels,
-            double_mel_loss=args.double_mel_loss,
-            local_gaussian=args.local_gaussian,
-            device=device,
-        )
-    elif args.model_type == "LSTM":
-        if args.vocoder_category == "pyworld":
-            model = LSTMSVS(
+        if args.db_joint:
+            model = GLU_TransformerSVS_combine(
                 phone_size=args.phone_size,
+                singer_size=args.singer_size,
                 embed_size=args.embedding_size,
-                d_model=args.hidden_size,
-                num_layers=args.num_rnn_layers,
+                hidden_size=args.hidden_size,
+                glu_num_layers=args.glu_num_layers,
                 dropout=args.dropout,
-                d_output=args.feat_dim,
+                output_dim=args.feat_dim,
+                dec_nhead=args.dec_nhead,
+                dec_num_block=args.dec_num_block,
                 n_mels=args.n_mels,
                 double_mel_loss=args.double_mel_loss,
+                local_gaussian=args.local_gaussian,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
                 device=device,
-                use_asr_post=args.use_asr_post,
-                feat_dim_pw=1025,
-                vocoder_category='pyworld',
             )
         else:
-            model = LSTMSVS(
+            model = GLU_TransformerSVS(
                 phone_size=args.phone_size,
                 embed_size=args.embedding_size,
-                d_model=args.hidden_size,
-                num_layers=args.num_rnn_layers,
+                hidden_size=args.hidden_size,
+                glu_num_layers=args.glu_num_layers,
                 dropout=args.dropout,
-                d_output=args.feat_dim,
+                output_dim=args.feat_dim,
+                dec_nhead=args.dec_nhead,
+                dec_num_block=args.dec_num_block,
                 n_mels=args.n_mels,
                 double_mel_loss=args.double_mel_loss,
+                local_gaussian=args.local_gaussian,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
                 device=device,
-                use_asr_post=args.use_asr_post,
             )
+    elif args.model_type == "LSTM":
+        if args.db_joint:
+            if args.vocoder_category == "pyworld":
+                model = LSTMSVS_combine(
+                    phone_size=args.phone_size,
+                    singer_size=args.singer_size,
+                    embed_size=args.embedding_size,
+                    d_model=args.hidden_size,
+                    num_layers=args.num_rnn_layers,
+                    dropout=args.dropout,
+                    d_output=args.feat_dim,
+                    n_mels=args.n_mels,
+                    double_mel_loss=args.double_mel_loss,
+                    device=device,
+                    use_asr_post=args.use_asr_post,
+                    feat_dim_pw=1025,
+                    vocoder_category='pyworld',
+                    Hz2semitone=args.Hz2semitone,
+                    semitone_size=args.semitone_size,
+                    device=device,
+                    use_asr_post=args.use_asr_post,
+                )
+            else:
+                model = LSTMSVS_combine(
+                    phone_size=args.phone_size,
+                    singer_size=args.singer_size,
+                    embed_size=args.embedding_size,
+                    d_model=args.hidden_size,
+                    num_layers=args.num_rnn_layers,
+                    dropout=args.dropout,
+                    d_output=args.feat_dim,
+                    n_mels=args.n_mels,
+                    double_mel_loss=args.double_mel_loss,
+                    device=device,
+                    use_asr_post=args.use_asr_post,
+                    Hz2semitone=args.Hz2semitone,
+                    semitone_size=args.semitone_size,
+                    device=device,
+                    use_asr_post=args.use_asr_post,
+                )
+
+        else:
+            if args.vocoder_category == "pyworld":
+                model = LSTMSVS(
+                    phone_size=args.phone_size,
+                    embed_size=args.embedding_size,
+                    d_model=args.hidden_size,
+                    num_layers=args.num_rnn_layers,
+                    dropout=args.dropout,
+                    d_output=args.feat_dim,
+                    n_mels=args.n_mels,
+                    double_mel_loss=args.double_mel_loss,
+                    Hz2semitone=args.Hz2semitone,
+                    semitone_size=args.semitone_size,
+                    device=device,
+                    use_asr_post=args.use_asr_post,
+                    feat_dim_pw=1025,
+                    vocoder_category='pyworld',
+                )                
+            else:
+                model = LSTMSVS(
+                    phone_size=args.phone_size,
+                    embed_size=args.embedding_size,
+                    d_model=args.hidden_size,
+                    num_layers=args.num_rnn_layers,
+                    dropout=args.dropout,
+                    d_output=args.feat_dim,
+                    n_mels=args.n_mels,
+                    double_mel_loss=args.double_mel_loss,
+                    Hz2semitone=args.Hz2semitone,
+                    semitone_size=args.semitone_size,
+                    device=device,
+                    use_asr_post=args.use_asr_post,
+                )
     elif args.model_type == "GRU_gs":
         model = GRUSVS_gs(
             phone_size=args.phone_size,
@@ -392,54 +496,116 @@ def train(args):
             double_mel_loss=args.double_mel_loss,
             local_gaussian=args.local_gaussian,
             dec_dropout=args.dec_dropout,
+            Hz2semitone=args.Hz2semitone,
+            semitone_size=args.semitone_size,
             device=device,
         )
     elif args.model_type == "Comformer_full":
-        model = ConformerSVS_FULL(
-            phone_size=args.phone_size,
-            embed_size=args.embedding_size,
-            output_dim=args.feat_dim,
-            n_mels=args.n_mels,
-            enc_attention_dim=args.enc_attention_dim,
-            enc_attention_heads=args.enc_attention_heads,
-            enc_linear_units=args.enc_linear_units,
-            enc_num_blocks=args.enc_num_blocks,
-            enc_dropout_rate=args.enc_dropout_rate,
-            enc_positional_dropout_rate=args.enc_positional_dropout_rate,
-            enc_attention_dropout_rate=args.enc_attention_dropout_rate,
-            enc_input_layer=args.enc_input_layer,
-            enc_normalize_before=args.enc_normalize_before,
-            enc_concat_after=args.enc_concat_after,
-            enc_positionwise_layer_type=args.enc_positionwise_layer_type,
-            enc_positionwise_conv_kernel_size=(args.enc_positionwise_conv_kernel_size),
-            enc_macaron_style=args.enc_macaron_style,
-            enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
-            enc_selfattention_layer_type=args.enc_selfattention_layer_type,
-            enc_activation_type=args.enc_activation_type,
-            enc_use_cnn_module=args.enc_use_cnn_module,
-            enc_cnn_module_kernel=args.enc_cnn_module_kernel,
-            enc_padding_idx=args.enc_padding_idx,
-            dec_attention_dim=args.dec_attention_dim,
-            dec_attention_heads=args.dec_attention_heads,
-            dec_linear_units=args.dec_linear_units,
-            dec_num_blocks=args.dec_num_blocks,
-            dec_dropout_rate=args.dec_dropout_rate,
-            dec_positional_dropout_rate=args.dec_positional_dropout_rate,
-            dec_attention_dropout_rate=args.dec_attention_dropout_rate,
-            dec_input_layer=args.dec_input_layer,
-            dec_normalize_before=args.dec_normalize_before,
-            dec_concat_after=args.dec_concat_after,
-            dec_positionwise_layer_type=args.dec_positionwise_layer_type,
-            dec_positionwise_conv_kernel_size=(args.dec_positionwise_conv_kernel_size),
-            dec_macaron_style=args.dec_macaron_style,
-            dec_pos_enc_layer_type=args.dec_pos_enc_layer_type,
-            dec_selfattention_layer_type=args.dec_selfattention_layer_type,
-            dec_activation_type=args.dec_activation_type,
-            dec_use_cnn_module=args.dec_use_cnn_module,
-            dec_cnn_module_kernel=args.dec_cnn_module_kernel,
-            dec_padding_idx=args.dec_padding_idx,
-            device=device,
-        )
+        if args.db_joint:
+            model = ConformerSVS_FULL_combine(
+                phone_size=args.phone_size,
+                singer_size=args.singer_size,
+                embed_size=args.embedding_size,
+                output_dim=args.feat_dim,
+                n_mels=args.n_mels,
+                enc_attention_dim=args.enc_attention_dim,
+                enc_attention_heads=args.enc_attention_heads,
+                enc_linear_units=args.enc_linear_units,
+                enc_num_blocks=args.enc_num_blocks,
+                enc_dropout_rate=args.enc_dropout_rate,
+                enc_positional_dropout_rate=args.enc_positional_dropout_rate,
+                enc_attention_dropout_rate=args.enc_attention_dropout_rate,
+                enc_input_layer=args.enc_input_layer,
+                enc_normalize_before=args.enc_normalize_before,
+                enc_concat_after=args.enc_concat_after,
+                enc_positionwise_layer_type=args.enc_positionwise_layer_type,
+                enc_positionwise_conv_kernel_size=(
+                    args.enc_positionwise_conv_kernel_size
+                ),
+                enc_macaron_style=args.enc_macaron_style,
+                enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
+                enc_selfattention_layer_type=args.enc_selfattention_layer_type,
+                enc_activation_type=args.enc_activation_type,
+                enc_use_cnn_module=args.enc_use_cnn_module,
+                enc_cnn_module_kernel=args.enc_cnn_module_kernel,
+                enc_padding_idx=args.enc_padding_idx,
+                dec_attention_dim=args.dec_attention_dim,
+                dec_attention_heads=args.dec_attention_heads,
+                dec_linear_units=args.dec_linear_units,
+                dec_num_blocks=args.dec_num_blocks,
+                dec_dropout_rate=args.dec_dropout_rate,
+                dec_positional_dropout_rate=args.dec_positional_dropout_rate,
+                dec_attention_dropout_rate=args.dec_attention_dropout_rate,
+                dec_input_layer=args.dec_input_layer,
+                dec_normalize_before=args.dec_normalize_before,
+                dec_concat_after=args.dec_concat_after,
+                dec_positionwise_layer_type=args.dec_positionwise_layer_type,
+                dec_positionwise_conv_kernel_size=(
+                    args.dec_positionwise_conv_kernel_size
+                ),
+                dec_macaron_style=args.dec_macaron_style,
+                dec_pos_enc_layer_type=args.dec_pos_enc_layer_type,
+                dec_selfattention_layer_type=args.dec_selfattention_layer_type,
+                dec_activation_type=args.dec_activation_type,
+                dec_use_cnn_module=args.dec_use_cnn_module,
+                dec_cnn_module_kernel=args.dec_cnn_module_kernel,
+                dec_padding_idx=args.dec_padding_idx,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
+                device=device,
+            )
+        else:
+            model = ConformerSVS_FULL(
+                phone_size=args.phone_size,
+                embed_size=args.embedding_size,
+                output_dim=args.feat_dim,
+                n_mels=args.n_mels,
+                enc_attention_dim=args.enc_attention_dim,
+                enc_attention_heads=args.enc_attention_heads,
+                enc_linear_units=args.enc_linear_units,
+                enc_num_blocks=args.enc_num_blocks,
+                enc_dropout_rate=args.enc_dropout_rate,
+                enc_positional_dropout_rate=args.enc_positional_dropout_rate,
+                enc_attention_dropout_rate=args.enc_attention_dropout_rate,
+                enc_input_layer=args.enc_input_layer,
+                enc_normalize_before=args.enc_normalize_before,
+                enc_concat_after=args.enc_concat_after,
+                enc_positionwise_layer_type=args.enc_positionwise_layer_type,
+                enc_positionwise_conv_kernel_size=(
+                    args.enc_positionwise_conv_kernel_size
+                ),
+                enc_macaron_style=args.enc_macaron_style,
+                enc_pos_enc_layer_type=args.enc_pos_enc_layer_type,
+                enc_selfattention_layer_type=args.enc_selfattention_layer_type,
+                enc_activation_type=args.enc_activation_type,
+                enc_use_cnn_module=args.enc_use_cnn_module,
+                enc_cnn_module_kernel=args.enc_cnn_module_kernel,
+                enc_padding_idx=args.enc_padding_idx,
+                dec_attention_dim=args.dec_attention_dim,
+                dec_attention_heads=args.dec_attention_heads,
+                dec_linear_units=args.dec_linear_units,
+                dec_num_blocks=args.dec_num_blocks,
+                dec_dropout_rate=args.dec_dropout_rate,
+                dec_positional_dropout_rate=args.dec_positional_dropout_rate,
+                dec_attention_dropout_rate=args.dec_attention_dropout_rate,
+                dec_input_layer=args.dec_input_layer,
+                dec_normalize_before=args.dec_normalize_before,
+                dec_concat_after=args.dec_concat_after,
+                dec_positionwise_layer_type=args.dec_positionwise_layer_type,
+                dec_positionwise_conv_kernel_size=(
+                    args.dec_positionwise_conv_kernel_size
+                ),
+                dec_macaron_style=args.dec_macaron_style,
+                dec_pos_enc_layer_type=args.dec_pos_enc_layer_type,
+                dec_selfattention_layer_type=args.dec_selfattention_layer_type,
+                dec_activation_type=args.dec_activation_type,
+                dec_use_cnn_module=args.dec_use_cnn_module,
+                dec_cnn_module_kernel=args.dec_cnn_module_kernel,
+                dec_padding_idx=args.dec_padding_idx,
+                Hz2semitone=args.Hz2semitone,
+                semitone_size=args.semitone_size,
+                device=device,
+            )
 
     elif args.model_type == "USTC_DAR":
         model = USTC_SVS(
@@ -500,10 +666,7 @@ def train(args):
 
     # load encoder parm from Transformer-TTS
     if pretrain_encoder_dir != "":
-        pretrain = torch.load(
-            pretrain_encoder_dir,
-            map_location=device,
-        )
+        pretrain = torch.load(pretrain_encoder_dir, map_location=device)
         pretrain_dict = pretrain["model"]
         model_dict = model.state_dict()
         state_dict_new = {}
@@ -558,10 +721,7 @@ def train(args):
     if args.optimizer == "noam":
         optimizer = ScheduledOptim(
             torch.optim.Adam(
-                model.parameters(),
-                lr=args.lr,
-                betas=(0.9, 0.98),
-                eps=1e-09,
+                model.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1e-09
             ),
             args.hidden_size,
             args.noam_warmup_steps,
@@ -569,10 +729,7 @@ def train(args):
         )
     elif args.optimizer == "adam":
         optimizer = torch.optim.Adam(
-            model.parameters(),
-            lr=args.lr,
-            betas=(0.9, 0.98),
-            eps=1e-09,
+            model.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1e-09
         )
         if args.scheduler == "OneCycleLR":
             scheduler = torch.optim.lr_scheduler.OneCycleLR(
@@ -583,17 +740,11 @@ def train(args):
             )
         elif args.scheduler == "ReduceLROnPlateau":
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer,
-                "min",
-                verbose=True,
-                patience=10,
-                factor=0.5,
+                optimizer, "min", verbose=True, patience=10, factor=0.5
             )
         elif args.scheduler == "ExponentialLR":
             scheduler = torch.optim.lr_scheduler.ExponentialLR(
-                optimizer,
-                verbose=True,
-                gamma=0.9886,
+                optimizer, verbose=True, gamma=0.9886
             )
     else:
         raise ValueError("Not Support Optimizer")
@@ -616,16 +767,11 @@ def train(args):
     if args.perceptual_loss > 0 and args.vocoder_category != 'pyworld':
         win_length = int(args.sampling_rate * args.frame_length)
         psd_dict, bark_num = cal_psd2bark_dict(
-            fs=args.sampling_rate,
-            win_len=win_length,
+            fs=args.sampling_rate, win_len=win_length
         )
         sf = cal_spread_function(bark_num)
         loss_perceptual_entropy = PerceptualEntropy(
-            bark_num,
-            sf,
-            args.sampling_rate,
-            win_length,
-            psd_dict,
+            bark_num, sf, args.sampling_rate, win_length, psd_dict
         )
     else:
         loss_perceptual_entropy = None
@@ -639,6 +785,30 @@ def train(args):
 
     # args.num_saved_model = 5
 
+    # preload vocoder model
+    voc_model = []
+    if args.vocoder_category == "wavernn":
+        voc_model = WaveRNN(
+            rnn_dims=args.voc_rnn_dims,
+            fc_dims=args.voc_fc_dims,
+            bits=args.voc_bits,
+            pad=args.voc_pad,
+            upsample_factors=(
+                args.voc_upsample_factors_0,
+                args.voc_upsample_factors_1,
+                args.voc_upsample_factors_2,
+            ),
+            feat_dims=args.n_mels,
+            compute_dims=args.voc_compute_dims,
+            res_out_dims=args.voc_res_out_dims,
+            res_blocks=args.voc_res_blocks,
+            hop_length=args.hop_length,
+            sample_rate=args.sampling_rate,
+            mode=args.voc_mode,
+        ).to(device)
+
+        voc_model.load(args.wavernn_voc_model)
+
     for epoch in range(start_epoch + 1, 1 + args.max_epochs):
         """Train Stage"""
         start_t_train = time.time()
@@ -651,6 +821,7 @@ def train(args):
             loss_perceptual_entropy,
             epoch,
             args,
+            voc_model,
         )
         end_t_train = time.time()
 
@@ -659,21 +830,19 @@ def train(args):
             out_log += "lr: {:.6f}, ".format(optimizer._optimizer.param_groups[0]["lr"])
         elif args.optimizer == "adam":
             out_log += "lr: {:.6f}, ".format(optimizer.param_groups[0]["lr"])
-        out_log += "loss: {:.4f}, spec_loss: {:.4f} ".format(
-            train_info["loss"],
-            train_info["spec_loss"],
-        )
+
+        if args.vocoder_category == "wavernn":
+            out_log += "loss: {:.4f} ".format(train_info["loss"])
+        else:
+            out_log += "loss: {:.4f}, spec_loss: {:.4f} ".format(
+                train_info["loss"], train_info["spec_loss"]
+            )
 
         if args.n_mels > 0 and args.vocoder_category != 'pyworld':
             out_log += "mel_loss: {:.4f}, ".format(train_info["mel_loss"])
         if args.perceptual_loss > 0 and args.vocoder_category != 'pyworld':
             out_log += "pe_loss: {:.4f}, ".format(train_info["pe_loss"])
-        logging.info(
-            "{} time: {:.2f}s".format(
-                out_log,
-                end_t_train - start_t_train,
-            )
-        )
+        logging.info("{} time: {:.2f}s".format(out_log, end_t_train - start_t_train))
 
         """Dev Stage"""
         torch.backends.cudnn.enabled = False  # 莫名的bug，关掉才可以跑
@@ -687,13 +856,12 @@ def train(args):
             loss_perceptual_entropy,
             epoch,
             args,
+            voc_model,
         )
         end_t_dev = time.time()
 
         dev_log = "Dev epoch: {:04d}, loss: {:.4f}, spec_loss: {:.4f}, ".format(
-            epoch,
-            dev_info["loss"],
-            dev_info["spec_loss"],
+            epoch, dev_info["loss"], dev_info["spec_loss"]
         )
         if args.vocoder_category != "pyworld":
             dev_log += "mcd_value: {:.4f}, ".format(dev_info["mcd_value"])
@@ -722,7 +890,7 @@ def train(args):
         if not os.path.exists(args.model_save_dir):
             os.makedirs(args.model_save_dir)
 
-        (total_loss_counter, total_loss_epoch_to_save,) = Auto_save_model(
+        (total_loss_counter, total_loss_epoch_to_save) = Auto_save_model(
             args,
             epoch,
             model,
@@ -738,7 +906,7 @@ def train(args):
         if (
             dev_info["spec_loss"] != 0
         ):  # spec_loss 有意义时再存模型，比如 USTC DAR model 不需要计算线性谱spec loss
-            (spec_loss_counter, spec_loss_epoch_to_save,) = Auto_save_model(
+            (spec_loss_counter, spec_loss_epoch_to_save) = Auto_save_model(
                 args,
                 epoch,
                 model,

@@ -42,10 +42,37 @@ if __name__ == "__main__":
         help="Type of model (New_Transformer or GLU_Transformer or LSTM)",
     )
     parser.add_argument(
-        "--num_frames",
-        default=500,
+        "--num_frames", default=500, type=int, help="number of frames in one utterance"
+    )
+    parser.add_argument(
+        "--db_joint",
+        type=bool,
+        default=False,
+        help="Combine multiple datasets & add singer embedding",
+    )
+    parser.add_argument(
+        "--Hz2semitone",
+        type=bool,
+        default=False,
+        help="Transfer f0 value into semitone",
+    )
+    parser.add_argument(
+        "--semitone_size",
         type=int,
-        help="number of frames in one utterance",
+        default=59,
+        help="Semitone size of your dataset, can be found in data/semitone_set.txt",
+    )
+    parser.add_argument(
+        "--semitone_min",
+        type=str,
+        default="F_1",
+        help="Minimum semitone of your dataset, can be found in data/semitone_set.txt",
+    )
+    parser.add_argument(
+        "--semitone_max",
+        type=str,
+        default="D_6",
+        help="Maximum semitone of your dataset, can be found in data/semitone_set.txt",
     )
     parser.add_argument(
         "--char_max_len", default=100, type=int, help="max length for character"
@@ -56,9 +83,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--decode_sample", default=-1, type=int, help="samples to decode"
     )
-    parser.add_argument("--frame_length", default=0.06, type=float)
-    parser.add_argument("--frame_shift", default=0.03, type=float)
-    parser.add_argument("--sampling_rate", default=44100, type=int)
+    parser.add_argument("--frame_length", default=0.05, type=float)
+    parser.add_argument("--frame_shift", default=0.0125, type=float)
+    parser.add_argument("--sampling_rate", default=22050, type=int)
     parser.add_argument("--preemphasis", default=0.97, type=float)
     parser.add_argument("--n_mels", default=80, type=int)
     parser.add_argument("--power", default=1.2, type=float)
@@ -66,6 +93,7 @@ if __name__ == "__main__":
     parser.add_argument("--ref_db", default=20, type=int)
     parser.add_argument("--nfft", default=2048, type=int)
     parser.add_argument("--phone_size", default=67, type=int)
+    parser.add_argument("--singer_size", default=10, type=int)
     parser.add_argument("--feat_dim", default=1324, type=int)
     parser.add_argument("--embedding_size", default=256, type=int)
     parser.add_argument("--hidden_size", default=256, type=int)
@@ -121,19 +149,45 @@ if __name__ == "__main__":
     parser.add_argument("--enc_use_cnn_module", default=False, type=bool)
     parser.add_argument("--enc_cnn_module_kernel", default=31, type=int)
     parser.add_argument("--enc_padding_idx", default=-1, type=int)
+
+    parser.add_argument("--dec_attention_dim", default=256, type=int)
+    parser.add_argument("--dec_attention_heads", default=4, type=int)
+    parser.add_argument("--dec_linear_units", default=2048, type=int)
+    parser.add_argument("--dec_num_blocks", default=6, type=int)
+    parser.add_argument("--dec_dropout_rate", default=0.1, type=float)
+    parser.add_argument("--dec_positional_dropout_rate", default=0.1, type=float)
+    parser.add_argument("--dec_attention_dropout_rate", default=0.0, type=float)
+    parser.add_argument("--dec_input_layer", default="conv2d", type=str)
+    parser.add_argument("--dec_normalize_before", default=True, type=bool)
+    parser.add_argument("--dec_concat_after", default=False, type=bool)
+    parser.add_argument("--dec_positionwise_layer_type", default="linear", type=str)
+    parser.add_argument("--dec_positionwise_conv_kernel_size", default=1, type=int)
+    parser.add_argument("--dec_macaron_style", default=False, type=bool)
+    parser.add_argument("--dec_pos_enc_layer_type", default="abs_pos", type=str)
+    parser.add_argument("--dec_selfattention_layer_type", default="selfattn", type=str)
+    parser.add_argument("--dec_activation_type", default="swish", type=str)
+    parser.add_argument("--dec_use_cnn_module", default=False, type=bool)
+    parser.add_argument("--dec_cnn_module_kernel", default=31, type=int)
+    parser.add_argument("--dec_padding_idx", default=-1, type=int)
+
     parser.add_argument("--dec_dropout", default=0.1, type=float)
 
     parser.add_argument("--double_mel_loss", default=False, type=float)
+
     parser.add_argument("--vocoder_category", default="griffin", type=str)
-    parser.add_argument("--hop_length", default=672, type=int)
-    parser.add_argument("--voc_mode", default="MOL", type=str)
-    parser.add_argument("--voc_upsample_factors", default=(6, 7, 16), type=tuple)
     parser.add_argument("--voc_rnn_dims", default=512, type=int)
     parser.add_argument("--voc_fc_dims", default=512, type=int)
+    parser.add_argument("--voc_bits", default=9, type=int)
+    parser.add_argument("--voc_pad", default=2, type=int)
+    parser.add_argument("--voc_upsample_factors_0", default=5, type=int)
+    parser.add_argument("--voc_upsample_factors_1", default=5, type=int)
+    parser.add_argument("--voc_upsample_factors_2", default=11, type=int)
     parser.add_argument("--voc_compute_dims", default=128, type=int)
     parser.add_argument("--voc_res_out_dims", default=128, type=int)
-    parser.add_argument("--voc_blocks", default=10, type=int)
-    parser.add_argument("--voc_pad", default=2, type=int)
+    parser.add_argument("--voc_res_blocks", default=10, type=int)
+    parser.add_argument("--hop_length", default=275, type=int)
+    parser.add_argument("--voc_mode", default="MOL", type=str)
+    parser.add_argument("--wavernn_voc_model", help="wavernn model used for training.")
 
     args = parser.parse_args()
 
