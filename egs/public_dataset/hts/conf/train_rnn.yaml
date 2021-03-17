@@ -21,7 +21,7 @@ frame_shift: 0.03
 model_type: LSTM
 max_epochs: 200
 batchsize: 4
-num_workers: 10
+num_workers: 4
 hidden_size: 512
 embedding_size: 512
 num_rnn_layers: 3
@@ -29,6 +29,7 @@ num_frames: 500
 char_max_len: 100
 optimizer: adam
 lr: 0.001
+scheduler: ReduceLROnPlateau
 phone_size: 68
 seed: 777
 gpu_id: -1

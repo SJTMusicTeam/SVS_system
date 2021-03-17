@@ -168,9 +168,10 @@ def process(args):
         song_align = os.path.join(args.outdir, "alignment")
         song_wav = os.path.join(args.outdir, "wav_info", str(index))
         song_pitch_beat = os.path.join(args.outdir, "pitch_beat_extraction", str(index))
-        pw_path_f0 = os.path.join(args.outdir, "pyworld_f0", str(index))
-        pw_path_sp = os.path.join(args.outdir, "pyworld_sp", str(index))
-        pw_path_ap = os.path.join(args.outdir, "pyworld_ap", str(index))
+        if args.use_pyworld_vocoder == True:
+            pw_path_f0 = os.path.join(args.outdir, "pyworld_f0", str(index))
+            pw_path_sp = os.path.join(args.outdir, "pyworld_sp", str(index))
+            pw_path_ap = os.path.join(args.outdir, "pyworld_ap", str(index))
 
         if not os.path.exists(song_align):
             os.makedirs(song_align)
@@ -178,12 +179,13 @@ def process(args):
             os.makedirs(song_wav)
         if not os.path.exists(song_pitch_beat):
             os.makedirs(song_pitch_beat)
-        if not os.path.exists(pw_path_f0):
-            os.makedirs(pw_path_f0)
-        if not os.path.exists(pw_path_sp):
-            os.makedirs(pw_path_sp)
-        if not os.path.exists(pw_path_ap):
-            os.makedirs(pw_path_ap)
+        if args.use_pyworld_vocoder == True:
+            if not os.path.exists(pw_path_f0):
+                os.makedirs(pw_path_f0)
+            if not os.path.exists(pw_path_sp):
+                os.makedirs(pw_path_sp)
+            if not os.path.exists(pw_path_ap):
+                os.makedirs(pw_path_ap)
         print("processing {}".format(song_wav))
         for seg in segments.keys():
             alignment = segments[seg]["alignment"]
@@ -195,11 +197,12 @@ def process(args):
                 )
             ]
 
-            """extract pw_paras"""
-            pw_f0, pw_sp, pw_ap = pw.wav2world(seg_signal, args.sr)
-            np.save(os.path.join(pw_path_f0, name) + "_f0", np.array(pw_f0))
-            np.save(os.path.join(pw_path_sp, name) + "_sp", np.array(pw_sp))
-            np.save(os.path.join(pw_path_ap, name) + "_ap", np.array(pw_ap))
+            if args.use_pyworld_vocoder == True:
+                """extract pw_paras"""
+                pw_f0, pw_sp, pw_ap = pw.wav2world(seg_signal, args.sr, frame_period=30.0)
+                np.save(os.path.join(pw_path_f0, name) + "_f0", np.array(pw_f0))
+                np.save(os.path.join(pw_path_sp, name) + "_sp", np.array(pw_sp))
+                np.save(os.path.join(pw_path_ap, name) + "_ap", np.array(pw_ap))
 
             """extract beats"""
             tempo, beats = librosa.beat.beat_track(
@@ -247,7 +250,7 @@ if __name__ == "__main__":
     parser.add_argument("labdir", type=str, help="label data directory")
     parser.add_argument("outdir", type=str, help="output directory")
     parser.add_argument("--model", type=str, default="TDNN", help="model type")
-    parser.add_argument("--sr", type=int, default=48000)
+    parser.add_argument("--sr", type=int, default=22050)
     parser.add_argument("--sil", type=str, default="pau")
     parser.add_argument(
         "--label_type",
@@ -257,5 +260,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("--label_extention", type=str, default=".txt")
     parser.add_argument("--wav_extention", type=str, default="wav")
+    parser.add_argument("--use_pyworld_vocoder", default=False, type=bool)
     args = parser.parse_args()
     process(args)

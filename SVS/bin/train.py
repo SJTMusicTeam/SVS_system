@@ -1,3 +1,7 @@
+#! /usr/bin/env python3
+# Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
+# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
+
 """Copyright [2020] [Jiatong Shi].
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,9 +16,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-# !/usr/bin/env python3
-# Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
-# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
 import jsonargparse
 import logging
@@ -217,6 +218,14 @@ if __name__ == "__main__":
         type=int,
         help="how many learning_steps use lr_decay",
     )
+    
+    parser.add_argument("--vocoder_category", type=str, help="The vocoder to be used (e.g., pyworld).")
+    parser.add_argument("--train_pw_f0", help="pyworld f0 data dir used for training.")
+    parser.add_argument("--train_pw_sp", help="pyworld sp data dir used for training.")
+    parser.add_argument("--train_pw_ap", help="pyworld ap data dir used for training.")
+    parser.add_argument("--val_pw_f0", help="pyworld f0 data dir used for validation.")
+    parser.add_argument("--val_pw_sp", help="pyworld sp data dir used for validation.")
+    parser.add_argument("--val_pw_ap", help="pyworld ap data dir used for validation.")
 
     args = parser.parse_args()
 

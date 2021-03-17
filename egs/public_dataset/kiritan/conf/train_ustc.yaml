@@ -1,10 +1,10 @@
 # public kiritan data
-train_align: /data1/gs/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/alignment/train
-train_pitch: /data1/gs/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/pitch_beat_extraction/train
-train_wav: /data1/gs/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info/train
-val_align: /data1/gs/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/alignment/test
-val_pitch: /data1/gs/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/pitch_beat_extraction/test
-val_wav: /data1/gs/jiatong/SVS_system/SVS/data/public_dataset/kiritan_data/wav_info/test
+train_align: downloads/kiritan_data/alignment/train
+train_pitch: downloads/kiritan_data/pitch_beat_extraction/train
+train_wav: downloads/kiritan_data/wav_info/train
+val_align: downloads/kiritan_data/alignment/dev
+val_pitch: downloads/kiritan_data/pitch_beat_extraction/dev
+val_wav: downloads/kiritan_data/wav_info/dev
 
 # standard: 4
 # sing_quality: conf/sing_quality.csv
@@ -19,14 +19,14 @@ frame_length: 0.06
 frame_shift: 0.03
 
 # model related
-model_save_dir: /data1/gs/jiatong/SVS_system/egs/public_dataset/kiritan/exp/12_18_ustc_lrDdecaySteps50/model                     # change
+model_save_dir: exp/12_18_ustc_lrDdecaySteps50/model                     # change
 model_type: USTC_DAR
 normalize: True
 # double_mel_loss: True
 # perceptual_loss: 0.01
 
-stats_file: /data1/gs/jiatong/SVS_system/egs/public_dataset/kiritan/exp/env_test/model/feats_stats.npz           # change
-stats_mel_file: /data1/gs/jiatong/SVS_system/egs/public_dataset/kiritan/exp/env_test/model/feats_mel_stats.npz   # change
+stats_file: exp/12_18_ustc_lrDdecaySteps50/model/feats_stats.npz           # change
+stats_mel_file: exp/12_18_ustc_lrDdecaySteps50/model/feats_mel_stats.npz   # change
 
 embedding_size: 512                                                                 # change
 middle_dim_fc: 512

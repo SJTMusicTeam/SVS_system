@@ -21,6 +21,7 @@ limitations under the License.
 
 import math
 import numpy as np
+from pathlib import Path
 from SVS.model.layers.conformer_related import Conformer_block
 import SVS.model.layers.module as module
 from SVS.model.layers.pretrain_module import Attention
@@ -30,6 +31,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.init import xavier_uniform_
+from torchaudio.models.wavernn import UpsampleNetwork
+from typing import Union
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -730,6 +733,8 @@ class LSTMSVS(nn.Module):
         dropout=0.1,
         device="cuda",
         use_asr_post=False,
+        feat_dim_pw=1025,
+        vocoder_category="pyworld",
     ):
         """init."""
         super(LSTMSVS, self).__init__()
@@ -756,7 +761,6 @@ class LSTMSVS(nn.Module):
         # Remember! embed_size must be even!!
         assert embed_size % 2 == 0
         self.fc_pos = nn.Linear(d_model, d_model)
-
         self.pos_lstm = nn.LSTM(
             input_size=d_model,
             hidden_size=d_model,
@@ -809,6 +813,10 @@ class LSTMSVS(nn.Module):
 
         self.use_asr_post = use_asr_post
         self.d_model = d_model
+        self.feat_dim_pw = feat_dim_pw
+        self.vocoder_category = vocoder_category
+        self.output_fc_pw = nn.Linear(d_output, self.feat_dim_pw*2+1)
+
 
     def forward(self, phone, pitch, beats):
         """forward."""
@@ -833,7 +841,7 @@ class LSTMSVS(nn.Module):
         beats = F.leaky_relu(self.emb_beats(beats.squeeze(-1)))
         out = beats + out
         out, (h0, c0) = self.beats_lstm(out)
-        if self.use_mel:
+        if self.use_mel and self.vocoder_category != "pyworld":
             mel_output = self.output_mel(out)
             if self.double_mel_loss:
                 mel_output2 = self.double_mel(mel_output)
@@ -843,9 +851,11 @@ class LSTMSVS(nn.Module):
             # out = self.postnet(mel)
             return output, (h0, c0), mel_output, mel_output2
 
-        if self.use_pw:
+        elif self.vocoder_category == "pyworld":
             out = self.output_fc(out)
+            out = self.output_fc_pw(out)
             return out, (h0, c0), None, None
+
         else:
             out = self.output_fc(out)
             return out, (h0, c0), None, None
@@ -1655,6 +1665,417 @@ class USTC_SVS(nn.Module):
             )  # [batch size, output_dim]
 
         return output
+
+
+def label_2_float(x, bits):
+    """Label_2_float."""
+    return 2 * x / (2 ** bits - 1.0) - 1.0
+
+
+def decode_mu_law(y, mu, from_labels=True):
+    """Decode_mu_law."""
+    if from_labels:
+        y = label_2_float(y, math.log2(mu))
+    mu = mu - 1
+    x = np.sign(y) / mu * ((1 + mu) ** np.abs(y) - 1)
+    return x
+
+
+class WaveRNN(nn.Module):
+    """Wavernn."""
+
+    def __init__(
+        self,
+        rnn_dims,
+        fc_dims,
+        bits,
+        pad,
+        upsample_factors,
+        feat_dims,
+        compute_dims,
+        res_out_dims,
+        res_blocks,
+        hop_length,
+        sample_rate,
+        mode="RAW",
+    ):
+        """Init."""
+        super().__init__()
+        self.mode = mode
+        self.pad = pad
+        if self.mode == "RAW":
+            self.n_classes = 2 ** bits
+        elif self.mode == "MOL":
+            self.n_classes = 30
+        else:
+            RuntimeError("Unknown model mode value - ", self.mode)
+
+        # List of rnns to call `flatten_parameters()` on
+        self._to_flatten = []
+
+        self.rnn_dims = rnn_dims
+        self.aux_dims = res_out_dims // 4
+        self.hop_length = hop_length
+        self.sample_rate = sample_rate
+
+        self.upsample = UpsampleNetwork(
+            feat_dims, upsample_factors, compute_dims, res_blocks, res_out_dims, pad
+        )
+        self.line = nn.Linear(feat_dims + self.aux_dims + 1, rnn_dims)
+
+        self.rnn1 = nn.GRU(rnn_dims, rnn_dims, batch_first=True)
+        self.rnn2 = nn.GRU(rnn_dims + self.aux_dims, rnn_dims, batch_first=True)
+        self._to_flatten += [self.rnn1, self.rnn2]
+
+        self.fc1 = nn.Linear(rnn_dims + self.aux_dims, fc_dims)
+        self.fc2 = nn.Linear(fc_dims + self.aux_dims, fc_dims)
+        self.fc3 = nn.Linear(fc_dims, self.n_classes)
+
+        self.register_buffer("step", torch.zeros(1, dtype=torch.long))
+        self.num_params()
+
+        # Avoid fragmentation of RNN parameters and associated warning
+        self._flatten_parameters()
+
+    def forward(self, x, mels):
+        """Forward."""
+        device = next(self.parameters()).device  # use same device as parameters
+
+        # Although we `_flatten_parameters()` on init, when using DataParallel
+        # the model gets replicated, making it no longer guaranteed that the
+        # weights are contiguous in GPU memory. Hence, we must call it again
+        self._flatten_parameters()
+
+        self.step += 1
+        bsize = x.size(0)
+        h1 = torch.zeros(1, bsize, self.rnn_dims, device=device)
+        h2 = torch.zeros(1, bsize, self.rnn_dims, device=device)
+        mels, aux = self.upsample(mels)
+
+        aux_idx = [self.aux_dims * i for i in range(5)]
+        a1 = aux[:, :, aux_idx[0] : aux_idx[1]]
+        a2 = aux[:, :, aux_idx[1] : aux_idx[2]]
+        a3 = aux[:, :, aux_idx[2] : aux_idx[3]]
+        a4 = aux[:, :, aux_idx[3] : aux_idx[4]]
+
+        x = torch.cat([x.unsqueeze(-1), mels, a1], dim=2)
+        x = self.line(x)
+        res = x
+        x, _ = self.rnn1(x, h1)
+
+        x = x + res
+        res = x
+        x = torch.cat([x, a2], dim=2)
+        x, _ = self.rnn2(x, h2)
+
+        x = x + res
+        x = torch.cat([x, a3], dim=2)
+        x = F.relu(self.fc1(x))
+
+        x = torch.cat([x, a4], dim=2)
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)
+
+    def generate(self, mels, batched, target, overlap, mu_law):
+        """Generate."""
+        self.eval()
+
+        device = next(self.parameters()).device  # use same device as parameters
+
+        mu_law = mu_law if self.mode == "RAW" else False
+
+        output = []
+        rnn1 = self.get_gru_cell(self.rnn1)
+        rnn2 = self.get_gru_cell(self.rnn2)
+
+        with torch.no_grad():
+
+            mels = torch.as_tensor(mels, device=device)
+            wave_len = (mels.size(-1) - 1) * self.hop_length
+            mels = self.pad_tensor(mels.transpose(1, 2), pad=self.pad, side="both")
+            mels, aux = self.upsample(mels.transpose(1, 2))
+
+            if batched:
+                mels = self.fold_with_overlap(mels, target, overlap)
+                aux = self.fold_with_overlap(aux, target, overlap)
+
+            b_size, seq_len, _ = mels.size()
+
+            h1 = torch.zeros(b_size, self.rnn_dims, device=device)
+            h2 = torch.zeros(b_size, self.rnn_dims, device=device)
+            x = torch.zeros(b_size, 1, device=device)
+
+            d = self.aux_dims
+            aux_split = [aux[:, :, d * i : d * (i + 1)] for i in range(4)]
+
+            for i in range(seq_len):
+
+                m_t = mels[:, i, :]
+
+                a1_t, a2_t, a3_t, a4_t = (a[:, i, :] for a in aux_split)
+
+                x = torch.cat([x, m_t, a1_t], dim=1)
+                x = self.I_line(x)
+                h1 = rnn1(x, h1)
+
+                x = x + h1
+                inp = torch.cat([x, a2_t], dim=1)
+                h2 = rnn2(inp, h2)
+
+                x = x + h2
+                x = torch.cat([x, a3_t], dim=1)
+                x = F.relu(self.fc1(x))
+
+                x = torch.cat([x, a4_t], dim=1)
+                x = F.relu(self.fc2(x))
+
+                logits = self.fc3(x)
+
+                if self.mode == "MOL":
+                    sample = sample_from_discretized_mix_logistic(
+                        logits.unsqueeze(0).transpose(1, 2)
+                    )
+                    output.append(sample.view(-1))
+                    # x = torch.FloatTensor([[sample]]).cuda()
+                    x = sample.transpose(0, 1)
+
+                elif self.mode == "RAW":
+                    posterior = F.softmax(logits, dim=1)
+                    distrib = torch.distributions.Categorical(posterior)
+
+                    sample = 2 * distrib.sample().float() / (self.n_classes - 1.0) - 1.0
+                    output.append(sample)
+                    x = sample.unsqueeze(-1)
+                else:
+                    raise RuntimeError("Unknown model mode value - ", self.mode)
+
+        output = torch.stack(output).transpose(0, 1)
+        output = output.cpu().numpy()
+        output = output.astype(np.float64)
+
+        if mu_law:
+            output = decode_mu_law(output, self.n_classes, False)
+
+        if batched:
+            output = self.xfade_and_unfold(output, overlap)
+        else:
+            output = output[0]
+
+        # Fade-out at the end to avoid signal cutting out suddenly
+        fade_out = np.linspace(1, 0, 20 * self.hop_length)
+        output = output[:wave_len]
+        output[-20 * self.hop_length :] *= fade_out
+
+        self.train()
+
+        output = output.astype(np.float32)
+
+        return output
+
+    def get_gru_cell(self, gru):
+        """Get_gru_cell."""
+        gru_cell = nn.GRUCell(gru.input_size, gru.hidden_size)
+        gru_cell.weight_hh.data = gru.weight_hh_l0.data
+        gru_cell.weight_ih.data = gru.weight_ih_l0.data
+        gru_cell.bias_hh.data = gru.bias_hh_l0.data
+        gru_cell.bias_ih.data = gru.bias_ih_l0.data
+        return gru_cell
+
+    def pad_tensor(self, x, pad, side="both"):
+        """Pad_tensor."""
+        # NB - this is just a quick method i need right now
+        # i.e., it won't generalise to other shapes/dims
+        b, t, c = x.size()
+        total = t + 2 * pad if side == "both" else t + pad
+        padded = torch.zeros(b, total, c, device=x.device)
+        if side == "before" or side == "both":
+            padded[:, pad : pad + t, :] = x
+        elif side == "after":
+            padded[:, :t, :] = x
+        return padded
+
+    def fold_with_overlap(self, x, target, overlap):
+        """Fold the tensor with overlap for quick batched inference.
+
+            Overlap will be used for crossfading in xfade_and_unfold()
+        Args:
+            x (tensor)    : Upsampled conditioning features.
+                            shape=(1, timesteps, features)
+            target (int)  : Target timesteps for each index of batch
+            overlap (int) : Timesteps for both xfade and rnn warmup
+        Return:
+            (tensor) : shape=(num_folds, target + 2 * overlap, features)
+        Details:
+            x = [[h1, h2, ... hn]]
+            Where each h is a vector of conditioning features
+            Eg: target=2, overlap=1 with x.size(1)=10
+            folded = [[h1, h2, h3, h4],
+                      [h4, h5, h6, h7],
+                      [h7, h8, h9, h10]]
+        """
+        _, total_len, features = x.size()
+
+        # Calculate variables needed
+        num_folds = (total_len - overlap) // (target + overlap)
+        extended_len = num_folds * (overlap + target) + overlap
+        remaining = total_len - extended_len
+
+        # Pad if some time steps poking out
+        if remaining != 0:
+            num_folds += 1
+            padding = target + 2 * overlap - remaining
+            x = self.pad_tensor(x, padding, side="after")
+
+        folded = torch.zeros(num_folds, target + 2 * overlap, features, device=x.device)
+
+        # Get the values for the folded tensor
+        for i in range(num_folds):
+            start = i * (target + overlap)
+            end = start + target + 2 * overlap
+            folded[i] = x[:, start:end, :]
+
+        return folded
+
+    def xfade_and_unfold(self, y, overlap):
+        """Apply a crossfade and unfolds into a 1d array.
+
+        Args:
+            y (ndarry)    : Batched sequences of audio samples
+                            shape=(num_folds, target + 2 * overlap)
+                            dtype=np.float64
+            overlap (int) : Timesteps for both xfade and rnn warmup
+
+        Return:
+            (ndarry) : audio samples in a 1d array
+                       shape=(total_len)
+                       dtype=np.float64
+
+        Details:
+            y = [[seq1],
+                 [seq2],
+                 [seq3]]
+
+            Apply a gain envelope at both ends of the sequences
+
+            y = [[seq1_in, seq1_target, seq1_out],
+                 [seq2_in, seq2_target, seq2_out],
+                 [seq3_in, seq3_target, seq3_out]]
+
+            Stagger and add up the groups of samples:
+
+            [seq1_in, seq1_target, (seq1_out + seq2_in), seq2_target, ...]
+
+        """
+        num_folds, length = y.shape
+        target = length - 2 * overlap
+        total_len = num_folds * (target + overlap) + overlap
+
+        # Need some silence for the rnn warmup
+        silence_len = overlap // 2
+        fade_len = overlap - silence_len
+        silence = np.zeros((silence_len), dtype=np.float64)
+        linear = np.ones((silence_len), dtype=np.float64)
+
+        # Equal power crossfade
+        t = np.linspace(-1, 1, fade_len, dtype=np.float64)
+        fade_in = np.sqrt(0.5 * (1 + t))
+        fade_out = np.sqrt(0.5 * (1 - t))
+
+        # Concat the silence to the fades
+        fade_in = np.concatenate([silence, fade_in])
+        fade_out = np.concatenate([linear, fade_out])
+
+        # Apply the gain to the overlap samples
+        y[:, :overlap] *= fade_in
+        y[:, -overlap:] *= fade_out
+
+        unfolded = np.zeros((total_len), dtype=np.float64)
+
+        # Loop to add up all the samples
+        for i in range(num_folds):
+            start = i * (target + overlap)
+            end = start + target + 2 * overlap
+            unfolded[start:end] += y[i]
+
+        return unfolded
+
+    def get_step(self):
+        """Get_step."""
+        return self.step.data.item()
+
+    def log(self, path, msg):
+        """Log."""
+        with open(path, "a") as f:
+            print(msg, file=f)
+
+    def load(self, path: Union[str, Path]):
+        """Load."""
+        # Use device of model params as location for loaded state
+        device = next(self.parameters()).device
+        self.load_state_dict(torch.load(path, map_location=device), strict=False)
+
+    def save(self, path: Union[str, Path]):
+        """Save."""
+        # No optimizer argument because saving a model should not include data
+        # only relevant in the training process - it should only be properties
+        # of the model itself. Let caller take care of saving optimzier state.
+        torch.save(self.state_dict(), path)
+
+    def num_params(self, print_out=True):
+        """Num_params."""
+        parameters = filter(lambda p: p.requires_grad, self.parameters())
+        parameters = sum([np.prod(p.size()) for p in parameters]) / 1_000_000
+        if print_out:
+            print("Trainable Parameters: %.3fM" % parameters)
+        return parameters
+
+    def _flatten_parameters(self):
+        """Call `flatten_parameters` on all the rnns used by the WaveRNN.
+
+        Used to improve efficiency and avoid PyTorch yelling at us.
+        """
+        [m.flatten_parameters() for m in self._to_flatten]
+
+
+def sample_from_discretized_mix_logistic(y, log_scale_min=None):
+    """Sample from discretized mixture of logistic distributions.
+
+    Args:
+        y (Tensor): B x C x T
+        log_scale_min (float): Log scale minimum value
+    Returns:
+        Tensor: sample in range of [-1, 1].
+
+    """
+    if log_scale_min is None:
+        log_scale_min = float(np.log(1e-14))
+    assert y.size(1) % 3 == 0
+    nr_mix = y.size(1) // 3
+
+    # B x T x C
+    y = y.transpose(1, 2)
+    logit_probs = y[:, :, :nr_mix]
+
+    # sample mixture indicator from softmax
+    temp = logit_probs.data.new(logit_probs.size()).uniform_(1e-5, 1.0 - 1e-5)
+    temp = logit_probs.data - torch.log(-torch.log(temp))
+    _, argmax = temp.max(dim=-1)
+
+    # (B, T) -> (B, T, nr_mix)
+    one_hot = F.one_hot(argmax, nr_mix).float()
+    # select logistic parameters
+    means = torch.sum(y[:, :, nr_mix : 2 * nr_mix] * one_hot, dim=-1)
+    log_scales = torch.clamp(
+        torch.sum(y[:, :, 2 * nr_mix : 3 * nr_mix] * one_hot, dim=-1), min=log_scale_min
+    )
+    # sample from logistic & clip to interval
+    # we don't actually round to the nearest 8bit value when sampling
+    u = means.data.new(means.size()).uniform_(1e-5, 1.0 - 1e-5)
+    x = means + torch.exp(log_scales) * (torch.log(u) - torch.log(1.0 - u))
+
+    x = torch.clamp(torch.clamp(x, min=-1.0), max=1.0)
+
+    return x
 
 
 def _test():
