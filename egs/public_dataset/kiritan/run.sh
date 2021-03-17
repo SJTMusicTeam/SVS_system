@@ -1,4 +1,4 @@
-#! /usr/bin/bash
+#!/bin/bash
 
 # Copyright 2020 RUC & Johns Hopkins University (author: Shuai Guo, Jiatong Shi)
 
@@ -74,7 +74,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   echo ===============
 
   if [ ${download_wavernn_vocoder} = True ]; then
-    ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
+    ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_train.log \
     train.py \
       -c conf/train_rnn_norm_perp.yaml \
       --model_save_dir ${expdir} \
@@ -83,7 +83,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
       --vocoder_category ${vocoder} \
       --wavernn_voc_model ${expdir}/model/wavernn/latest_weights.pyt
   else
-    ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
+    ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_train.log \
     train.py \
       -c conf/train_rnn_norm_perp.yaml \
       --model_save_dir ${expdir} \

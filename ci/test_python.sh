@@ -13,9 +13,9 @@ if ! black --check ${modules}; then
 fi
 
 # flake8
-"$(dirname $0)"/test_flake8.sh
+# "$(dirname $0)"/test_flake8.sh
 # pycodestyle
-pycodestyle -r ${modules} --show-source --show-pep8
+# pycodestyle -r ${modules} --show-source --show-pep8
 
 # TODO
 # pytest -q

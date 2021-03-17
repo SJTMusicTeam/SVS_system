@@ -473,7 +473,7 @@ def infer(args):
             mel = mel.to(device).float()
             real = real.to(device).float()
             imag = imag.to(device).float()
-            length_mask = length.unsqueeze(2)
+            length_mask = (length > 0).int().unsqueeze(2)
             length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
             length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
             length_mask = length_mask.to(device)

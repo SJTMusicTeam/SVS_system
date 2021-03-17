@@ -86,7 +86,7 @@ def Auto_save_model(
 
     else:
         sorted_dict_keys = sorted(epoch_to_save.keys(), reverse=True)
-        select_loss = sorted_dict_keys[0]  # smallest spec_loss of saved models
+        select_loss = sorted_dict_keys[0]  # biggest spec_loss of saved models
         if dev_info[save_loss_select] < select_loss:
             epoch_to_save[dev_info[save_loss_select]] = epoch
             logging.info(f"### - {save_loss_select} - ###")
