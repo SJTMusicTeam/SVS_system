@@ -37,9 +37,10 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   echo " Stage1: data preprocessing "
   echo ============================
 
-  python local/prepare_data.py ${raw_data_dir}/OFUTON_P_UTAGOE_DB/wav ${raw_data_dir}/OFUTON_P_UTAGOE_DB/lab data \
-    --label_type r --wav_extention wav
+  python local/prepare_data.py ${raw_data_dir}/OFUTON_P_UTAGOE_DB \
+    ${raw_data_dir}/OFUTON_P_UTAGOE_DB data --label_type ns
   ./local/train_dev_test_split.sh data train dev test
+
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then 
