@@ -1,4 +1,4 @@
-#! /usr/bin/bash
+#!/bin/bash
 
 # Copyright 2020 RUC (author: Shuai Guo)
 
