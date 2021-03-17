@@ -17,10 +17,11 @@ limitations under the License.
 import logging
 import numpy as np
 from SVS.model.layers.global_mvn import GlobalMVN
-from SVS.model.utils.utils import AverageMeter
+from SVS.model.network import RNN_Discriminator
 from SVS.model.utils.SVSDataset import SVSCollator
 from SVS.model.utils.SVSDataset import SVSDataset
-from SVS.model.network import RNN_Discriminator
+from SVS.model.utils.utils import AverageMeter
+
 import time
 import torch
 from torch import nn
