@@ -136,10 +136,13 @@ def process(args):
                 )
                 cmd = (
                     "ln -s "
-                    + beat_path
+                    + os.path.abspath(beat_path)
                     + " "
-                    + os.path.join(
-                        song_pitch_beat, dataset + "_" + filename[:-4] + "_beats.npy"
+                    + os.path.abspath(
+                        os.path.join(
+                            song_pitch_beat,
+                            dataset + "_" + filename[:-4] + "_beats.npy",
+                        )
                     )
                 )
                 os.system(cmd)
@@ -151,10 +154,13 @@ def process(args):
                 )
                 cmd = (
                     "ln -s "
-                    + pitch_path
+                    + os.path.abspath(pitch_path)
                     + " "
-                    + os.path.join(
-                        song_pitch_beat, dataset + "_" + filename[:-4] + "_pitch.npy"
+                    + os.path.abspath(
+                        os.path.join(
+                            song_pitch_beat,
+                            dataset + "_" + filename[:-4] + "_pitch.npy",
+                        )
                     )
                 )
                 os.system(cmd)
@@ -166,9 +172,11 @@ def process(args):
                 )
                 cmd = (
                     "ln -s "
-                    + wav_path
+                    + os.path.abspath(wav_path)
                     + " "
-                    + os.path.join(song_wav, dataset + "_" + filename[:-4] + ".wav")
+                    + os.path.abspath(
+                        os.path.join(song_wav, dataset + "_" + filename[:-4] + ".wav")
+                    )
                 )
                 os.system(cmd)
 
@@ -184,5 +192,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # process(args)
+    process(args)
     get_semitone_txt(args)
