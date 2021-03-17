@@ -2646,22 +2646,40 @@ def sample_from_discretized_mix_logistic(y, log_scale_min=None):
 
 # Music information Discriminator (spec -> singer_id , phone, semitone)
 class RNN_Discriminator(nn.Module):
+    """RNN_Discriminator."""
 
-    def __init__(self, embed_size=256, d_model=256, hidden_size=256,
-                 num_layers=2, n_specs=1025, singer_size=7, phone_size=43, simitone_size=59,
-                 dropout=0.1, bidirectional=False, device="cuda"):
+    def __init__(
+        self,
+        embed_size=256,
+        d_model=256,
+        hidden_size=256,
+        num_layers=2,
+        n_specs=1025,
+        singer_size=7,
+        phone_size=43,
+        simitone_size=59,
+        dropout=0.1,
+        bidirectional=False,
+        device="cuda",
+    ):
         """Init."""
         super().__init__()
 
-        if bidirectional == True:
+        if bidirectional:
             self.num_directions = 2
         else:
             self.num_directions = 1
-        
+
         self.linear_spec = nn.Linear(n_specs, embed_size)
-        self.spec_lstm = nn.LSTM(input_size=embed_size, hidden_size=d_model, num_layers=num_layers, batch_first=True,
-            bidirectional=bidirectional, dropout=dropout)
-        
+        self.spec_lstm = nn.LSTM(
+            input_size=embed_size,
+            hidden_size=d_model,
+            num_layers=num_layers,
+            batch_first=True,
+            bidirectional=bidirectional,
+            dropout=dropout,
+        )
+
         self.output_fc1_singer = nn.Linear(d_model * self.num_directions, hidden_size)
         self.output_fc2_singer = nn.Linear(hidden_size, singer_size)
 
@@ -2678,9 +2696,13 @@ class RNN_Discriminator(nn.Module):
     def forward(self, spec, lenght_list):
         """Forward."""
         spec_embed = F.leaky_relu(self.linear_spec(spec))
-        packed_spec_embed = nn.utils.rnn.pack_padded_sequence(spec_embed, lenght_list, batch_first=True, enforce_sorted=False)
+        packed_spec_embed = nn.utils.rnn.pack_padded_sequence(
+            spec_embed, lenght_list, batch_first=True, enforce_sorted=False
+        )
         packed_spec_out, (h0, c0) = self.spec_lstm(packed_spec_embed)
-        spec_out, _ = nn.utils.rnn.pad_packed_sequence(packed_spec_out, batch_first=True)
+        spec_out, _ = nn.utils.rnn.pad_packed_sequence(
+            packed_spec_out, batch_first=True
+        )
         #  out - (batch, seq_len, num_directions * d_model)
         #  h/c - (num_layers * num_directions, batch, d_model)
 
@@ -2694,11 +2716,11 @@ class RNN_Discriminator(nn.Module):
 
         # mean pooling
         batch_size = np.shape(spec_out)[0]
-        mean_spec_out = torch.zeros(batch_size, self.num_directions*self.d_model) 
+        mean_spec_out = torch.zeros(batch_size, self.num_directions * self.d_model)
         for i in range(batch_size):
-            tmp = spec_out[i, :lenght_list[i], :]
+            tmp = spec_out[i, : lenght_list[i], :]
             mean_spec_out[i] = torch.mean(tmp, dim=0, keepdim=True)
-        
+
         # mean_spec_out - [batch size, num_directions * self.d_model]
         mean_spec_out = mean_spec_out.to(self.device)
 
@@ -2708,10 +2730,8 @@ class RNN_Discriminator(nn.Module):
 
         return singer_out, phone_out, semitone_out
 
-        
     def _reset_parameters(self):
         """Initiate parameters in the transformer model."""
-
         for p in self.parameters():
             if p.dim() > 1:
                 xavier_uniform_(p)

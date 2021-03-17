@@ -28,7 +28,6 @@ import SVS.utils.metrics as Metrics
 import time
 import torch
 
-import logging
 # from SVS.model.layers.utterance_mvn import UtteranceMVN
 # from pathlib import Path
 # from SVS.model.network import WaveRNN
@@ -184,10 +183,7 @@ def train_one_epoch(
             mel = mel.to(device).float()
         real = real.to(device).float()
         imag = imag.to(device).float()
-        length_mask = length.unsqueeze(2)
-
-        
-
+        length_mask = (length > 0).int().unsqueeze(2)
         if mel is not None:
             length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
             length_mel_mask = length_mel_mask.to(device)
@@ -461,7 +457,7 @@ def validate(
                 mel = mel.to(device).float()
             real = real.to(device).float()
             imag = imag.to(device).float()
-            length_mask = length.unsqueeze(2)
+            length_mask = (length > 0).int().unsqueeze(2)
             if mel is not None:
                 length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
                 length_mel_mask = length_mel_mask.to(device)
@@ -665,6 +661,7 @@ def validate(
         info["mel_loss"] = mel_losses.avg
     return info
 
+
 def train_one_epoch_discriminator(
     train_loader,
     model,
@@ -674,6 +671,7 @@ def train_one_epoch_discriminator(
     epoch,
     args,
 ):
+    """train_one_epoch_discriminator."""
     singer_losses = AverageMeter()
     phone_losses = AverageMeter()
     semitone_losses = AverageMeter()
@@ -736,7 +734,7 @@ def train_one_epoch_discriminator(
             mel = mel.to(device).float()
         real = real.to(device).float()
         imag = imag.to(device).float()
-        length_mask = length.unsqueeze(2)
+        length_mask = (length > 0).int().unsqueeze(2)
         if mel is not None:
             length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
             length_mel_mask = length_mel_mask.to(device)
@@ -754,8 +752,6 @@ def train_one_epoch_discriminator(
         if args.Hz2semitone:
             pitch = semitone
 
-        spec_origin = spec.clone()
-        mel_origin = mel.clone()
         if args.normalize:
             sepc_normalizer = GlobalMVN(args.stats_file)
             mel_normalizer = GlobalMVN(args.stats_mel_file)
@@ -774,22 +770,24 @@ def train_one_epoch_discriminator(
         semitone_correct = 0
         batch_size = np.shape(spec)[0]
         for i in range(batch_size):
-            phone_i = phone[i, :len_list[i], :].view(-1)    # [valid seq len]
-            phone_out_i = phone_out[i, :len_list[i], :]     # [valid seq len, phone_size]
+            phone_i = phone[i, : len_list[i], :].view(-1)  # [valid seq len]
+            phone_out_i = phone_out[i, : len_list[i], :]  # [valid seq len, phone_size]
             phone_loss += criterion(phone_out_i, phone_i)
 
-            _, phone_predict = torch.max(phone_out_i, dim = 1)
+            _, phone_predict = torch.max(phone_out_i, dim=1)
             phone_correct += phone_predict.eq(phone_i).cpu().sum().numpy()
 
-            semitone_i = semitone[i, :len_list[i], :].view(-1)  # [valid seq len]
-            semitone_out_i = semitone_out[i, :len_list[i], :]   # [valid seq len, semitone_size]
+            semitone_i = semitone[i, : len_list[i], :].view(-1)  # [valid seq len]
+            semitone_out_i = semitone_out[
+                i, : len_list[i], :
+            ]  # [valid seq len, semitone_size]
             semitone_loss += criterion(semitone_out_i, semitone_i)
 
-            _, semitone_predict = torch.max(semitone_out_i, dim = 1)
+            _, semitone_predict = torch.max(semitone_out_i, dim=1)
             semitone_correct += semitone_predict.eq(semitone_i).cpu().sum().numpy()
-            
+
         singer_id = singer_id.view(-1)  # [batch size]
-        _, singer_predict = torch.max(singer_out, dim = 1)
+        _, singer_predict = torch.max(singer_out, dim=1)
         singer_correct = singer_predict.eq(singer_id).cpu().sum().numpy()
 
         phone_loss /= np.sum(len_list)
@@ -816,30 +814,37 @@ def train_one_epoch_discriminator(
 
         singer_count.update(singer_correct.item() / batch_size, batch_size)
         phone_count.update(phone_correct.item() / np.sum(len_list), np.sum(len_list))
-        semitone_count.update(semitone_correct.item() / np.sum(len_list), np.sum(len_list))
+        semitone_count.update(
+            semitone_correct.item() / np.sum(len_list), np.sum(len_list)
+        )
 
         if step % args.train_step_log == 0:
             end = time.time()
 
-            out_log = "step {}: loss {:.6f}, ".format(step, singer_losses.avg + phone_losses.avg + semitone_losses.avg)
-            out_log += '\t singer_loss: {:.4f} '.format(singer_losses.avg)
-            out_log += 'phone_loss: {:.4f} '.format(phone_losses.avg)
-            out_log += 'semitone_loss: {:.4f} \n'.format(semitone_losses.avg)
+            out_log = "step {}: loss {:.6f}, ".format(
+                step, singer_losses.avg + phone_losses.avg + semitone_losses.avg
+            )
+            out_log += "\t singer_loss: {:.4f} ".format(singer_losses.avg)
+            out_log += "phone_loss: {:.4f} ".format(phone_losses.avg)
+            out_log += "semitone_loss: {:.4f} \n".format(semitone_losses.avg)
 
-            out_log += '\t singer_accuracy: {:.4f}% '.format(singer_count.avg * 100)
-            out_log += 'phone_accuracy: {:.4f}% '.format(phone_count.avg * 100)
-            out_log += 'semitone_accuracy: {:.4f}% '.format(semitone_count.avg * 100)
-            
-            print("{} -- sum_time: {:.2f}s".format(out_log, (end-start)))
+            out_log += "\t singer_accuracy: {:.4f}% ".format(singer_count.avg * 100)
+            out_log += "phone_accuracy: {:.4f}% ".format(phone_count.avg * 100)
+            out_log += "semitone_accuracy: {:.4f}% ".format(semitone_count.avg * 100)
 
-    info = {"loss": singer_losses.avg + phone_losses.avg + semitone_losses.avg, 
-            "singer_loss": singer_losses.avg,
-            "phone_loss": phone_losses.avg,
-            "semitone_loss": semitone_losses.avg,
-            "singer_accuracy": singer_count.avg,
-            "phone_accuracy": phone_count.avg,
-            "semitone_accuracy": semitone_count.avg}
+            print("{} -- sum_time: {:.2f}s".format(out_log, (end - start)))
+
+    info = {
+        "loss": singer_losses.avg + phone_losses.avg + semitone_losses.avg,
+        "singer_loss": singer_losses.avg,
+        "phone_loss": phone_losses.avg,
+        "semitone_loss": semitone_losses.avg,
+        "singer_accuracy": singer_count.avg,
+        "phone_accuracy": phone_count.avg,
+        "semitone_accuracy": semitone_count.avg,
+    }
     return info
+
 
 def validate_one_epoch_discriminator(
     dev_loader,
@@ -849,6 +854,7 @@ def validate_one_epoch_discriminator(
     epoch,
     args,
 ):
+    """validate_one_epoch_discriminator."""
     singer_losses = AverageMeter()
     phone_losses = AverageMeter()
     semitone_losses = AverageMeter()
@@ -912,7 +918,7 @@ def validate_one_epoch_discriminator(
                 mel = mel.to(device).float()
             real = real.to(device).float()
             imag = imag.to(device).float()
-            length_mask = length.unsqueeze(2)
+            length_mask = (length > 0).int().unsqueeze(2)
             if mel is not None:
                 length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
                 length_mel_mask = length_mel_mask.to(device)
@@ -930,15 +936,13 @@ def validate_one_epoch_discriminator(
             if args.Hz2semitone:
                 pitch = semitone
 
-            spec_origin = spec.clone()
-            mel_origin = mel.clone()
             if args.normalize:
                 sepc_normalizer = GlobalMVN(args.stats_file)
                 mel_normalizer = GlobalMVN(args.stats_mel_file)
                 spec, _ = sepc_normalizer(spec, length)
                 mel, _ = mel_normalizer(mel, length)
 
-            len_list, _ = torch.max(length, dim=1)      # [len1, len2, len3, ...]
+            len_list, _ = torch.max(length, dim=1)  # [len1, len2, len3, ...]
             len_list = len_list.cpu().detach().numpy()
 
             singer_out, phone_out, semitone_out = model(spec, len_list)
@@ -950,22 +954,26 @@ def validate_one_epoch_discriminator(
             semitone_correct = 0
             batch_size = np.shape(spec)[0]
             for i in range(batch_size):
-                phone_i = phone[i, :len_list[i], :].view(-1)    # [valid seq len]
-                phone_out_i = phone_out[i, :len_list[i], :]     # [valid seq len, phone_size]
+                phone_i = phone[i, : len_list[i], :].view(-1)  # [valid seq len]
+                phone_out_i = phone_out[
+                    i, : len_list[i], :
+                ]  # [valid seq len, phone_size]
                 phone_loss += criterion(phone_out_i, phone_i)
 
-                _, phone_predict = torch.max(phone_out_i, dim = 1)
+                _, phone_predict = torch.max(phone_out_i, dim=1)
                 phone_correct += phone_predict.eq(phone_i).cpu().sum().numpy()
 
-                semitone_i = semitone[i, :len_list[i], :].view(-1)  # [valid seq len]
-                semitone_out_i = semitone_out[i, :len_list[i], :]   # [valid seq len, semitone_size]
+                semitone_i = semitone[i, : len_list[i], :].view(-1)  # [valid seq len]
+                semitone_out_i = semitone_out[
+                    i, : len_list[i], :
+                ]  # [valid seq len, semitone_size]
                 semitone_loss += criterion(semitone_out_i, semitone_i)
 
-                _, semitone_predict = torch.max(semitone_out_i, dim = 1)
+                _, semitone_predict = torch.max(semitone_out_i, dim=1)
                 semitone_correct += semitone_predict.eq(semitone_i).cpu().sum().numpy()
-                
+
             singer_id = singer_id.view(-1)  # [batch size]
-            _, singer_predict = torch.max(singer_out, dim = 1)
+            _, singer_predict = torch.max(singer_out, dim=1)
             singer_correct = singer_predict.eq(singer_id).cpu().sum().numpy()
 
             phone_loss /= np.sum(len_list)
@@ -978,32 +986,41 @@ def validate_one_epoch_discriminator(
             semitone_losses.update(semitone_loss.item(), np.sum(len_list))
 
             singer_count.update(singer_correct.item() / batch_size, batch_size)
-            phone_count.update(phone_correct.item() / np.sum(len_list), np.sum(len_list))
-            semitone_count.update(semitone_correct.item() / np.sum(len_list), np.sum(len_list))
+            phone_count.update(
+                phone_correct.item() / np.sum(len_list), np.sum(len_list)
+            )
+            semitone_count.update(
+                semitone_correct.item() / np.sum(len_list), np.sum(len_list)
+            )
 
             if step % args.dev_step_log == 0:
                 end = time.time()
 
-                out_log = "step {}: loss {:.6f}, ".format(step, singer_losses.avg + phone_losses.avg + semitone_losses.avg)
-                out_log += '\t singer_loss: {:.4f} '.format(singer_losses.avg)
-                out_log += 'phone_loss: {:.4f} '.format(phone_losses.avg)
-                out_log += 'semitone_loss: {:.4f} \n'.format(semitone_losses.avg)
+                out_log = "step {}: loss {:.6f}, ".format(
+                    step, singer_losses.avg + phone_losses.avg + semitone_losses.avg
+                )
+                out_log += "\t singer_loss: {:.4f} ".format(singer_losses.avg)
+                out_log += "phone_loss: {:.4f} ".format(phone_losses.avg)
+                out_log += "semitone_loss: {:.4f} \n".format(semitone_losses.avg)
 
-                out_log += '\t singer_accuracy: {:.4f}% '.format(singer_count.avg * 100)
-                out_log += 'phone_accuracy: {:.4f}% '.format(phone_count.avg * 100)
-                out_log += 'semitone_accuracy: {:.4f}% '.format(semitone_count.avg * 100)
-                
-                print("{} -- sum_time: {:.2f}s".format(out_log, (end-start)))
+                out_log += "\t singer_accuracy: {:.4f}% ".format(singer_count.avg * 100)
+                out_log += "phone_accuracy: {:.4f}% ".format(phone_count.avg * 100)
+                out_log += "semitone_accuracy: {:.4f}% ".format(
+                    semitone_count.avg * 100
+                )
 
-    info = {"loss": singer_losses.avg + phone_losses.avg + semitone_losses.avg, 
-            "singer_loss": singer_losses.avg,
-            "phone_loss": phone_losses.avg,
-            "semitone_loss": semitone_losses.avg,
-            "singer_accuracy": singer_count.avg,
-            "phone_accuracy": phone_count.avg,
-            "semitone_accuracy": semitone_count.avg}
+                print("{} -- sum_time: {:.2f}s".format(out_log, (end - start)))
+
+    info = {
+        "loss": singer_losses.avg + phone_losses.avg + semitone_losses.avg,
+        "singer_loss": singer_losses.avg,
+        "phone_loss": phone_losses.avg,
+        "semitone_loss": semitone_losses.avg,
+        "singer_accuracy": singer_count.avg,
+        "phone_accuracy": phone_count.avg,
+        "semitone_accuracy": semitone_count.avg,
+    }
     return info
-
 
 
 class AverageMeter(object):

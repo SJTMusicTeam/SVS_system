@@ -19,7 +19,7 @@ limitations under the License.
 
 import jsonargparse
 import logging
-from SVS.model.train import train
+from SVS.model.train_predictor import train_predictor
 
 if __name__ == "__main__":
     parser = jsonargparse.ArgumentParser(description="SVS training")
@@ -277,4 +277,4 @@ if __name__ == "__main__":
     logging.getLogger().setLevel(logging.INFO)
     logging.info(f"{args}")
 
-    train(args)
+    train_predictor(args)
