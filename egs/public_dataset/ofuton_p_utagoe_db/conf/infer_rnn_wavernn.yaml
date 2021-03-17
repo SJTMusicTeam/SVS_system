@@ -1,0 +1,37 @@
+# public OFUTON_P_UTAGOE_DB data
+test_align: data/alignment/test
+test_pitch: data/pitch_beat_extraction/test
+test_wav: data/wav_info/test
+
+model_file: exp/rnn/epoch_spec_loss_220.pth.tar
+prediction_path: exp/rnn/result_cbhg_epoch_43
+stats_file: exp/rnn/feats_stats.npz
+stats_mel_file: exp/rnn/feats_mel_stats.npz
+
+# gpu related
+auto_select_gpu: True
+gpu_id: 0
+
+# model related
+model_type: LSTM
+normalize: True
+perceptual_loss: 0.01
+
+hidden_size: 256
+embedding_size: 256
+num_rnn_layers: 3
+
+# feature related
+sampling_rate: 22050
+nfft: 2048
+feat_dim: 1025
+frame_length: 0.06
+frame_shift: 0.03
+
+num_frames: 500
+char_max_len: 80
+phone_size: 68
+seed: 777
+
+# stats_file: exp/GLU_Transformer/model/feats_stats.npz
+# stats_mel_file: exp/GLU_Transformer/model/feats_mel_stats.npz
