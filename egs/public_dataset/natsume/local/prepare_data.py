@@ -30,7 +30,7 @@ def same_split(alignment):
     return segments, size
 
 
-def make_segment(alignment, sil="pau"):
+def make_segment(alignment, window_size, shift_size, sil="pau"):
     segment_info = {}
     start_id = 1
     silence_start = []
@@ -57,34 +57,60 @@ def make_segment(alignment, sil="pau"):
             }
         start_id += 1
 
-    for i in range(len(silence_start) - 1):
-        if silence_end[i] - silence_start[i] > 5:
-            start = silence_end[i] - 5
+    multiple = round(window_size / shift_size)
+    if len(silence_start) - multiple + 1 <= 0:
+        if silence_end[0] - silence_start[0] > 5:
+            start = silence_end[0] - 5
         else:
-            start = silence_start[i]
-
-        if silence_end[i + 1] - silence_start[i + 1] > 5:
-            end = silence_start[i + 1] + 5
+            start = silence_start[0]
+        if silence_end[-1] - silence_start[-1] > 5:
+            end = silence_start[-1] + 5
         else:
-            end = silence_end[i + 1]
+            end = silence_end[-1]
 
         if end - start > 450:
             segments, size = same_split(alignment[start:end])
-            pre_size = 0
             for i in range(size):
                 segment_info[pack_zero(start_id)] = {
                     "alignment": segments[i],
-                    "start": start + pre_size,
+                    "start": start,
                 }
                 start_id += 1
-                pre_size += len(segments[i])
-            continue
 
         segment_info[pack_zero(start_id)] = {
             "alignment": alignment[start:end],
             "start": start,
         }
-        start_id += 1
+
+    else:
+        for i in range(len(silence_start) - multiple + 1):
+            if silence_end[i] - silence_start[i] > 5:
+                start = silence_end[i] - 5
+            else:
+                start = silence_start[i]
+
+            if silence_end[i + multiple - 1] - silence_start[i + multiple - 1] > 5:
+                end = silence_start[i + multiple - 1] + 5
+            else:
+                end = silence_end[i + multiple - 1]
+
+            if end - start > 450:
+                segments, size = same_split(alignment[start:end])
+                pre_size = 0
+                for i in range(size):
+                    segment_info[pack_zero(start_id)] = {
+                        "alignment": segments[i],
+                        "start": start + pre_size,
+                    }
+                    start_id += 1
+                    pre_size += len(segments[i])
+                continue
+
+            segment_info[pack_zero(start_id)] = {
+                "alignment": alignment[start:end],
+                "start": start,
+            }
+            start_id += 1
 
     if silence_end[-1] != len(alignment) - 1:
         if silence_end[-1] - silence_start[-1] > 5:
@@ -100,7 +126,15 @@ def make_segment(alignment, sil="pau"):
     return segment_info
 
 
-def load_label(label_file, s_type="s", sr=48000, frame_shift=0.03, sil="pau"):
+def load_label(
+    label_file,
+    s_type="s",
+    sr=48000,
+    frame_shift=0.03,
+    sil="pau",
+    window_size=60,
+    shift_size=30,
+):
     label_data = open(label_file, "r")
     label_data = label_data.read().split("\n")
     quantized_align = []
@@ -113,8 +147,8 @@ def load_label(label_file, s_type="s", sr=48000, frame_shift=0.03, sil="pau"):
             length = (float(label[1]) - float(label[0])) / frame_shift
         else:
             length = (float(label[1]) - float(label[0])) / (frame_shift * 1e7)
-        quantized_align.extend([label[-1]] * round(length))
-    segment = make_segment(quantized_align, sil=sil)
+        quantized_align.extend([label[-1].strip()] * round(length))
+    segment = make_segment(quantized_align, window_size, shift_size, sil=sil)
     return segment, list(set(quantized_align))
 
 
@@ -141,9 +175,12 @@ def process(args):
             sr=args.sr,
             frame_shift=frame_shift,
             sil=args.sil,
+            window_size=args.window_size,
+            shift_size=args.shift_size,
         )
 
         for p in phone:
+            p = p.strip()
             if p not in phone_set:
                 phone_set.append(p)
 
@@ -214,9 +251,7 @@ def process(args):
             )
 
             sf.write(
-                os.path.join(song_wav, name) + ".wav",
-                seg_signal,
-                samplerate=args.sr,
+                os.path.join(song_wav, name) + ".wav", seg_signal, samplerate=args.sr
             )
             print("saved {}".format(os.path.join(song_wav, name) + ".wav"))
         index += 1
@@ -236,7 +271,7 @@ if __name__ == "__main__":
         "--window_size", type=int, default=60, help="window size in miliseconds"
     )
     parser.add_argument(
-        "--shift_size", type=int, default=30, help="shift size in miliseconds"
+        "--shift_size", type=float, default=30, help="shift size in miliseconds"
     )
     parser.add_argument("--sr", type=int, default=48000)
     parser.add_argument("--sil", type=str, default="pau")

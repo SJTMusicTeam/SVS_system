@@ -1,0 +1,53 @@
+# db_joint data
+test_align: data/alignment/test
+test_pitch: data/pitch_beat_extraction/test
+test_wav: data/wav_info/test
+
+
+# gpu related
+auto_select_gpu: False
+gpu_id: 0
+
+# model related
+model_type: LSTM
+normalize: True
+# perceptual_loss: 0.01
+
+hidden_size: 256
+embedding_size: 256
+num_rnn_layers: 3
+
+# feature related
+sampling_rate: 22050
+nfft: 2048
+feat_dim: 1025
+frame_length: 0.05
+frame_shift: 0.0125
+
+num_frames: 500
+char_max_len: 80
+phone_size: 68
+singer_size: 10
+seed: 777
+
+double_mel_loss: False
+perceptual_loss: 1e-2
+use_asr_post: False
+n_mels: 80
+
+# vocoder parameters
+voc_rnn_dims: 512
+voc_fc_dims: 512
+voc_bits: 9
+voc_pad: 2
+# voc_upsample_factors: (5, 5, 11)
+voc_upsample_factors_0: 5
+voc_upsample_factors_1: 5
+voc_upsample_factors_2: 11
+voc_compute_dims: 128
+voc_res_out_dims: 128
+voc_res_blocks: 10
+hop_length: 275
+voc_mode: "MOL"
+wavernn_voc_model: downloads/model/wavernn/latest_weights.pyt
+

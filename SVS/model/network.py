@@ -19,6 +19,7 @@ limitations under the License.
 # import sys
 # sys.path.append("/Users/jiatongshi/projects/svs_system/SVS_system")
 
+# import logging
 import math
 import numpy as np
 from pathlib import Path
@@ -31,8 +32,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.init import xavier_uniform_
-from torchaudio.models.wavernn import UpsampleNetwork
 from typing import Union
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -285,13 +286,7 @@ class SA_Encoder(nn.Module):
     """SA_Encoder."""
 
     def __init__(
-        self,
-        phone_size,
-        embed_size,
-        hidden_size,
-        dropout,
-        num_blocks=3,
-        nheads=4,
+        self, phone_size, embed_size, hidden_size, dropout, num_blocks=3, nheads=4
     ):
         """init."""
         super(SA_Encoder, self).__init__()
@@ -407,11 +402,15 @@ class Conformer_Encoder(nn.Module):
 class Encoder_Postnet(nn.Module):
     """Encoder Postnet."""
 
-    def __init__(self, embed_size):
+    def __init__(self, embed_size, semitone_size=59, Hz2semitone=False):
         """init."""
         super(Encoder_Postnet, self).__init__()
 
-        self.fc_pitch = nn.Linear(1, embed_size)
+        self.Hz2semitone = Hz2semitone
+        if self.Hz2semitone:
+            self.emb_pitch = nn.Embedding(semitone_size, embed_size)
+        else:
+            self.fc_pitch = nn.Linear(1, embed_size)
         # Remember! embed_size must be even!!
         self.fc_pos = nn.Linear(embed_size, embed_size)
         # only 0 and 1 two possibilities
@@ -456,7 +455,10 @@ class Encoder_Postnet(nn.Module):
 
         aligner_out = self.aligner(encoder_out, align_phone, text_phone)
 
-        pitch = self.fc_pitch(pitch)
+        if self.Hz2semitone:
+            pitch = self.emb_pitch(pitch.squeeze(-1))
+        else:
+            pitch = self.fc_pitch(pitch)
         out = aligner_out + pitch
 
         beats = self.emb_beats(beats.squeeze(2))
@@ -466,6 +468,95 @@ class Encoder_Postnet(nn.Module):
         pos_out = self.fc_pos(torch.transpose(pos_encode, 0, 1))
 
         out = out + pos_out
+
+        return out
+
+
+class Encoder_Postnet_combine(nn.Module):
+    """Encoder Postnet."""
+
+    def __init__(self, embed_size, singer_size, semitone_size=59, Hz2semitone=False):
+        """init."""
+        super(Encoder_Postnet_combine, self).__init__()
+
+        self.Hz2semitone = Hz2semitone
+        if self.Hz2semitone:
+            self.emb_pitch = nn.Embedding(semitone_size, embed_size)
+        else:
+            self.fc_pitch = nn.Linear(1, embed_size)
+        # Remember! embed_size must be even!!
+        self.fc_pos = nn.Linear(embed_size, embed_size)
+        # only 0 and 1 two possibilities
+        self.emb_beats = nn.Embedding(2, embed_size)
+        self.pos = module.PositionalEncoding(embed_size)
+
+        self.emb_singer = nn.Embedding(singer_size, embed_size)
+        self.fc_out = nn.Linear(2 * embed_size, embed_size)
+
+    def aligner(self, encoder_out, align_phone, text_phone):
+        """aligner."""
+        # align_phone = [batch_size, align_phone_length]
+        # text_phone = [batch_size, text_phone_length]
+        # align_phone_length( = frame_num) > text_phone_length
+        # batch
+        align_phone = align_phone.long()
+        for i in range(align_phone.shape[0]):
+            before_text_phone = text_phone[i][0]
+            encoder_ind = 0
+            line = encoder_out[i][0].unsqueeze(0)
+            # frame
+            for j in range(1, align_phone.shape[1]):
+                if align_phone[i][j] == before_text_phone:
+                    temp = encoder_out[i][encoder_ind]
+                    line = torch.cat((line, temp.unsqueeze(0)), dim=0)
+                else:
+                    encoder_ind += 1
+                    if encoder_ind >= text_phone[i].size()[0]:
+                        break
+                    before_text_phone = text_phone[i][encoder_ind]
+                    temp = encoder_out[i][encoder_ind]
+                    line = torch.cat((line, temp.unsqueeze(0)), dim=0)
+            if i == 0:
+                out = line.unsqueeze(0)
+            else:
+                out = torch.cat((out, line.unsqueeze(0)), dim=0)
+
+        return out
+
+    def forward(self, encoder_out, align_phone, text_phone, pitch, beats, singer_vec):
+        """pitch/beats:[batch_size, frame_num]->[batch_size, frame_num，1]."""
+        # singer_vec=[        # repeat singer_id for length times
+        #     [1,1,...,1]
+        #     [0,0,...,0]
+        #     [5,5,...,5]
+        # ]
+        # batch_size = pitch.shape[0]
+        # frame_num = pitch.shape[1]
+        # embedded_dim = encoder_out.shape[2]
+
+        aligner_out = self.aligner(encoder_out, align_phone, text_phone)
+
+        if self.Hz2semitone:
+            pitch = self.emb_pitch(pitch.squeeze(-1))
+        else:
+            pitch = self.fc_pitch(pitch)
+        out = aligner_out + pitch
+
+        beats = self.emb_beats(beats.squeeze(2))
+        out = out + beats
+
+        pos_encode = self.pos(torch.transpose(aligner_out, 0, 1))
+        pos_out = self.fc_pos(torch.transpose(pos_encode, 0, 1))
+        out = out + pos_out
+
+        singer_embed = self.emb_singer(
+            singer_vec.squeeze(-1)
+        )  # [batch size, length, emb_size]
+        out = torch.cat(
+            (out, singer_embed), dim=2
+        )  # [batch size, length, 2 * emb_size]
+
+        out = F.leaky_relu(self.fc_out(out))
 
         return out
 
@@ -648,6 +739,8 @@ class GLU_TransformerSVS(nn.Module):
         n_mels=-1,
         double_mel_loss=True,
         local_gaussian=False,
+        semitone_size=59,
+        Hz2semitone=False,
         device="cuda",
     ):
         """init."""
@@ -661,7 +754,7 @@ class GLU_TransformerSVS(nn.Module):
             num_layers=1,
             glu_kernel=3,
         )
-        self.enc_postnet = Encoder_Postnet(embed_size)
+        self.enc_postnet = Encoder_Postnet(embed_size, semitone_size, Hz2semitone)
 
         self.use_mel = n_mels > 0
         if self.use_mel:
@@ -718,6 +811,100 @@ class GLU_TransformerSVS(nn.Module):
         return output, att_weight, mel_output, mel_output2
 
 
+class GLU_TransformerSVS_combine(nn.Module):
+    """Transformer Network."""
+
+    def __init__(
+        self,
+        phone_size,
+        singer_size,
+        embed_size,
+        hidden_size,
+        glu_num_layers,
+        dropout,
+        dec_num_block,
+        dec_nhead,
+        output_dim,
+        n_mels=-1,
+        double_mel_loss=True,
+        local_gaussian=False,
+        semitone_size=59,
+        Hz2semitone=False,
+        device="cuda",
+    ):
+        """init."""
+        super(GLU_TransformerSVS_combine, self).__init__()
+        self.encoder = Encoder(
+            phone_size,
+            embed_size,
+            hidden_size,
+            dropout,
+            glu_num_layers,
+            num_layers=1,
+            glu_kernel=3,
+        )
+        self.enc_postnet = Encoder_Postnet_combine(
+            embed_size, singer_size, semitone_size, Hz2semitone
+        )
+
+        self.use_mel = n_mels > 0
+        if self.use_mel:
+            self.double_mel_loss = double_mel_loss
+        else:
+            self.double_mel_loss = False
+
+        if self.use_mel:
+            self.decoder = Decoder(
+                dec_num_block,
+                embed_size,
+                n_mels,
+                dec_nhead,
+                dropout,
+                local_gaussian=local_gaussian,
+                device=device,
+            )
+            if self.double_mel_loss:
+                self.double_mel = module.PostNet(n_mels, n_mels, n_mels)
+            self.postnet = module.PostNet(n_mels, output_dim, (output_dim // 2 * 2))
+        else:
+            self.decoder = Decoder(
+                dec_num_block,
+                embed_size,
+                output_dim,
+                dec_nhead,
+                dropout,
+                local_gaussian=local_gaussian,
+                device=device,
+            )
+            self.postnet = module.PostNet(output_dim, output_dim, (output_dim // 2 * 2))
+
+    def forward(
+        self,
+        characters,
+        phone,
+        pitch,
+        beat,
+        singer_vec,
+        pos_text=True,
+        pos_char=None,
+        pos_spec=None,
+    ):
+        """forward."""
+        encoder_out, text_phone = self.encoder(characters.squeeze(2), pos=pos_char)
+        post_out = self.enc_postnet(
+            encoder_out, phone, text_phone, pitch, beat, singer_vec
+        )
+        mel_output, att_weight = self.decoder(post_out, pos=pos_spec)
+
+        if self.double_mel_loss:
+            mel_output2 = self.double_mel(mel_output)
+        else:
+            mel_output2 = mel_output
+        output = self.postnet(mel_output2)
+
+        return output, att_weight, mel_output, mel_output2
+
+
 class LSTMSVS(nn.Module):
     """LSTM singing voice synthesis model."""
 
@@ -733,8 +920,8 @@ class LSTMSVS(nn.Module):
         dropout=0.1,
         device="cuda",
         use_asr_post=False,
-        feat_dim_pw=1025,
-        vocoder_category="pyworld",
+        semitone_size=59,
+        Hz2semitone=False,
     ):
         """init."""
         super(LSTMSVS, self).__init__()
@@ -761,6 +948,7 @@ class LSTMSVS(nn.Module):
         # Remember! embed_size must be even!!
         assert embed_size % 2 == 0
         self.fc_pos = nn.Linear(d_model, d_model)
+
         self.pos_lstm = nn.LSTM(
             input_size=d_model,
             hidden_size=d_model,
@@ -770,7 +958,164 @@ class LSTMSVS(nn.Module):
             dropout=dropout,
         )
 
-        self.fc_pitch = nn.Linear(1, d_model)
+        self.Hz2semitone = Hz2semitone
+        if self.Hz2semitone:
+            self.emb_pitch = nn.Embedding(semitone_size, d_model)
+        else:
+            self.fc_pitch = nn.Linear(1, d_model)
+        self.linear_wrapper3 = nn.Linear(d_model * 2, d_model)
+        self.pitch_lstm = nn.LSTM(
+            input_size=d_model,
+            hidden_size=d_model,
+            num_layers=num_layers,
+            batch_first=True,
+            bidirectional=True,
+            dropout=dropout,
+        )
+
+        # only 0 and 1 two possibilities
+        self.emb_beats = nn.Embedding(2, d_model)
+        self.linear_wrapper4 = nn.Linear(d_model * 2, d_model)
+        self.beats_lstm = nn.LSTM(
+            input_size=d_model,
+            hidden_size=d_model,
+            num_layers=num_layers,
+            batch_first=True,
+            bidirectional=True,
+            dropout=dropout,
+        )
+
+        self.output_fc = nn.Linear(d_model * 2, d_output)
+
+        self.use_mel = n_mels > 0
+        self.n_mels = n_mels
+        if self.use_mel:
+            self.output_mel = nn.Linear(d_model * 2, n_mels)
+            self.postnet = module.PostNet(n_mels, d_output, (d_output // 2 * 2))
+
+            self.double_mel_loss = double_mel_loss
+            if self.double_mel_loss:
+                self.double_mel = module.PostNet(n_mels, n_mels, n_mels)
+        else:
+            self.output_fc = nn.Linear(d_model * 2, d_output)
+
+            self.double_mel_loss = False
+
+        self._reset_parameters()
+
+        self.use_asr_post = use_asr_post
+        self.d_model = d_model
+
+    def forward(self, phone, pitch, beats):
+        """forward."""
+        if self.use_asr_post:
+            out = self.input_fc(phone.squeeze(-1))
+        else:
+            out = self.input_embed(phone.squeeze(-1))
+        out = F.leaky_relu(out)
+        out = F.leaky_relu(self.linear_wrapper(out))
+        out, _ = self.phone_lstm(out)
+        out = F.leaky_relu(self.linear_wrapper2(out))
+
+        pos = self.pos(out)
+        # pos_encode = self.fc_pos(pos)
+        out = pos + out
+        out, _ = self.pos_lstm(out)
+        out = F.leaky_relu(self.linear_wrapper3(out))
+
+        if self.Hz2semitone:
+            pitch = F.leaky_relu(self.emb_pitch(pitch.squeeze(-1)))
+        else:
+            pitch = F.leaky_relu(self.fc_pitch(pitch))
+        out = pitch + out
+        out, _ = self.pitch_lstm(out)
+        out = F.leaky_relu(self.linear_wrapper4(out))
+
+        beats = F.leaky_relu(self.emb_beats(beats.squeeze(-1)))
+        out = beats + out
+        out, (h0, c0) = self.beats_lstm(out)
+
+        if self.use_mel:
+            mel_output = self.output_mel(out)
+            if self.double_mel_loss:
+                mel_output2 = self.double_mel(mel_output)
+            else:
+                mel_output2 = mel_output
+            output = self.postnet(mel_output2)
+            # out = self.postnet(mel)
+            return output, (h0, c0), mel_output, mel_output2
+        else:
+            out = self.output_fc(out)
+            return out, (h0, c0), None, None
+
+    def _reset_parameters(self):
+        """Initiate parameters in the transformer model."""
+        for p in self.parameters():
+            if p.dim() > 1:
+                xavier_uniform_(p)
+
+
+class LSTMSVS_combine(nn.Module):
+    """LSTM singing voice synthesis model."""
+
+    def __init__(
+        self,
+        embed_size=512,
+        d_model=512,
+        d_output=1324,
+        num_layers=2,
+        phone_size=87,
+        singer_size=10,
+        n_mels=-1,
+        double_mel_loss=True,
+        dropout=0.1,
+        device="cuda",
+        use_asr_post=False,
+        feat_dim_pw=1025,
+        vocoder_category="pyworld",
+        semitone_size=59,
+        Hz2semitone=False,
+    ):
+        """init."""
+        super(LSTMSVS_combine, self).__init__()
+
+        if use_asr_post:
+            self.input_fc = nn.Linear(phone_size - 1, d_model)
+        else:
+            self.input_embed = nn.Embedding(phone_size, embed_size)
+
+        self.emb_singer = nn.Embedding(singer_size, embed_size)
+        self.linear_wrapper = nn.Linear(2 * embed_size, d_model)
+
+        self.phone_lstm = nn.LSTM(
+            input_size=d_model,
+            hidden_size=d_model,
+            num_layers=num_layers,
+            batch_first=True,
+            bidirectional=True,
+            dropout=dropout,
+        )
+
+        self.linear_wrapper2 = nn.Linear(d_model * 2, d_model)
+
+        self.pos = module.PositionalEncoding(d_model)
+        # Remember! embed_size must be even!!
+        assert embed_size % 2 == 0
+        self.fc_pos = nn.Linear(d_model, d_model)
+        self.pos_lstm = nn.LSTM(
+            input_size=d_model,
+            hidden_size=d_model,
+            num_layers=num_layers,
+            batch_first=True,
+            bidirectional=True,
+            dropout=dropout,
+        )
+
+        self.Hz2semitone = Hz2semitone
+        if self.Hz2semitone:
+            self.emb_pitch = nn.Embedding(semitone_size, d_model)
+        else:
+            self.fc_pitch = nn.Linear(1, d_model)
         self.linear_wrapper3 = nn.Linear(d_model * 2, d_model)
         self.pitch_lstm = nn.LSTM(
             input_size=d_model,
@@ -818,12 +1163,20 @@ class LSTMSVS(nn.Module):
         self.output_fc_pw = nn.Linear(d_output, self.feat_dim_pw*2+1)
 
 
-    def forward(self, phone, pitch, beats):
+    def forward(self, phone, pitch, beats, singer_vec):
         """forward."""
         if self.use_asr_post:
             out = self.input_fc(phone.squeeze(-1))
         else:
             out = self.input_embed(phone.squeeze(-1))
+
+        singer_embed = self.emb_singer(
+            singer_vec.squeeze(-1)
+        )  # [batch size, length, emb_size]
+        out = torch.cat(
+            (out, singer_embed), dim=2
+        )  # # [batch size, length, 2 * emb_size]
+
         out = F.leaky_relu(out)
         out = F.leaky_relu(self.linear_wrapper(out))
         out, _ = self.phone_lstm(out)
@@ -834,10 +1187,15 @@ class LSTMSVS(nn.Module):
         out = pos + out
         out, _ = self.pos_lstm(out)
         out = F.leaky_relu(self.linear_wrapper3(out))
-        pitch = F.leaky_relu(self.fc_pitch(pitch))
+
+        if self.Hz2semitone:
+            pitch = F.leaky_relu(self.emb_pitch(pitch.squeeze(-1)))
+        else:
+            pitch = F.leaky_relu(self.fc_pitch(pitch))
         out = pitch + out
         out, _ = self.pitch_lstm(out)
         out = F.leaky_relu(self.linear_wrapper4(out))
+
         beats = F.leaky_relu(self.emb_beats(beats.squeeze(-1)))
         out = beats + out
         out, (h0, c0) = self.beats_lstm(out)
@@ -1093,7 +1451,7 @@ class TransformerSVS(nn.Module):
 
 
 class ConformerSVS(nn.Module):
-    """Conformer Transformer Network."""
+    """Conformer Transformer Network.(Conformer encoder + plain decoder)."""
 
     def __init__(
         self,
@@ -1126,6 +1484,8 @@ class ConformerSVS(nn.Module):
         enc_cnn_module_kernel=31,
         enc_padding_idx=-1,
         device="cuda",
+        semitone_size=59,
+        Hz2semitone=False,
     ):
         """init."""
         super(ConformerSVS, self).__init__()
@@ -1152,7 +1512,7 @@ class ConformerSVS(nn.Module):
             cnn_module_kernel=enc_cnn_module_kernel,
             padding_idx=enc_padding_idx,
         )
-        self.enc_postnet = Encoder_Postnet(embed_size)
+        self.enc_postnet = Encoder_Postnet(embed_size, semitone_size, Hz2semitone)
 
         self.use_mel = n_mels > 0
         if self.use_mel:
@@ -1259,6 +1619,8 @@ class ConformerSVS_FULL(nn.Module):
         dec_cnn_module_kernel=31,
         dec_padding_idx=-1,
         device="cuda",
+        semitone_size=59,
+        Hz2semitone=False,
     ):
         """init."""
         super(ConformerSVS_FULL, self).__init__()
@@ -1285,7 +1647,7 @@ class ConformerSVS_FULL(nn.Module):
             cnn_module_kernel=enc_cnn_module_kernel,
             padding_idx=enc_padding_idx,
         )
-        self.enc_postnet = Encoder_Postnet(embed_size)
+        self.enc_postnet = Encoder_Postnet(embed_size, semitone_size, Hz2semitone)
 
         self.decoder = Conformer_Decoder(
             embed_size,
@@ -1328,6 +1690,137 @@ class ConformerSVS_FULL(nn.Module):
             characters.squeeze(2), pos=pos_char, length=pos_spec
         )
         post_out = self.enc_postnet(encoder_out, phone, text_phone, pitch, beat)
+        mel_output = self.decoder(post_out, pos=pos_spec)
+        output = self.postnet(mel_output)
+
+        return output, None, mel_output, None
+
+
+class ConformerSVS_FULL_combine(nn.Module):
+    """Conformer Transformer Network."""
+
+    def __init__(
+        self,
+        phone_size,
+        singer_size,
+        embed_size,
+        output_dim,
+        n_mels=-1,
+        enc_attention_dim=256,
+        enc_attention_heads=4,
+        enc_linear_units=2048,
+        enc_num_blocks=6,
+        enc_dropout_rate=0.1,
+        enc_positional_dropout_rate=0.1,
+        enc_attention_dropout_rate=0.0,
+        enc_input_layer="conv2d",
+        enc_normalize_before=True,
+        enc_concat_after=False,
+        enc_positionwise_layer_type="linear",
+        enc_positionwise_conv_kernel_size=1,
+        enc_macaron_style=False,
+        enc_pos_enc_layer_type="abs_pos",
+        enc_selfattention_layer_type="selfattn",
+        enc_activation_type="swish",
+        enc_use_cnn_module=False,
+        enc_cnn_module_kernel=31,
+        enc_padding_idx=-1,
+        dec_attention_dim=256,
+        dec_attention_heads=4,
+        dec_linear_units=2048,
+        dec_num_blocks=6,
+        dec_dropout_rate=0.1,
+        dec_positional_dropout_rate=0.1,
+        dec_attention_dropout_rate=0.0,
+        dec_input_layer="conv2d",
+        dec_normalize_before=True,
+        dec_concat_after=False,
+        dec_positionwise_layer_type="linear",
+        dec_positionwise_conv_kernel_size=1,
+        dec_macaron_style=False,
+        dec_pos_enc_layer_type="abs_pos",
+        dec_selfattention_layer_type="selfattn",
+        dec_activation_type="swish",
+        dec_use_cnn_module=False,
+        dec_cnn_module_kernel=31,
+        dec_padding_idx=-1,
+        device="cuda",
+        semitone_size=59,
+        Hz2semitone=False,
+    ):
+        """init."""
+        super(ConformerSVS_FULL_combine, self).__init__()
+        self.encoder = Conformer_Encoder(
+            phone_size,
+            embed_size,
+            attention_dim=enc_attention_dim,
+            attention_heads=enc_attention_heads,
+            linear_units=enc_linear_units,
+            num_blocks=enc_num_blocks,
+            dropout_rate=enc_dropout_rate,
+            positional_dropout_rate=enc_positional_dropout_rate,
+            attention_dropout_rate=enc_attention_dropout_rate,
+            input_layer=enc_input_layer,
+            normalize_before=enc_normalize_before,
+            concat_after=enc_concat_after,
+            positionwise_layer_type=enc_positionwise_layer_type,
+            positionwise_conv_kernel_size=enc_positionwise_conv_kernel_size,
+            macaron_style=enc_macaron_style,
+            pos_enc_layer_type=enc_pos_enc_layer_type,
+            selfattention_layer_type=enc_selfattention_layer_type,
+            activation_type=enc_activation_type,
+            use_cnn_module=enc_use_cnn_module,
+            cnn_module_kernel=enc_cnn_module_kernel,
+            padding_idx=enc_padding_idx,
+        )
+        self.enc_postnet = Encoder_Postnet_combine(
+            embed_size, singer_size, semitone_size, Hz2semitone
+        )
+
+        self.decoder = Conformer_Decoder(
+            embed_size,
+            n_mels=n_mels,
+            attention_dim=dec_attention_dim,
+            attention_heads=dec_attention_heads,
+            linear_units=dec_linear_units,
+            num_blocks=dec_num_blocks,
+            dropout_rate=dec_dropout_rate,
+            positional_dropout_rate=dec_positional_dropout_rate,
+            attention_dropout_rate=dec_attention_dropout_rate,
+            input_layer=dec_input_layer,
+            normalize_before=dec_normalize_before,
+            concat_after=dec_concat_after,
+            positionwise_layer_type=dec_positionwise_layer_type,
+            positionwise_conv_kernel_size=dec_positionwise_conv_kernel_size,
+            macaron_style=dec_macaron_style,
+            pos_enc_layer_type=dec_pos_enc_layer_type,
+            selfattention_layer_type=dec_selfattention_layer_type,
+            activation_type=dec_activation_type,
+            use_cnn_module=dec_use_cnn_module,
+            cnn_module_kernel=dec_cnn_module_kernel,
+            padding_idx=dec_padding_idx,
+        )
+
+        self.postnet = module.PostNet(n_mels, output_dim, (output_dim // 2 * 2))
+
+    def forward(
+        self,
+        characters,
+        phone,
+        pitch,
+        beat,
+        singer_vec,
+        pos_text=True,
+        pos_char=None,
+        pos_spec=None,
+    ):
+        """forward."""
+        encoder_out, text_phone = self.encoder(
+            characters.squeeze(2), pos=pos_char, length=pos_spec
+        )
+        post_out = self.enc_postnet(
+            encoder_out, phone, text_phone, pitch, beat, singer_vec
+        )
         mel_output = self.decoder(post_out, pos=pos_spec)
         output = self.postnet(mel_output)
 
@@ -1415,11 +1908,7 @@ class USTC_Prenet(nn.Module):
 
         if pad_length == 1:
             x = torch.cat(
-                (
-                    x,
-                    torch.zeros(batch_size, 1, self.dim_input).to(self.device),
-                ),
-                dim=1,
+                (x, torch.zeros(batch_size, 1, self.dim_input).to(self.device)), dim=1
             )
         else:
             pad_before_length = pad_length // 2
@@ -1546,7 +2035,6 @@ class USTC_SVS(nn.Module):
         )
 
         self.fc_linear = nn.Linear(uni_d_model, output_dim)
-
         self.output_dim = output_dim
         self.uni_d_model = uni_d_model
         self.device = device
@@ -1681,8 +2169,106 @@ def decode_mu_law(y, mu, from_labels=True):
     return x
 
 
+class MelResNet(nn.Module):
+    """MelResNet."""
+
+    def __init__(self, res_blocks, in_dims, compute_dims, res_out_dims, pad):
+        """Init."""
+        super().__init__()
+        k_size = pad * 2 + 1
+        self.conv_in = nn.Conv1d(in_dims, compute_dims, kernel_size=k_size, bias=False)
+        self.batch_norm = nn.BatchNorm1d(compute_dims)
+        self.layers = nn.ModuleList()
+        for i in range(res_blocks):
+            self.layers.append(ResBlock(compute_dims))
+        self.conv_out = nn.Conv1d(compute_dims, res_out_dims, kernel_size=1)
+
+    def forward(self, x):
+        """Forward."""
+        x = self.conv_in(x)
+        x = self.batch_norm(x)
+        x = F.relu(x)
+        for f in self.layers:
+            x = f(x)
+        x = self.conv_out(x)
+        return x
+
+
+class ResBlock(nn.Module):
+    """ResBlock."""
+
+    def __init__(self, dims):
+        """Init."""
+        super().__init__()
+        self.conv1 = nn.Conv1d(dims, dims, kernel_size=1, bias=False)
+        self.conv2 = nn.Conv1d(dims, dims, kernel_size=1, bias=False)
+        self.batch_norm1 = nn.BatchNorm1d(dims)
+        self.batch_norm2 = nn.BatchNorm1d(dims)
+
+    def forward(self, x):
+        """Forward."""
+        residual = x
+        x = self.conv1(x)
+        x = self.batch_norm1(x)
+        x = F.relu(x)
+        x = self.conv2(x)
+        x = self.batch_norm2(x)
+        return x + residual
+
+
+class Stretch2d(nn.Module):
+    """Stretch2d."""
+
+    def __init__(self, x_scale, y_scale):
+        """Init."""
+        super().__init__()
+        self.x_scale = x_scale
+        self.y_scale = y_scale
+
+    def forward(self, x):
+        """Forward."""
+        b, c, h, w = x.size()
+        x = x.unsqueeze(-1).unsqueeze(3)
+        x = x.repeat(1, 1, 1, self.y_scale, 1, self.x_scale)
+        return x.view(b, c, h * self.y_scale, w * self.x_scale)
+
+
+class UpsampleNetwork(nn.Module):
+    """UpsampleNetwork."""
+
+    def __init__(
+        self, feat_dims, upsample_scales, compute_dims, res_blocks, res_out_dims, pad
+    ):
+        """Init."""
+        super().__init__()
+        total_scale = np.cumproduct(upsample_scales)[-1]
+        self.indent = pad * total_scale
+        self.resnet = MelResNet(res_blocks, feat_dims, compute_dims, res_out_dims, pad)
+        self.resnet_stretch = Stretch2d(total_scale, 1)
+        self.up_layers = nn.ModuleList()
+        for scale in upsample_scales:
+            k_size = (1, scale * 2 + 1)
+            padding = (0, scale)
+            stretch = Stretch2d(scale, 1)
+            conv = nn.Conv2d(1, 1, kernel_size=k_size, padding=padding, bias=False)
+            conv.weight.data.fill_(1.0 / k_size[1])
+            self.up_layers.append(stretch)
+            self.up_layers.append(conv)
+
+    def forward(self, m):
+        """Forward."""
+        aux = self.resnet(m).unsqueeze(1)
+        aux = self.resnet_stretch(aux)
+        aux = aux.squeeze(1)
+        m = m.unsqueeze(1)
+        for f in self.up_layers:
+            m = f(m)
+        m = m.squeeze(1)[:, :, self.indent : -self.indent]
+        return m.transpose(1, 2), aux.transpose(1, 2)
+
+
 class WaveRNN(nn.Module):
-    """Wavernn."""
+    """WaveRNN."""
 
     def __init__(
         self,
@@ -1712,7 +2298,6 @@ class WaveRNN(nn.Module):
 
         # List of rnns to call `flatten_parameters()` on
         self._to_flatten = []
-
         self.rnn_dims = rnn_dims
         self.aux_dims = res_out_dims // 4
         self.hop_length = hop_length
@@ -1721,7 +2306,7 @@ class WaveRNN(nn.Module):
         self.upsample = UpsampleNetwork(
             feat_dims, upsample_factors, compute_dims, res_blocks, res_out_dims, pad
         )
-        self.line = nn.Linear(feat_dims + self.aux_dims + 1, rnn_dims)
+        self.Ine = nn.Linear(feat_dims + self.aux_dims + 1, rnn_dims)
 
         self.rnn1 = nn.GRU(rnn_dims, rnn_dims, batch_first=True)
         self.rnn2 = nn.GRU(rnn_dims + self.aux_dims, rnn_dims, batch_first=True)
@@ -1740,7 +2325,6 @@ class WaveRNN(nn.Module):
     def forward(self, x, mels):
         """Forward."""
         device = next(self.parameters()).device  # use same device as parameters
-
         # Although we `_flatten_parameters()` on init, when using DataParallel
         # the model gets replicated, making it no longer guaranteed that the
         # weights are contiguous in GPU memory. Hence, we must call it again
@@ -1759,7 +2343,7 @@ class WaveRNN(nn.Module):
         a4 = aux[:, :, aux_idx[3] : aux_idx[4]]
 
         x = torch.cat([x.unsqueeze(-1), mels, a1], dim=2)
-        x = self.line(x)
+        x = self.Ine(x)
         res = x
         x, _ = self.rnn1(x, h1)
 
@@ -1776,7 +2360,9 @@ class WaveRNN(nn.Module):
         x = F.relu(self.fc2(x))
         return self.fc3(x)
 
-    def generate(self, mels, batched, target, overlap, mu_law):
+    def generate(
+        self, mels, save_path: Union[str, Path], batched, target, overlap, mu_law
+    ):
         """Generate."""
         self.eval()
 
@@ -1815,7 +2401,7 @@ class WaveRNN(nn.Module):
                 a1_t, a2_t, a3_t, a4_t = (a[:, i, :] for a in aux_split)
 
                 x = torch.cat([x, m_t, a1_t], dim=1)
-                x = self.I_line(x)
+                x = self.Ine(x)
                 h1 = rnn1(x, h1)
 
                 x = x + h1
@@ -1843,7 +2429,7 @@ class WaveRNN(nn.Module):
                     posterior = F.softmax(logits, dim=1)
                     distrib = torch.distributions.Categorical(posterior)
 
-                    sample = 2 * distrib.sample().float() / (self.n_classes - 1.0) - 1.0
+                    sample = 2 * distrib.sample().float() / (self.n_classes - 1.0) - 1
                     output.append(sample)
                     x = sample.unsqueeze(-1)
                 else:
@@ -1857,7 +2443,7 @@ class WaveRNN(nn.Module):
             output = decode_mu_law(output, self.n_classes, False)
 
         if batched:
-            output = self.xfade_and_unfold(output, overlap)
+            output = self.xfade_and_unfold(output, target, overlap)
         else:
             output = output[0]
 
@@ -1867,8 +2453,6 @@ class WaveRNN(nn.Module):
         output[-20 * self.hop_length :] *= fade_out
 
         self.train()
-
-        output = output.astype(np.float32)
 
         return output
 
@@ -1936,7 +2520,7 @@ class WaveRNN(nn.Module):
 
         return folded
 
-    def xfade_and_unfold(self, y, overlap):
+    def xfade_and_unfold(self, y, target, overlap):
         """Apply a crossfade and unfolds into a 1d array.
 
         Args:
@@ -1944,27 +2528,20 @@ class WaveRNN(nn.Module):
                             shape=(num_folds, target + 2 * overlap)
                             dtype=np.float64
             overlap (int) : Timesteps for both xfade and rnn warmup
-
         Return:
             (ndarry) : audio samples in a 1d array
                        shape=(total_len)
                        dtype=np.float64
-
         Details:
             y = [[seq1],
                  [seq2],
                  [seq3]]
-
             Apply a gain envelope at both ends of the sequences
-
             y = [[seq1_in, seq1_target, seq1_out],
                  [seq2_in, seq2_target, seq2_out],
                  [seq3_in, seq3_target, seq3_out]]
-
             Stagger and add up the groups of samples:
-
             [seq1_in, seq1_target, (seq1_out + seq2_in), seq2_target, ...]
-
         """
         num_folds, length = y.shape
         target = length - 2 * overlap
@@ -2045,7 +2622,6 @@ def sample_from_discretized_mix_logistic(y, log_scale_min=None):
         log_scale_min (float): Log scale minimum value
     Returns:
         Tensor: sample in range of [-1, 1].
-
     """
     if log_scale_min is None:
         log_scale_min = float(np.log(1e-14))
@@ -2076,6 +2652,99 @@ def sample_from_discretized_mix_logistic(y, log_scale_min=None):
     x = torch.clamp(torch.clamp(x, min=-1.0), max=1.0)
 
     return x
+
+
+# Music information Discriminator (spec -> singer_id , phone, semitone)
+class RNN_Discriminator(nn.Module):
+    """RNN_Discriminator."""
+
+    def __init__(
+        self,
+        embed_size=256,
+        d_model=256,
+        hidden_size=256,
+        num_layers=2,
+        n_specs=1025,
+        singer_size=7,
+        phone_size=43,
+        simitone_size=59,
+        dropout=0.1,
+        bidirectional=False,
+        device="cuda",
+    ):
+        """Init."""
+        super().__init__()
+
+        if bidirectional:
+            self.num_directions = 2
+        else:
+            self.num_directions = 1
+
+        self.linear_spec = nn.Linear(n_specs, embed_size)
+        self.spec_lstm = nn.LSTM(
+            input_size=embed_size,
+            hidden_size=d_model,
+            num_layers=num_layers,
+            batch_first=True,
+            bidirectional=bidirectional,
+            dropout=dropout,
+        )
+
+        self.output_fc1_singer = nn.Linear(d_model * self.num_directions, hidden_size)
+        self.output_fc2_singer = nn.Linear(hidden_size, singer_size)
+
+        self.output_fc1_phone = nn.Linear(d_model * self.num_directions, hidden_size)
+        self.output_fc2_phone = nn.Linear(hidden_size, phone_size)
+
+        self.output_fc1_semitone = nn.Linear(d_model * self.num_directions, hidden_size)
+        self.output_fc2_semitone = nn.Linear(hidden_size, simitone_size)
+
+        self.d_model = d_model
+        self.device = device
+        self._reset_parameters()
+
+    def forward(self, spec, lenght_list):
+        """Forward."""
+        spec_embed = F.leaky_relu(self.linear_spec(spec))
+        packed_spec_embed = nn.utils.rnn.pack_padded_sequence(
+            spec_embed, lenght_list, batch_first=True, enforce_sorted=False
+        )
+        packed_spec_out, (h0, c0) = self.spec_lstm(packed_spec_embed)
+        spec_out, _ = nn.utils.rnn.pad_packed_sequence(
+            packed_spec_out, batch_first=True
+        )
+        #  out - (batch, seq_len, num_directions * d_model)
+        #  h/c - (num_layers * num_directions, batch, d_model)
+
+        phone_out = F.leaky_relu(self.output_fc1_phone(spec_out))
+        phone_out = self.output_fc2_phone(phone_out)
+        # phone_out - [batch, seq_len, phone_size]
+
+        semitone_out = F.leaky_relu(self.output_fc1_semitone(spec_out))
+        semitone_out = self.output_fc2_semitone(semitone_out)
+        # semitone_out - [batch, seq_len, simitone_size]
+
+        # mean pooling
+        batch_size = np.shape(spec_out)[0]
+        mean_spec_out = torch.zeros(batch_size, self.num_directions * self.d_model)
+        for i in range(batch_size):
+            tmp = spec_out[i, : lenght_list[i], :]
+            mean_spec_out[i] = torch.mean(tmp, dim=0, keepdim=True)
+
+        # mean_spec_out - [batch size, num_directions * self.d_model]
+        mean_spec_out = mean_spec_out.to(self.device)
+
+        singer_out = F.leaky_relu(self.output_fc1_singer(mean_spec_out))
+        singer_out = self.output_fc2_singer(singer_out)
+        # singer_out - [batch size, singer_size]
+
+        return singer_out, phone_out, semitone_out
+
+    def _reset_parameters(self):
+        """Initiate parameters in the transformer model."""
+        for p in self.parameters():
+            if p.dim() > 1:
+                xavier_uniform_(p)
 
 
 def _test():
