@@ -59,7 +59,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 
   ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
   train.py \
-    -c conf/train_rnn_norm_perp.yaml \
+    -c conf/train_rnn_wavernn.yaml \
     --collect_stats True \
     --model_save_dir ${expdir} \
     --stats_file ${expdir}/feats_stats.npz \
@@ -75,7 +75,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   if [ ${download_wavernn_vocoder} = True ]; then
     ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_train.log \
     train.py \
-      -c conf/train_rnn_norm_perp.yaml \
+      -c conf/train_rnn_wavernn.yaml \
       --model_save_dir ${expdir} \
       --stats_file ${expdir}/feats_stats.npz \
       --stats_mel_file ${expdir}/feats_mel_stats.npz \
