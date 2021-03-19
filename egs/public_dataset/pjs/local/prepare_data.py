@@ -164,7 +164,6 @@ def load_label(
 
 
 def process(args):
-
     f0_max = 1100.0
     f0_min = 50.0
 
@@ -172,15 +171,14 @@ def process(args):
 
     hop_length = int(args.sr * frame_shift)
 
-    data_list = os.listdir(args.datadir)
-    data_list.sort()
-    lab_list = []
-    for data_dir in data_list:
-        if data_dir[:3] == "pjs":
-            data = os.listdir(os.path.join(args.datadir, data_dir))
-            for file in data:
-                if file[-4:] == ".lab":
-                    lab_list.append(os.path.join(args.datadir, data_dir + "/" + file))
+    # lab_list = os.listdir(args.labdir)
+    lab_list = [
+        os.path.join(name, name + ".lab")
+        for name in os.listdir(args.labdir)
+        if os.path.isdir(os.path.join(args.labdir, name))
+    ]
+
+    lab_list.sort()
 
     phone_set = []
     idscp = {}
@@ -190,7 +188,7 @@ def process(args):
         idscp[lab_id] = index
 
         segments, phone = load_label(
-            os.path.join(lab),
+            os.path.join(args.labdir, lab),
             s_type=args.label_type,
             sr=args.sr,
             frame_shift=frame_shift,
@@ -203,7 +201,7 @@ def process(args):
             if p not in phone_set:
                 phone_set.append(p)
 
-        wav_path = os.path.join(lab_id + "_song." + args.wav_extention)
+        wav_path = os.path.join(args.wavdir, lab_id + "_song." + args.wav_extention)
         if args.wav_extention == "raw":
             signal, osr = sf.read(
                 wav_path,
@@ -271,7 +269,9 @@ def process(args):
             )
 
             sf.write(
-                os.path.join(song_wav, name) + ".wav", seg_signal, samplerate=args.sr
+                os.path.join(song_wav, name) + ".wav",
+                seg_signal,
+                samplerate=args.sr,
             )
             print("saved {}".format(os.path.join(song_wav, name) + ".wav"))
         index += 1
@@ -284,7 +284,8 @@ def process(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("datadir", type=str, help="data directory")
+    parser.add_argument("wavdir", type=str, help="wav data directory")
+    parser.add_argument("labdir", type=str, help="label data directory")
     parser.add_argument("outdir", type=str, help="output directory")
     parser.add_argument(
         "--window_size", type=int, default=60, help="window size in miliseconds"

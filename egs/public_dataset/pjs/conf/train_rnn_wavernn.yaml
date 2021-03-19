@@ -1,4 +1,4 @@
-# public kiritan data
+# public pjs data
 train_align: data/alignment/train
 train_pitch: data/pitch_beat_extraction/train
 train_wav: data/wav_info/train
@@ -10,24 +10,24 @@ val_wav: data/wav_info/dev
 # sing_quality: conf/sing_quality.csv
 
 model_type: LSTM
-# model_save_dir: exp/2020_1_21_rnn_norm_perp/model
-# stats_file: exp/2020_1_21_rnn_norm_perp/model/feats_stats.npz
-# stats_mel_file: exp/2020_1_21_rnn_norm_perp/model/feats_mel_stats.npz
+#model_save_dir: exp/2020_1_21_rnn_norm_perp/model
+#stats_file: exp/2020_1_21_rnn_norm_perp/model/feats_stats.npz
+#stats_mel_file: exp/2020_1_21_rnn_norm_perp/model/feats_mel_stats.npz
 
 normalize: True
 double_mel_loss: False
-# perceptual_loss: 1e-2
-
+perceptual_loss: 0.01
 
 accumulation_steps: 1
-auto_select_gpu: False
+auto_select_gpu: True
 gpu_id: 0
 
-max_epochs: 150
+max_epochs: 300
 
-batchsize: 5
+batchsize: 4
 num_workers: 5
 
+resume: True
 mask_free: False
 use_asr_post: False
 sampling_rate: 22050
