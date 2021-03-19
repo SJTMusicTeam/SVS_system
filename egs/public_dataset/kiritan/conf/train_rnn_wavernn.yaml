@@ -21,7 +21,7 @@ double_mel_loss: False
 
 accumulation_steps: 1
 auto_select_gpu: False
-gpu_id: 1
+gpu_id: 0
 
 max_epochs: 150
 
