@@ -65,7 +65,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 
   ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
   train.py \
-    -c conf/train_rnn.yaml \
+    -c conf/train_rnn_wavernn.yaml \
     --collect_stats True \
     --model_save_dir ${expdir} \
     --stats_file ${expdir}/feats_stats.npz \
@@ -81,7 +81,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   if [ ${download_wavernn_vocoder} = True ]; then
     ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_train.log \
     train.py \
-      -c conf/train_rnn.yaml \
+      -c conf/train_rnn_wavernn.yaml \
       --model_save_dir ${expdir} \
       --stats_file ${expdir}/feats_stats.npz \
       --stats_mel_file ${expdir}/feats_mel_stats.npz \
@@ -106,7 +106,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
 
   if [ ${download_wavernn_vocoder} = True ]; then
     ${cuda_cmd} -gpu ${ngpu} ${expdir}/svs_infer.log \
-    infer.py -c conf/infer_rnn.yaml \
+    infer.py -c conf/infer_rnn_wavernn.yaml \
       --prediction_path ${expdir}/infer_result \
       --model_file ${expdir}/epoch_loss_96.pth.tar \
       --stats_file ${expdir}/feats_stats.npz \
