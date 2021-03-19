@@ -14,9 +14,12 @@ def pack_zero(number, length=4):
     return "0" * (length - len(number)) + number
 
 
-def same_split(alignment):
+def same_split(alignment, shift_size):
+    # threshold = 10000ms / shift_size
+    threshold = round(10000 / shift_size)
+
     size = 2
-    while len(alignment) / size > 330:
+    while len(alignment) / size > threshold:
         size += 1
     segments = []
     start = 0
@@ -58,18 +61,25 @@ def make_segment(alignment, window_size, shift_size, sil="pau"):
         start_id += 1
 
     multiple = round(window_size / shift_size)
+
+    # threshold = 13500ms / shift_size
+    threshold = round(13500 / shift_size)
+
+    # hop = 150ms / shift_size
+    hop = round(150 / shift_size)
+
     if len(silence_start) - multiple + 1 <= 0:
-        if silence_end[0] - silence_start[0] > 5:
-            start = silence_end[0] - 5
+        if silence_end[0] - silence_start[0] > hop:
+            start = silence_end[0] - hop
         else:
             start = silence_start[0]
-        if silence_end[-1] - silence_start[-1] > 5:
-            end = silence_start[-1] + 5
+        if silence_end[-1] - silence_start[-1] > hop:
+            end = silence_start[-1] + hop
         else:
             end = silence_end[-1]
 
-        if end - start > 450:
-            segments, size = same_split(alignment[start:end])
+        if end - start > threshold:
+            segments, size = same_split(alignment[start:end], shift_size)
             for i in range(size):
                 segment_info[pack_zero(start_id)] = {
                     "alignment": segments[i],
@@ -84,18 +94,18 @@ def make_segment(alignment, window_size, shift_size, sil="pau"):
 
     else:
         for i in range(len(silence_start) - multiple + 1):
-            if silence_end[i] - silence_start[i] > 5:
-                start = silence_end[i] - 5
+            if silence_end[i] - silence_start[i] > hop:
+                start = silence_end[i] - hop
             else:
                 start = silence_start[i]
 
-            if silence_end[i + multiple - 1] - silence_start[i + multiple - 1] > 5:
-                end = silence_start[i + multiple - 1] + 5
+            if silence_end[i + multiple - 1] - silence_start[i + multiple - 1] > hop:
+                end = silence_start[i + multiple - 1] + hop
             else:
                 end = silence_end[i + multiple - 1]
 
-            if end - start > 450:
-                segments, size = same_split(alignment[start:end])
+            if end - start > threshold:
+                segments, size = same_split(alignment[start:end], shift_size)
                 pre_size = 0
                 for i in range(size):
                     segment_info[pack_zero(start_id)] = {
@@ -113,10 +123,10 @@ def make_segment(alignment, window_size, shift_size, sil="pau"):
             start_id += 1
 
     if silence_end[-1] != len(alignment) - 1:
-        if silence_end[-1] - silence_start[-1] > 5:
+        if silence_end[-1] - silence_start[-1] > hop:
             segment_info[pack_zero(start_id)] = {
-                "alignment": alignment[silence_end[-1] - 5 :],
-                "start": silence_end[-1] - 5,
+                "alignment": alignment[silence_end[-1] - hop :],
+                "start": silence_end[-1] - hop,
             }
         else:
             segment_info[pack_zero(start_id)] = {
@@ -161,6 +171,7 @@ def process(args):
     hop_length = int(args.sr * frame_shift)
 
     lab_list = os.listdir(args.labdir)
+    lab_list.sort()
     phone_set = []
     idscp = {}
     index = 1
@@ -272,7 +283,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--shift_size", type=float, default=30, help="shift size in miliseconds"
     )
-    parser.add_argument("--sr", type=int, default=22050)
+    parser.add_argument("--sr", type=int, default=48000)
     parser.add_argument("--sil", type=str, default="pau")
     parser.add_argument(
         "--label_type",
