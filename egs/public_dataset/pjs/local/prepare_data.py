@@ -175,7 +175,7 @@ def process(args):
     lab_list = [
         os.path.join(name, name + ".lab")
         for name in os.listdir(args.labdir)
-        if os.path.isdir(os.path.join(args.labdir, name))
+        if os.path.isdir(os.path.join(args.labdir, name)) and name[:3] == "pjs"
     ]
 
     lab_list.sort()
@@ -293,7 +293,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--shift_size", type=float, default=30, help="shift size in miliseconds"
     )
-    parser.add_argument("--sr", type=int, default=22050)
+    parser.add_argument("--sr", type=int, default=48000)
     parser.add_argument("--sil", type=str, default="pau")
     parser.add_argument(
         "--label_type",
