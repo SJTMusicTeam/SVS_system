@@ -42,12 +42,16 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   if [ ${download_wavernn_vocoder} = True ]; then
     wget -nc https://raw.githubusercontent.com/pppku/model_zoo/main/wavernn/latest_weights.pyt -P ${expdir}/model/wavernn
     python local/prepare_data.py ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/raw ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/labels/mono data \
-      --label_type r --wav_extention raw \
+      --label_type r \
+      --wav_extention raw \
       --window_size 50 \
-      --shift_size 12.5
+      --shift_size 12.5 \
+      --sil pau sil
   else
     python local/prepare_data.py ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/raw ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/labels/mono data \
-    --label_type r --wav_extention raw
+    --label_type r \
+    --wav_extention raw \
+    --sil pau sil
   fi
   ./local/train_dev_test_split.sh data train dev test
 
