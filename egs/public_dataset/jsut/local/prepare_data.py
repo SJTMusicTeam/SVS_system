@@ -281,7 +281,7 @@ if __name__ == "__main__":
         "--shift_size", type=float, default=30, help="shift size in miliseconds"
     )
     parser.add_argument("--sr", type=int, default=48000)
-    parser.add_argument("--sil", nargs='+')
+    parser.add_argument("--sil", nargs="+")
     parser.add_argument(
         "--label_type",
         type=str,
