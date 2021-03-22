@@ -225,7 +225,7 @@ def train(args):
             align_root_path=args.train_align,
             pitch_beat_root_path=args.train_pitch,
             wav_root_path=args.train_wav,
-            pw_f0_root_path=None
+            pw_f0_root_path=None,
             pw_sp_root_path=None,
             pw_ap_root_path=None,
             vocoder_category=args.vocoder_category,
@@ -384,8 +384,6 @@ def train(args):
                     vocoder_category='pyworld',
                     Hz2semitone=args.Hz2semitone,
                     semitone_size=args.semitone_size,
-                    device=device,
-                    use_asr_post=args.use_asr_post,
                 )
             else:
                 model = LSTMSVS_combine(
@@ -402,8 +400,6 @@ def train(args):
                     use_asr_post=args.use_asr_post,
                     Hz2semitone=args.Hz2semitone,
                     semitone_size=args.semitone_size,
-                    device=device,
-                    use_asr_post=args.use_asr_post,
                 )
 
         else:

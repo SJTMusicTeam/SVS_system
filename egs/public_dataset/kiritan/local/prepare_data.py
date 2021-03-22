@@ -7,7 +7,6 @@ import numpy as np
 import os
 import pyworld as pw
 import soundfile as sf
-import pyworld as pw
 
 
 def pack_zero(number, length=4):
@@ -161,6 +160,8 @@ def process(args):
         frame_shift = 10 / 1000
     elif args.model == "TDNN":
         frame_shift = 30 / 1000
+    elif args.model == "pyworld":
+        frame_shift = pw.default_frame_period / 1000
 
     hop_length = int(args.sr * frame_shift)
 
@@ -235,7 +236,7 @@ def process(args):
 
             if args.use_pyworld_vocoder == True:
                 """extract pw_paras"""
-                pw_f0, pw_sp, pw_ap = pw.wav2world(seg_signal, args.sr, frame_period=30.0)
+                pw_f0, pw_sp, pw_ap = pw.wav2world(seg_signal.astype("double"), args.sr, frame_period=pw.default_frame_period)
                 np.save(os.path.join(pw_path_f0, name) + "_f0", np.array(pw_f0))
                 np.save(os.path.join(pw_path_sp, name) + "_sp", np.array(pw_sp))
                 np.save(os.path.join(pw_path_ap, name) + "_ap", np.array(pw_ap))
@@ -300,5 +301,6 @@ if __name__ == "__main__":
     parser.add_argument("--label_extention", type=str, default=".txt")
     parser.add_argument("--wav_extention", type=str, default="wav")
     parser.add_argument("--use_pyworld_vocoder", default=False, type=bool)
+    parser.add_argument("--model", type=str, default="pyworld", help="model type")
     args = parser.parse_args()
     process(args)

@@ -6,19 +6,19 @@
 . ./cmd.sh || exit 1;
 
 
-stage=0
-stop_stage=100
+stage=2
+stop_stage=3
 ngpu=1
 raw_data_dir=downloads
-expdir=exp/2_1_rnn_norm
-download_wavernn_vocoder=True
-vocoder=wavernn
+expdir=exp/3_18_rnn_norm
+download_wavernn_vocoder=False
+vocoder=pyworld
 
 # Set bash to 'debug' mode, it will exit on :
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
 set -e
 set -u
-set -o pipefail
+# set -o pipefail
 
 ./utils/parse_options.sh || exit 1;
 
@@ -45,7 +45,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
       --window_size 50 \
       --shift_size 12.5
   else
-    python local/prepare_data.py ${raw_data_dir}/kiritan_singing/wav ${raw_data_dir}/kiritan_singing/mono_label data
+    python local/prepare_data.py ${raw_data_dir}/kiritan_singing/wav ${raw_data_dir}/kiritan_singing/mono_label data --use_pyworld_vocoder Ture
   fi
   ./local/train_dev_test_split.sh data train dev test
 
@@ -59,7 +59,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 
   ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
   train.py \
-    -c conf/train_conformer_gnorm_perp.yaml \
+    -c conf/train_rnn_norm_perp.yaml \
     --collect_stats True \
     --model_save_dir ${expdir} \
     --stats_file ${expdir}/feats_stats.npz \

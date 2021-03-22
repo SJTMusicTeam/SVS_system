@@ -10,7 +10,7 @@ val_wav: data/wav_info/dev
 # sing_quality: conf/sing_quality.csv
 
 model_type: LSTM
-# model_save_dir: exp/2020_1_21_rnn_norm_perp/model
+model_save_dir: exp/3_18_rnn_norm/model
 # stats_file: exp/2020_1_21_rnn_norm_perp/model/feats_stats.npz
 # stats_mel_file: exp/2020_1_21_rnn_norm_perp/model/feats_mel_stats.npz
 
@@ -35,9 +35,6 @@ nfft: 2048
 feat_dim: 1025
 n_mels: 80
 
-frame_length: 0.05
-frame_shift: 0.0125
-
 hidden_size: 256
 embedding_size: 256
 num_rnn_layers: 3
@@ -51,3 +48,17 @@ seed: 777
 train_step_log: 20
 dev_step_log: 2
 
+
+frame_length: 0.06
+frame_shift: 0.03
+vocoder_category: pyworld
+train_pw_f0: data/pyworld_f0/train
+train_pw_sp: data/pyworld_sp/train
+train_pw_ap: data/pyworld_ap/train
+val_pw_f0: data/pyworld_f0/dev
+val_pw_sp: data/pyworld_sp/dev
+val_pw_ap: data/pyworld_ap/dev
+
+stats_f0_file: exp/3_18_rnn_norm/model/feats_f0_stats.npz
+stats_sp_file: exp/3_18_rnn_norm/model/feats_sp_stats.npz
+stats_ap_file: exp/3_18_rnn_norm/model/feats_ap_stats.npz

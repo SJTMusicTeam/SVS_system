@@ -852,6 +852,7 @@ def validate(
                         "spec_loss {:.4f};".format(
                             step, losses.avg, spec_losses.avg
                         )
+                    )
                 else:
                     out_log = (
                         "step {}: train_loss {:.4f}; "

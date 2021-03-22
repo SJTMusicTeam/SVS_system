@@ -720,6 +720,14 @@ class SVSDataset(Dataset):
                     np.shape(spectrogram)[0], len(phone), len(pitch), len(beat)
                 )
             )
+        print("#####################################")
+        print(len(phone))
+        print(np.shape(spectrogram)[0])
+        signal, osr = librosa.load(wav_path, sr=None)
+        if osr != 22050:
+            signal = librosa.resample(signal, osr, 22050)
+        print(len(signal))
+        print("#####################################")
         assert np.abs(len(phone) - np.shape(spectrogram)[0]) <= 15
         # for post condition
         if len(phone.shape) > 1:
