@@ -42,12 +42,16 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   if [ ${download_wavernn_vocoder} = True ]; then
     wget -nc https://raw.githubusercontent.com/pppku/model_zoo/main/wavernn/latest_weights.pyt -P ${expdir}/model/wavernn
     python local/prepare_data.py ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/raw ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/labels/mono data \
-      --label_type r --wav_extention raw \
+      --label_type r \
+      --wav_extention raw \
       --window_size 50 \
-      --shift_size 12.5
+      --shift_size 12.5 \
+      --sil pau sil
   else
     python local/prepare_data.py ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/raw ${raw_data_dir}/HTS-demo_NIT-SONG070-F001/data/labels/mono data \
-    --label_type r --wav_extention raw
+    --label_type r \
+    --wav_extention raw \
+    --sil pau sil
   fi
   ./local/train_dev_test_split.sh data train dev test
 
@@ -61,7 +65,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 
   ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
   train.py \
-    -c conf/train_rnn.yaml \
+    -c conf/train_rnn_wavernn.yaml \
     --collect_stats True \
     --model_save_dir ${expdir} \
     --stats_file ${expdir}/feats_stats.npz \
@@ -77,7 +81,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   if [ ${download_wavernn_vocoder} = True ]; then
     ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_train.log \
     train.py \
-      -c conf/train_rnn.yaml \
+      -c conf/train_rnn_wavernn.yaml \
       --gpu_id 0 \
       --model_save_dir ${expdir} \
       --stats_file ${expdir}/feats_stats.npz \
@@ -100,7 +104,7 @@ fi
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then 
   # Stage4: inference
   echo ===============
-  echo " Stage3: infer "
+  echo " Stage4: infer "
   echo ===============
 
   ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_infer.log \
@@ -108,12 +112,20 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
 
   if [ ${download_wavernn_vocoder} = True ]; then
     ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_infer.log \
-    infer.py -c conf/infer_rnn.yaml \
+    infer.py -c conf/infer_rnn_wavernn.yaml \
+      --prediction_path ${expdir}/infer_result \
+      --model_file ${expdir}/epoch_spec_loss_117.pth.tar \
+      --stats_file ${expdir}/feats_stats.npz \
+      --stats_mel_file ${expdir}/feats_mel_stats.npz \
       --vocoder_category ${vocoder} \
       --wavernn_voc_model ${expdir}/model/wavernn/latest_weights.pyt
   else
     ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_infer.log \
-    infer.py -c conf/infer_rnn.yaml
+    infer.py -c conf/infer_rnn.yaml \
+      --prediction_path ${expdir}/infer_result \
+      --model_file ${expdir}/epoch_spec_loss_117.pth.tar \
+      --stats_file ${expdir}/feats_stats.npz \
+      --stats_mel_file ${expdir}/feats_mel_stats.npz
   fi
 
 fi

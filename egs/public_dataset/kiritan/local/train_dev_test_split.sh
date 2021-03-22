@@ -19,24 +19,24 @@ test=$4
 mkdir -p ${data}/alignment/${dev}
 mkdir -p ${data}/alignment/${test}
 mkdir -p ${data}/alignment/${train}
-mv ${data}/alignment/0006* ${data}/alignment/${dev}
-mv ${data}/alignment/0042* ${data}/alignment/${test}
+mv ${data}/alignment/0011* ${data}/alignment/${dev}
+mv ${data}/alignment/0016* ${data}/alignment/${test}
 mv ${data}/alignment/00* ${data}/alignment/${train}
 
 # process pitch-beat split
 mkdir -p ${data}/pitch_beat_extraction/${dev}
 mkdir -p ${data}/pitch_beat_extraction/${test}
 mkdir -p ${data}/pitch_beat_extraction/${train}
-mv ${data}/pitch_beat_extraction/6 ${data}/pitch_beat_extraction/${dev}/
-mv ${data}/pitch_beat_extraction/42 ${data}/pitch_beat_extraction/${test}/
+mv ${data}/pitch_beat_extraction/11 ${data}/pitch_beat_extraction/${dev}/
+mv ${data}/pitch_beat_extraction/16 ${data}/pitch_beat_extraction/${test}/
 mv ${data}/pitch_beat_extraction/{1..50} ${data}/pitch_beat_extraction/${train}/
 
 # process wav split
 mkdir -p ${data}/wav_info/${dev}
 mkdir -p ${data}/wav_info/${test}
 mkdir -p ${data}/wav_info/${train}
-mv ${data}/wav_info/6 ${data}/wav_info/${dev}/
-mv ${data}/wav_info/42 ${data}/wav_info/${test}/
+mv ${data}/wav_info/11 ${data}/wav_info/${dev}/
+mv ${data}/wav_info/16 ${data}/wav_info/${test}/
 mv ${data}/wav_info/{1..50} ${data}/wav_info/${train}/
 
 # process pw_paras

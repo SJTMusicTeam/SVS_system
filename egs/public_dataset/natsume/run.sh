@@ -46,11 +46,13 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
       --label_type s \
       --wav_extention wav \
       --window_size 50 \
-      --shift_size 12.5
+      --shift_size 12.5 \
+      --sil pau sil
   else
     python3 local/prepare_data.py ${raw_data_dir}/Natsume_Singing_DB/wav ${raw_data_dir}/Natsume_Singing_DB/mono_label data \
       --label_type s \
-      --wav_extention wav
+      --wav_extention wav \
+      --sil pau sil
   fi
   ./local/train_dev_test_split.sh data train dev test
 fi
@@ -63,7 +65,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 
   ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
   train.py \
-    -c conf/train_rnn.yaml \
+    -c conf/train_rnn_wavernn.yaml \
     --collect_stats True \
     --model_save_dir ${expdir} \
     --stats_file ${expdir}/feats_stats.npz \
@@ -79,7 +81,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   if [ ${download_wavernn_vocoder} = True ]; then
     ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_train.log \
     train.py \
-      -c conf/train_rnn.yaml \
+      -c conf/train_rnn_wavernn.yaml \
       --model_save_dir ${expdir} \
       --stats_file ${expdir}/feats_stats.npz \
       --stats_mel_file ${expdir}/feats_mel_stats.npz \
@@ -104,7 +106,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
 
   if [ ${download_wavernn_vocoder} = True ]; then
     ${cuda_cmd} -gpu ${ngpu} ${expdir}/svs_infer.log \
-    infer.py -c conf/infer.yaml \
+    infer.py -c conf/infer_rnn_wavernn.yaml \
       --prediction_path ${expdir}/infer_result \
       --model_file ${expdir}/epoch_loss_102.pth.tar \
       --stats_file ${expdir}/feats_stats.npz \

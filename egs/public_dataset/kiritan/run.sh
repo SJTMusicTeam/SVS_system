@@ -43,9 +43,11 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     wget -nc https://raw.githubusercontent.com/pppku/model_zoo/main/wavernn/latest_weights.pyt -P ${expdir}/model/wavernn
     python local/prepare_data.py ${raw_data_dir}/kiritan_singing/wav ${raw_data_dir}/kiritan_singing/mono_label data \
       --window_size 50 \
-      --shift_size 12.5
+      --shift_size 12.5 \
+      --sil pau sil
   else
-    python local/prepare_data.py ${raw_data_dir}/kiritan_singing/wav ${raw_data_dir}/kiritan_singing/mono_label data --use_pyworld_vocoder Ture
+    python local/prepare_data.py ${raw_data_dir}/kiritan_singing/wav ${raw_data_dir}/kiritan_singing/mono_label data \
+      --sil pau sil --use_pyworld_vocoder Ture
   fi
   ./local/train_dev_test_split.sh data train dev test
 
@@ -59,7 +61,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 
   ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
   train.py \
-    -c conf/train_rnn_norm_perp.yaml \
+    -c conf/train_rnn_wavernn.yaml \
     --collect_stats True \
     --model_save_dir ${expdir} \
     --stats_file ${expdir}/feats_stats.npz \

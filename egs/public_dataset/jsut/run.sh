@@ -49,9 +49,11 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     wget -nc https://raw.githubusercontent.com/pppku/model_zoo/main/wavernn/latest_weights.pyt -P ${expdir}/model/wavernn
     python local/prepare_data.py ${raw_data_dir}/jsut-song_ver1/child_song/wav ${raw_data_dir}/lab_std data \
       --window_size 50 \
-      --shift_size 12.5
+      --shift_size 12.5 \
+      --sil pau sil
   else
-    python local/prepare_data.py ${raw_data_dir}/jsut-song_ver1/child_song/wav ${raw_data_dir}/lab_std data
+    python local/prepare_data.py ${raw_data_dir}/jsut-song_ver1/child_song/wav ${raw_data_dir}/lab_std data \
+      --sil pau sil
   fi
 
   ./local/train_dev_test_split.sh data train dev test
@@ -65,7 +67,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 
   ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
   train.py \
-    -c conf/train_rnn.yaml \
+    -c conf/train_rnn_wavernn.yaml \
     --collect_stats True \
     --model_save_dir ${expdir} \
     --stats_file ${expdir}/feats_stats.npz \
@@ -81,7 +83,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   if [ ${download_wavernn_vocoder} = True ]; then
     ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_train.log \
     train.py \
-      -c conf/train_rnn.yaml \
+      -c conf/train_rnn_wavernn.yaml \
       --model_save_dir ${expdir} \
       --stats_file ${expdir}/feats_stats.npz \
       --stats_mel_file ${expdir}/feats_mel_stats.npz \
@@ -106,7 +108,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
 
   if [ ${download_wavernn_vocoder} = True ]; then
     ${cuda_cmd} -gpu ${ngpu} ${expdir}/svs_infer.log \
-    infer.py -c conf/infer_rnn.yaml \
+    infer.py -c conf/infer_rnn_wavernn.yaml \
       --prediction_path ${expdir}/infer_result \
       --model_file ${expdir}/epoch_loss_96.pth.tar \
       --stats_file ${expdir}/feats_stats.npz \

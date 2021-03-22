@@ -35,6 +35,9 @@ nfft: 2048
 feat_dim: 1025
 n_mels: 80
 
+frame_length: 0.06
+frame_shift: 0.03
+
 hidden_size: 256
 embedding_size: 256
 num_rnn_layers: 3
