@@ -44,10 +44,13 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     python local/prepare_data.py ${raw_data_dir}/OFUTON_P_UTAGOE_DB ${raw_data_dir}/OFUTON_P_UTAGOE_DB data \
       --label_type r --wav_extention wav \
       --window_size 50 \
-      --shift_size 12.5
+      --shift_size 12.5 \
+      --sil pau sil
   else
       python local/prepare_data.py ${raw_data_dir}/OFUTON_P_UTAGOE_DB \
-        ${raw_data_dir}/OFUTON_P_UTAGOE_DB data --label_type ns
+        ${raw_data_dir}/OFUTON_P_UTAGOE_DB data \
+          --label_type ns \
+          --sil pau sil
   fi
   ./local/train_dev_test_split.sh data train dev test
 
