@@ -45,10 +45,12 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
       --label_type ms \
       --wav_extention wav \
       --window_size 50 \
-      --shift_size 12.5
+      --shift_size 12.5 \
+      --sil pau sil
   else
     python local/prepare_data.py ${raw_data_dir}/PJS_corpus_ver1.1 ${raw_data_dir}/PJS_corpus_ver1.1 data \
-      --label_type ns
+      --label_type ns \
+      --sil pau sil
   fi
   ./local/train_dev_test_split.sh data train dev test
 fi
@@ -61,7 +63,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 
   ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
   train.py \
-    -c conf/train_rnn_wavernn.yaml \
+    -c conf/train_rnn.yaml \
     --collect_stats True \
     --model_save_dir ${expdir} \
     --stats_file ${expdir}/feats_stats.npz \

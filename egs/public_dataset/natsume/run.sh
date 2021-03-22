@@ -46,11 +46,13 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
       --label_type s \
       --wav_extention wav \
       --window_size 50 \
-      --shift_size 12.5
+      --shift_size 12.5 \
+      --sil pau sil
   else
     python3 local/prepare_data.py ${raw_data_dir}/Natsume_Singing_DB/wav ${raw_data_dir}/Natsume_Singing_DB/mono_label data \
       --label_type s \
-      --wav_extention wav
+      --wav_extention wav \
+      --sil pau sil
   fi
   ./local/train_dev_test_split.sh data train dev test
 fi
