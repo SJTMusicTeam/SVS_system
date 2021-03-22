@@ -85,3 +85,11 @@ train_step_log: 20
 dev_step_log: 2
 seed: 777
 gpu: 1
+
+vocoder_category: "pyworld"
+train_pw_f0: data/pyworld_f0/train
+train_pw_sp: data/pyworld_sp/train
+train_pw_ap: data/pyworld_ap/train
+val_pw_f0: data/pyworld_f0/dev
+val_pw_sp: data/pyworld_sp/dev
+val_pw_ap: data/pyworld_ap/dev
