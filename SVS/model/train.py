@@ -47,6 +47,8 @@ from SVS.model.utils.utils import validate
 import sys
 import time
 import torch
+import pyworld as pw
+import soundfile
 
 
 def count_parameters(model):
@@ -161,7 +163,7 @@ def train(args):
     else:
         device = torch.device("cpu")
         logging.info("Warning: CPU is used")
-        
+
     if args.vocoder_category == "pyworld":
         train_set = SVSDataset(
             align_root_path=args.train_align,
@@ -278,6 +280,7 @@ def train(args):
             phone_shift_size=-1,
             semitone_shift=False,
         )
+
     collate_fn_svs_train = SVSCollator(
         args.num_frames,
         args.vocoder_category,
@@ -285,7 +288,7 @@ def train(args):
         args.use_asr_post,
         args.phone_size,
         args.n_mels,
-        args.feat_dim,
+        args.pw_para_dim,
         args.db_joint,
         args.random_crop,
         args.crop_min_length,
@@ -293,10 +296,12 @@ def train(args):
     )
     collate_fn_svs_val = SVSCollator(
         args.num_frames,
+        args.vocoder_category,
         args.char_max_len,
         args.use_asr_post,
         args.phone_size,
         args.n_mels,
+        args.pw_para_dim,
         args.db_joint,
         False,  # random crop
         -1,  # crop_min_length
@@ -380,8 +385,8 @@ def train(args):
                     double_mel_loss=args.double_mel_loss,
                     device=device,
                     use_asr_post=args.use_asr_post,
-                    feat_dim_pw=1025,
-                    vocoder_category='pyworld',
+                    feat_dim_pw=513,
+                    vocoder_category="pyworld",
                     Hz2semitone=args.Hz2semitone,
                     semitone_size=args.semitone_size,
                 )
@@ -417,9 +422,9 @@ def train(args):
                     semitone_size=args.semitone_size,
                     device=device,
                     use_asr_post=args.use_asr_post,
-                    feat_dim_pw=1025,
-                    vocoder_category='pyworld',
-                )                
+                    feat_dim_pw=513,
+                    vocoder_category="pyworld",
+                )
             else:
                 model = LSTMSVS(
                     phone_size=args.phone_size,
@@ -697,6 +702,7 @@ def train(args):
                 or k == "mel_normalizer.std"
             ):
                 continue
+
             if model_dict[k].size() == loading_dict[k].size():
                 state_dict_new[k] = v
             else:
@@ -760,7 +766,7 @@ def train(args):
     else:
         raise ValueError("Not Support Loss Type")
 
-    if args.perceptual_loss > 0 and args.vocoder_category != 'pyworld':
+    if args.perceptual_loss > 0 and args.vocoder_category != "pyworld":
         win_length = int(args.sampling_rate * args.frame_length)
         psd_dict, bark_num = cal_psd2bark_dict(
             fs=args.sampling_rate, win_len=win_length
@@ -834,9 +840,9 @@ def train(args):
                 train_info["loss"], train_info["spec_loss"]
             )
 
-        if args.n_mels > 0 and args.vocoder_category != 'pyworld':
+        if args.n_mels > 0 and args.vocoder_category != "pyworld":
             out_log += "mel_loss: {:.4f}, ".format(train_info["mel_loss"])
-        if args.perceptual_loss > 0 and args.vocoder_category != 'pyworld':
+        if args.perceptual_loss > 0 and args.vocoder_category != "pyworld":
             out_log += "pe_loss: {:.4f}, ".format(train_info["pe_loss"])
         logging.info("{} time: {:.2f}s".format(out_log, end_t_train - start_t_train))
 
@@ -863,7 +869,7 @@ def train(args):
             dev_log += "mcd_value: {:.4f}, ".format(dev_info["mcd_value"])
         if args.n_mels > 0 and args.vocoder_category != "pyworld":
             dev_log += "mel_loss: {:.4f}, ".format(dev_info["mel_loss"])
-        if args.perceptual_loss > 0 and args.vocoder_category != 'pyworld':
+        if args.perceptual_loss > 0 and args.vocoder_category != "pyworld":
             dev_log += "pe_loss: {:.4f}, ".format(dev_info["pe_loss"])
         logging.info("{} time: {:.2f}s".format(dev_log, end_t_dev - start_t_train))
 

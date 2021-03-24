@@ -922,6 +922,8 @@ class LSTMSVS(nn.Module):
         use_asr_post=False,
         semitone_size=59,
         Hz2semitone=False,
+        feat_dim_pw=513,
+        vocoder_category="others",
     ):
         """init."""
         super(LSTMSVS, self).__init__()
@@ -1005,6 +1007,9 @@ class LSTMSVS(nn.Module):
 
         self.use_asr_post = use_asr_post
         self.d_model = d_model
+        self.feat_dim_pw = feat_dim_pw
+        self.vocoder_category = vocoder_category
+        self.output_fc_pw = nn.Linear(d_output, self.feat_dim_pw * 2 + 1)
 
     def forward(self, phone, pitch, beats):
         """forward."""
@@ -1035,7 +1040,7 @@ class LSTMSVS(nn.Module):
         out = beats + out
         out, (h0, c0) = self.beats_lstm(out)
 
-        if self.use_mel:
+        if self.use_mel and self.vocoder_category != "pyworld":
             mel_output = self.output_mel(out)
             if self.double_mel_loss:
                 mel_output2 = self.double_mel(mel_output)
@@ -1044,6 +1049,12 @@ class LSTMSVS(nn.Module):
             output = self.postnet(mel_output2)
             # out = self.postnet(mel)
             return output, (h0, c0), mel_output, mel_output2
+
+        elif self.vocoder_category == "pyworld":
+            out = self.output_fc(out)
+            out = self.output_fc_pw(out)
+            return out, (h0, c0), None, None
+
         else:
             out = self.output_fc(out)
             return out, (h0, c0), None, None
@@ -1071,7 +1082,7 @@ class LSTMSVS_combine(nn.Module):
         dropout=0.1,
         device="cuda",
         use_asr_post=False,
-        feat_dim_pw=1025,
+        feat_dim_pw=513,
         vocoder_category="pyworld",
         semitone_size=59,
         Hz2semitone=False,
@@ -1160,8 +1171,7 @@ class LSTMSVS_combine(nn.Module):
         self.d_model = d_model
         self.feat_dim_pw = feat_dim_pw
         self.vocoder_category = vocoder_category
-        self.output_fc_pw = nn.Linear(d_output, self.feat_dim_pw*2+1)
-
+        self.output_fc_pw = nn.Linear(d_output, self.feat_dim_pw * 2 + 1)
 
     def forward(self, phone, pitch, beats, singer_vec):
         """forward."""

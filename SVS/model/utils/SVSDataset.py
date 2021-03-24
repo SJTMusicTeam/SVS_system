@@ -24,6 +24,8 @@ import random
 from SVS.model.utils.utils import melspectrogram
 import torch
 from torch.utils.data import Dataset
+import pyworld as pw
+import soundfile
 
 
 def _get_spectrograms(
@@ -311,7 +313,6 @@ class SVSCollator(object):
     def __call__(self, batch):
         """call."""
         # phone, beat, pitch, spectrogram, char, phase, mel
-
         batch_size = len(batch)
         # get spectrum dim
         spec_dim = len(batch[0]["spec"][0])
@@ -324,7 +325,7 @@ class SVSCollator(object):
             mel = np.zeros((batch_size, self.max_len, self.n_mels))
         pitch = np.zeros((batch_size, self.max_len))
         beat = np.zeros((batch_size, self.max_len))
-        if self.vocoder_category == 'pyworld':
+        if self.vocoder_category == "pyworld":
             pw_f0 = np.zeros((batch_size, self.max_len, 1))
             pw_sp = np.zeros((batch_size, self.max_len, self.pw_dim))
             pw_ap = np.zeros((batch_size, self.max_len, self.pw_dim))
@@ -364,7 +365,7 @@ class SVSCollator(object):
                         index_begin:index_end
                     ]
 
-                if self.vocoder_category == 'pyworld':
+                if self.vocoder_category == "pyworld":
                     pw_f0[i, :crop_length, :] = batch[i]["pw_f0"][index_begin:index_end]
                     pw_sp[i, :crop_length, :] = batch[i]["pw_sp"][index_begin:index_end]
                     pw_ap[i, :crop_length, :] = batch[i]["pw_ap"][index_begin:index_end]
@@ -396,6 +397,11 @@ class SVSCollator(object):
                 if self.n_mels > 0:
                     mel[i, :length] = batch[i]["mel"][:length]
 
+                if self.vocoder_category == "pyworld":
+                    pw_f0[i, :length, :] = batch[i]["pw_f0"][:length]
+                    pw_sp[i, :length, :] = batch[i]["pw_sp"][:length]
+                    pw_ap[i, :length, :] = batch[i]["pw_ap"][:length]
+
                 if self.use_asr_post:
                     phone[i, :length, :] = batch[i]["phone"][:length]
                 else:
@@ -415,10 +421,10 @@ class SVSCollator(object):
         length_mask = torch.from_numpy(length_mask).long()
         pitch = torch.from_numpy(pitch).unsqueeze(dim=-1).long()
         beat = torch.from_numpy(beat).unsqueeze(dim=-1).long()
-        if self.vocoder_category == 'pyworld':
+        if self.vocoder_category == "pyworld":
             pw_f0 = torch.from_numpy(pw_f0.astype(np.float))
-            pw_sp = torch.from_numpy(pw_f0.astype(np.float))
-            pw_ap = torch.from_numpy(pw_f0.astype(np.float))
+            pw_sp = torch.from_numpy(pw_sp.astype(np.float))
+            pw_ap = torch.from_numpy(pw_ap.astype(np.float))
         phone = torch.from_numpy(phone).unsqueeze(dim=-1).long()
 
         if not self.use_asr_post:
@@ -434,7 +440,7 @@ class SVSCollator(object):
             semitone = None
 
         if self.db_joint:
-            if self.vocoder_category == 'pyworld':
+            if self.vocoder_category == "pyworld":
                 return (
                     phone,
                     beat,
@@ -471,7 +477,7 @@ class SVSCollator(object):
                     None,
                 )
         else:
-            if self.vocoder_category == 'pyworld':
+            if self.vocoder_category == "pyworld":
                 return (
                     phone,
                     beat,
@@ -639,7 +645,7 @@ class SVSDataset(Dataset):
                     self.filename_list[i][4:-4] + "_f0.npy",
                 )
                 pw_f0 = np.load(pw_f0_path)
-                pw_f0 = pw_f0.reshape((-1,1))
+                pw_f0 = pw_f0.reshape((-1, 1))
 
                 pw_sp_path = os.path.join(
                     self.pw_sp_root_path,
@@ -683,7 +689,7 @@ class SVSDataset(Dataset):
                     self.filename_list[i][4:-4] + "_f0.npy",
                 )
                 pw_f0 = np.load(pw_f0_path)
-                pw_f0 = pw_f0.reshape((-1,1))
+                pw_f0 = pw_f0.reshape((-1, 1))
 
                 pw_sp_path = os.path.join(
                     self.pw_sp_root_path,
@@ -712,22 +718,15 @@ class SVSDataset(Dataset):
         )
 
         # length check
-        if np.abs(len(phone) - np.shape(spectrogram)[0]) > 3:
-            logging.info("error file: %s" % self.filename_list[i])
-            logging.info(
-                "spectrum_size: {}, alignment_size: {}, "
-                "pitch_size: {}, beat_size: {}".format(
-                    np.shape(spectrogram)[0], len(phone), len(pitch), len(beat)
-                )
-            )
-        print("#####################################")
-        print(len(phone))
-        print(np.shape(spectrogram)[0])
-        signal, osr = librosa.load(wav_path, sr=None)
-        if osr != 22050:
-            signal = librosa.resample(signal, osr, 22050)
-        print(len(signal))
-        print("#####################################")
+        #         if np.abs(len(phone) - np.shape(spectrogram)[0]) > 3:
+        #             logging.info("error file: %s" % self.filename_list[i])
+        #             logging.info(
+        #                 "spectrum_size: {}, alignment_size: {}, "
+        #                 "pitch_size: {}, beat_size: {}".format(
+        #                     np.shape(spectrogram)[0], len(phone), len(pitch), len(beat)
+        #                 )
+        #             )
+
         assert np.abs(len(phone) - np.shape(spectrogram)[0]) <= 15
         # for post condition
         if len(phone.shape) > 1:

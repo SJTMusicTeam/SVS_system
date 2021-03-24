@@ -164,12 +164,10 @@ def process(args):
     f0_max = 1100.0
     f0_min = 50.0
 
-    if args.model == "HMM":
-        frame_shift = 10 / 1000
-    elif args.model == "TDNN":
-        frame_shift = 30 / 1000
-    elif args.model == "pyworld":
-        frame_shift = pw.default_frame_period / 1000
+    if args.use_pyworld_vocoder == True:
+        assert args.shift_size == 5
+
+    frame_shift = args.shift_size / 1000
 
     hop_length = int(args.sr * frame_shift)
 
@@ -245,7 +243,11 @@ def process(args):
 
             if args.use_pyworld_vocoder == True:
                 """extract pw_paras"""
-                pw_f0, pw_sp, pw_ap = pw.wav2world(seg_signal.astype("double"), args.sr, frame_period=pw.default_frame_period)
+                pw_f0, pw_sp, pw_ap = pw.wav2world(
+                    seg_signal.astype("double"),
+                    args.sr,
+                    frame_period=pw.default_frame_period,
+                )
                 np.save(os.path.join(pw_path_f0, name) + "_f0", np.array(pw_f0))
                 np.save(os.path.join(pw_path_sp, name) + "_sp", np.array(pw_sp))
                 np.save(os.path.join(pw_path_ap, name) + "_ap", np.array(pw_ap))
@@ -287,6 +289,11 @@ def process(args):
             print("saved {}".format(os.path.join(song_wav, name) + ".wav"))
         index += 1
 
+    with open(os.path.join(args.outdir, "phone_set.txt"), "w") as f:
+        for p_id, p in enumerate(phone_set):
+            f.write(str(p_id) + " " + p)
+            f.write("\n")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -310,6 +317,5 @@ if __name__ == "__main__":
     parser.add_argument("--label_extention", type=str, default=".txt")
     parser.add_argument("--wav_extention", type=str, default="wav")
     parser.add_argument("--use_pyworld_vocoder", default=False, type=bool)
-    parser.add_argument("--model", type=str, default="pyworld", help="model type")
     args = parser.parse_args()
     process(args)

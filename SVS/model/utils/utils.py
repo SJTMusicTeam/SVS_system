@@ -28,6 +28,7 @@ import SVS.utils.metrics as Metrics
 import time
 import torch
 import pyworld as pw
+import logging
 
 # from SVS.model.layers.utterance_mvn import UtteranceMVN
 # from pathlib import Path
@@ -113,7 +114,6 @@ def collect_stats(train_loader, args):
                 sum_pw_sp += seq.sum(0)
                 sum_square_pw_sp += (seq ** 2).sum(0)
                 count_pw_sp += len(seq)
-
             for i, seq in enumerate(pw_ap.cpu().numpy()):
                 seq_length = torch.max(length[i])
                 seq = seq[:seq_length]
@@ -167,7 +167,10 @@ def collect_stats(train_loader, args):
         )
 
     else:
-        dirnames = [os.path.dirname(args.stats_file), os.path.dirname(args.stats_mel_file)]
+        dirnames = [
+            os.path.dirname(args.stats_file),
+            os.path.dirname(args.stats_mel_file),
+        ]
         for name in dirnames:
             if not os.path.exists(name):
                 os.makedirs(name)
@@ -277,7 +280,7 @@ def train_one_epoch(
             length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
             length_mel_mask = length_mel_mask.to(device)
         if args.vocoder_category == "pyworld":
-            length_mask_pw = length_mask.repeat(1, 1, args.feat_dim*2+1).float()
+            length_mask_pw = length_mask.repeat(1, 1, args.pw_para_dim * 2 + 1).float()
             length_mask_pw = length_mask_pw.to(device)
         length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
         length_mask = length_mask.to(device)
@@ -360,10 +363,6 @@ def train_one_epoch(
             pw_sp_origin = pw_sp.clone()
             pw_ap_origin = pw_ap.clone()
         if args.normalize:
-            sepc_normalizer = GlobalMVN(args.stats_file)
-            mel_normalizer = GlobalMVN(args.stats_mel_file)
-            output_mel_normalizer = GlobalMVN(args.stats_mel_file)
-            spec, _ = sepc_normalizer(spec, length)
             if args.vocoder_category == "pyworld":
                 pw_f0_normalizer = GlobalMVN(args.stats_f0_file)
                 pw_sp_normalizer = GlobalMVN(args.stats_sp_file)
@@ -372,9 +371,11 @@ def train_one_epoch(
                 pw_sp, _ = pw_sp_normalizer(pw_sp, length)
                 pw_ap, _ = pw_ap_normalizer(pw_ap, length)
             else:
+                sepc_normalizer = GlobalMVN(args.stats_file)
+                output_mel_normalizer = GlobalMVN(args.stats_mel_file)
+                spec, _ = sepc_normalizer(spec, length)
                 mel_normalizer = GlobalMVN(args.stats_mel_file)
                 mel, _ = mel_normalizer(mel, length)
-
 
         if args.model_type == "USTC_DAR" and args.vocoder_category != "pyworld":
             spec_loss = 0
@@ -450,30 +451,45 @@ def train_one_epoch(
                 # length_temp = np.max(length.cpu().detach().numpy()[0])
                 length_temp = length
                 output = output.cpu().detach().numpy()
-                out_pw_f0 = output[:,:,:1]
-                out_pw_ap = output[:,:,1:args.feat_dim+1]
-                out_pw_sp = output[:,:,args.feat_dim+1:args.feat_dim*2+1]
+                out_pw_f0 = output[:, :, :1]
+                out_pw_ap = output[:, :, 1 : args.pw_para_dim + 1]
+                out_pw_sp = output[
+                    :, :, args.pw_para_dim + 1 : args.pw_para_dim * 2 + 1
+                ]
                 if args.normalize and args.stats_file:
-                    # out_pw_f0 = out_pw_f0.reshape(-1)
-                    out_pw_f0 = torch.from_numpy(out_pw_f0.astype(np.float)).to(device).float()
-                    out_pw_sp = torch.from_numpy(out_pw_sp.astype(np.float)).to(device).float()
-                    out_pw_ap = torch.from_numpy(out_pw_ap.astype(np.float)).to(device).float()
-                    # print("#################################################")
-                    # print(out_pw_f0.size())
-                    # print(length_temp)
-                    # print("#################################################")
+                    out_pw_f0 = (
+                        torch.from_numpy(out_pw_f0.astype(np.float)).to(device).float()
+                    )
+                    out_pw_sp = (
+                        torch.from_numpy(out_pw_sp.astype(np.float)).to(device).float()
+                    )
+                    out_pw_ap = (
+                        torch.from_numpy(out_pw_ap.astype(np.float)).to(device).float()
+                    )
                     out_pw_f0, _ = pw_f0_normalizer.inverse(out_pw_f0, length_temp)
                     out_pw_sp, _ = pw_sp_normalizer.inverse(out_pw_sp, length_temp)
                     out_pw_ap, _ = pw_ap_normalizer.inverse(out_pw_ap, length_temp)
                     out_pw_f0 = out_pw_f0.cpu().detach().numpy()
                     out_pw_sp = out_pw_sp.cpu().detach().numpy()
                     out_pw_ap = out_pw_ap.cpu().detach().numpy()
-                    output[:,:,:1] = out_pw_f0
-                    output[:,:,1:args.feat_dim+1] = out_pw_ap
-                    output[:,:,args.feat_dim+1:args.feat_dim*2+1] = out_pw_sp
+                    output[:, :, :1] = out_pw_f0
+                    output[:, :, 1 : args.pw_para_dim + 1] = out_pw_ap
+                    output[
+                        :, :, args.pw_para_dim + 1 : args.pw_para_dim * 2 + 1
+                    ] = out_pw_sp
                     output = output[0]
-                log_figure_pw(step, output, pw_f0_origin, pw_sp_origin, pw_ap_origin, att, length, log_save_dir, args)
-                out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
+                log_figure_pw(
+                    step,
+                    output,
+                    pw_f0_origin,
+                    pw_sp_origin,
+                    pw_ap_origin,
+                    att,
+                    length,
+                    log_save_dir,
+                    args,
+                )
+                out_log = "step {}: train_loss {:.4f}; pw_loss {:.4f};".format(
                     step, losses.avg, spec_losses.avg
                 )
 
@@ -508,7 +524,7 @@ def train_one_epoch(
                 out_log = "step {}: train_loss {:.4f}; spec_loss {:.4f};".format(
                     step, losses.avg, spec_losses.avg
                 )
- 
+
             if args.perceptual_loss > 0 and args.vocoder_category != "pyworld":
                 out_log += "pe_loss {:.4f}; ".format(pe_losses.avg)
             if args.n_mels > 0 and args.vocoder_category != "pyworld":
@@ -518,6 +534,7 @@ def train_one_epoch(
             print("{} -- sum_time: {:.2f}s".format(out_log, (end - start)))
 
     info = {"loss": losses.avg, "spec_loss": spec_losses.avg}
+
     if args.perceptual_loss > 0 and args.vocoder_category != "pyworld":
         info["pe_loss"] = pe_losses.avg
     if args.n_mels > 0 and args.vocoder_category != "pyworld":
@@ -614,7 +631,9 @@ def validate(
                 length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
                 length_mel_mask = length_mel_mask.to(device)
             if args.vocoder_category == "pyworld":
-                length_mask_pw = length_mask.repeat(1, 1, args.feat_dim*2+1).float()
+                length_mask_pw = length_mask.repeat(
+                    1, 1, args.pw_para_dim * 2 + 1
+                ).float()
                 length_mask_pw = length_mask_pw.to(device)
             length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
             length_mask = length_mask.to(device)
@@ -707,7 +726,7 @@ def validate(
                     pw_ap_normalizer = GlobalMVN(args.stats_ap_file)
                     pw_f0, _ = pw_f0_normalizer(pw_f0, length)
                     pw_sp, _ = pw_sp_normalizer(pw_sp, length)
-                    pw_ap, _ = pw_ap_normalizer(pw_ap, length)  
+                    pw_ap, _ = pw_ap_normalizer(pw_ap, length)
                 else:
                     sepc_normalizer = GlobalMVN(args.stats_file)
                     mel_normalizer = GlobalMVN(args.stats_mel_file)
@@ -719,7 +738,7 @@ def validate(
                 spec_loss = 0
             elif args.vocoder_category == "pyworld":
                 label_pw = torch.cat((pw_f0, pw_ap, pw_sp), dim=2)
-                pw_loss = criterion(output, label_pw, length_mask_pw)                
+                pw_loss = criterion(output, label_pw, length_mask_pw)
                 spec_loss = pw_loss
             else:
                 spec_loss = criterion(output, spec, length_mask)
@@ -773,23 +792,33 @@ def validate(
             elif args.vocoder_category == "pyworld":
                 length_temp = length
                 output = output.cpu().detach().numpy()
-                out_pw_f0 = output[:,:,:1]
-                out_pw_ap = output[:,:,1:args.feat_dim+1]
-                out_pw_sp = output[:,:,args.feat_dim+1:args.feat_dim*2+1]
+                out_pw_f0 = output[:, :, :1]
+                out_pw_ap = output[:, :, 1 : args.pw_para_dim + 1]
+                out_pw_sp = output[
+                    :, :, args.pw_para_dim + 1 : args.pw_para_dim * 2 + 1
+                ]
                 if args.normalize and args.stats_file:
                     # out_pw_f0 = out_pw_f0.reshape(-1)
-                    out_pw_f0 = torch.from_numpy(out_pw_f0.astype(np.float)).to(device).float()
-                    out_pw_sp = torch.from_numpy(out_pw_sp.astype(np.float)).to(device).float()
-                    out_pw_ap = torch.from_numpy(out_pw_ap.astype(np.float)).to(device).float()
+                    out_pw_f0 = (
+                        torch.from_numpy(out_pw_f0.astype(np.float)).to(device).float()
+                    )
+                    out_pw_sp = (
+                        torch.from_numpy(out_pw_sp.astype(np.float)).to(device).float()
+                    )
+                    out_pw_ap = (
+                        torch.from_numpy(out_pw_ap.astype(np.float)).to(device).float()
+                    )
                     out_pw_f0, _ = pw_f0_normalizer.inverse(out_pw_f0, length_temp)
                     out_pw_sp, _ = pw_sp_normalizer.inverse(out_pw_sp, length_temp)
                     out_pw_ap, _ = pw_ap_normalizer.inverse(out_pw_ap, length_temp)
                     out_pw_f0 = out_pw_f0.cpu().detach().numpy()
                     out_pw_sp = out_pw_sp.cpu().detach().numpy()
                     out_pw_ap = out_pw_ap.cpu().detach().numpy()
-                    output[:,:,:1] = out_pw_f0
-                    output[:,:,1:args.feat_dim+1] = out_pw_ap
-                    output[:,:,args.feat_dim+1:args.feat_dim*2+1] = out_pw_sp
+                    output[:, :, :1] = out_pw_f0
+                    output[:, :, 1 : args.pw_para_dim + 1] = out_pw_ap
+                    output[
+                        :, :, args.pw_para_dim + 1 : args.pw_para_dim * 2 + 1
+                    ] = out_pw_sp
                     output = output[0]
                 mcd_value, length_sum = (
                     0,
@@ -814,7 +843,7 @@ def validate(
                     log_figure_mel(
                         step, output_mel, mel_origin, att, length, log_save_dir, args
                     )
-                elif args.vocoder_category != "pyworld":
+                elif args.vocoder_category == "pyworld":
                     log_figure_pw(
                         step,
                         output,
@@ -846,12 +875,9 @@ def validate(
                             step, output, spec_origin, att, length, log_save_dir, args
                         )
 
-                if args.vocoder_category != "pyworld":
-                    out_log = (
-                        "step {}: train_loss {:.4f}; "
-                        "spec_loss {:.4f};".format(
-                            step, losses.avg, spec_losses.avg
-                        )
+                if args.vocoder_category == "pyworld":
+                    out_log = "step {}: train_loss {:.4f}; " "pw_loss {:.4f};".format(
+                        step, losses.avg, spec_losses.avg
                     )
                 else:
                     out_log = (
@@ -1570,7 +1596,10 @@ def log_mel(step, output_mel, ori_mel, att, length, save_dir, args, voc_model):
         specshow(att[3])
         plt.savefig(os.path.join(save_dir, "{}_att.png".format(step)))
 
-def log_figure_pw(step, output, pw_f0_ture, pw_sp_ture, pw_ap_ture, att, length, save_dir, args):
+
+def log_figure_pw(
+    step, output, pw_f0_ture, pw_sp_ture, pw_ap_ture, att, length, save_dir, args
+):
     """log_figure."""
     # only get one sample from a batch
     # save wav and plot spectrogram
@@ -1581,12 +1610,12 @@ def log_figure_pw(step, output, pw_f0_ture, pw_sp_ture, pw_ap_ture, att, length,
     pw_ap_ture = pw_ap_ture.cpu().detach().numpy()[0]
     # output = output[:length]
 
-    pw_f0 = output[:length,:1]
-    pw_ap = output[:length,1:args.feat_dim+1]
-    pw_sp = output[:length,args.feat_dim+1:args.feat_dim*2+1]
-    pw_f0_ture = pw_f0_ture[:length,:]
-    pw_sp_ture = pw_sp_ture[:length,:]
-    pw_ap_ture = pw_ap_ture[:length,:]
+    pw_f0 = output[:length, :1]
+    pw_ap = output[:length, 1 : args.pw_para_dim + 1]
+    pw_sp = output[:length, args.pw_para_dim + 1 : args.pw_para_dim * 2 + 1]
+    pw_f0_ture = pw_f0_ture[:length, :]
+    pw_sp_ture = pw_sp_ture[:length, :]
+    pw_ap_ture = pw_ap_ture[:length, :]
 
     plt.subplot(1, 2, 1)
     specshow(pw_f0.T)
@@ -1612,11 +1641,23 @@ def log_figure_pw(step, output, pw_f0_ture, pw_sp_ture, pw_ap_ture, att, length,
     plt.title("ground_truth")
     plt.savefig(os.path.join(save_dir, "{}_pw_sp.png".format(step)))
 
-
     pw_f0 = pw_f0.reshape(-1)
     pw_f0_ture = pw_f0_ture.reshape(-1)
-    wav_pw = pw.synthesize(np.ascontiguousarray(pw_f0, dtype=np.double), np.ascontiguousarray(pw_sp, dtype=np.double), np.ascontiguousarray(pw_ap, dtype=np.double), args.sampling_rate, frame_period=30.0)
-    wav_true = pw.synthesize(np.ascontiguousarray(pw_f0_ture, dtype=np.double), np.ascontiguousarray(pw_sp_ture, dtype=np.double), np.ascontiguousarray(pw_ap_ture, dtype=np.double), args.sampling_rate, frame_period=30.0)
+
+    wav_pw = pw.synthesize(
+        np.ascontiguousarray(pw_f0, dtype=np.double),
+        np.ascontiguousarray(pw_sp, dtype=np.double),
+        np.ascontiguousarray(pw_ap, dtype=np.double),
+        args.sampling_rate,
+        frame_period=args.frame_shift * 1000,
+    )
+    wav_true = pw.synthesize(
+        np.ascontiguousarray(pw_f0_ture, dtype=np.double),
+        np.ascontiguousarray(pw_sp_ture, dtype=np.double),
+        np.ascontiguousarray(pw_ap_ture, dtype=np.double),
+        args.sampling_rate,
+        frame_period=args.frame_shift * 1000,
+    )
 
     if librosa.__version__ < "0.8.0":
         librosa.output.write_wav(
@@ -1645,6 +1686,7 @@ def log_figure_pw(step, output, pw_f0_ture, pw_sp_ture, pw_ap_ture, att, length,
             format="wav",
             subtype="PCM_24",
         )
+
 
 def Calculate_time(elapsed_time):
     """Calculate_time."""
