@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /usr/bin/bash
 
 # Copyright 2020 RUC (author: Shuai Guo)
 
@@ -33,7 +33,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
   echo " Stage1: data preprocessing "
   echo =============================
   mkdir -p ${raw_data_dir}
-  python local/prepare_data.py data ..
+  python local/prepare_data.py data --use_pyworld_vocoder Ture .. 
 
   if [ ${download_wavernn_vocoder} = True ]; then
     wget -nc https://raw.githubusercontent.com/pppku/model_zoo/main/wavernn/latest_weights.pyt -P ${expdir}/model/wavernn
@@ -120,4 +120,3 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   fi
 
 fi
-

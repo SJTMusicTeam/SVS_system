@@ -136,8 +136,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num_workers", default=4, type=int, help="number of cpu workers"
     )
-    parser.add_argument("--frame_length", default=0.05, type=float)
-    parser.add_argument("--frame_shift", default=0.0125, type=float)
+    parser.add_argument("--frame_length", default=0.06, type=float)
+    parser.add_argument("--frame_shift", default=0.03, type=float)
     parser.add_argument("--sampling_rate", default=22050, type=int)
     parser.add_argument("--preemphasis", default=0.97, type=float)
     parser.add_argument("--n_mels", default=80, type=int)
@@ -271,6 +271,18 @@ if __name__ == "__main__":
         type=int,
         help="how many learning_steps use lr_decay",
     )
+
+    #     parser.add_argument("--vocoder_category", type=str, help="The vocoder to be used (e.g., pyworld).")
+    parser.add_argument("--train_pw_f0", help="pyworld f0 data dir used for training.")
+    parser.add_argument("--train_pw_sp", help="pyworld sp data dir used for training.")
+    parser.add_argument("--train_pw_ap", help="pyworld ap data dir used for training.")
+    parser.add_argument("--val_pw_f0", help="pyworld f0 data dir used for validation.")
+    parser.add_argument("--val_pw_sp", help="pyworld sp data dir used for validation.")
+    parser.add_argument("--val_pw_ap", help="pyworld ap data dir used for validation.")
+    parser.add_argument("--stats_f0_file", default="", type=str)
+    parser.add_argument("--stats_sp_file", default="", type=str)
+    parser.add_argument("--stats_ap_file", default="", type=str)
+    parser.add_argument("--pw_para_dim", default=513, type=int)
 
     args = parser.parse_args()
 

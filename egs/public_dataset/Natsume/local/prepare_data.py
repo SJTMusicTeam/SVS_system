@@ -14,12 +14,9 @@ def pack_zero(number, length=4):
     return "0" * (length - len(number)) + number
 
 
-def same_split(alignment, shift_size):
-    # threshold = 10000ms / shift_size
-    threshold = round(10000 / shift_size)
-
+def same_split(alignment):
     size = 2
-    while len(alignment) / size > threshold:
+    while len(alignment) / size > 330:
         size += 1
     segments = []
     start = 0
@@ -33,15 +30,15 @@ def same_split(alignment, shift_size):
     return segments, size
 
 
-def make_segment(alignment, window_size, shift_size, sil="pau"):
+def make_segment(alignment, sil="pau"):
     segment_info = {}
     start_id = 1
     silence_start = []
     silence_end = []
     for i in range(len(alignment)):
-        if len(silence_start) == len(silence_end) and alignment[i] in sil:
+        if len(silence_start) == len(silence_end) and alignment[i] == sil:
             silence_start.append(i)
-        elif len(silence_start) != len(silence_end) and alignment[i] not in sil:
+        elif len(silence_start) != len(silence_end) and alignment[i] != sil:
             silence_end.append(i)
         else:
             continue
@@ -60,71 +57,40 @@ def make_segment(alignment, window_size, shift_size, sil="pau"):
             }
         start_id += 1
 
-    # threshold = 13500ms / shift_size
-    threshold = round(13500 / shift_size)
-
-    # hop = 150ms / shift_size
-    hop = round(150 / shift_size)
-
-    if len(silence_start) <= 1:
-        if silence_end[0] - silence_start[0] > hop:
-            start = silence_end[0] - hop
+    for i in range(len(silence_start) - 1):
+        if silence_end[i] - silence_start[i] > 5:
+            start = silence_end[i] - 5
         else:
-            start = silence_start[0]
-        if silence_end[-1] - silence_start[-1] > hop:
-            end = silence_start[-1] + hop
-        else:
-            end = silence_end[-1]
+            start = silence_start[i]
 
-        if end - start > threshold:
-            segments, size = same_split(alignment[start:end], shift_size)
+        if silence_end[i + 1] - silence_start[i + 1] > 5:
+            end = silence_start[i + 1] + 5
+        else:
+            end = silence_end[i + 1]
+
+        if end - start > 450:
+            segments, size = same_split(alignment[start:end])
+            pre_size = 0
             for i in range(size):
                 segment_info[pack_zero(start_id)] = {
                     "alignment": segments[i],
-                    "start": start,
+                    "start": start + pre_size,
                 }
                 start_id += 1
+                pre_size += len(segments[i])
+            continue
 
         segment_info[pack_zero(start_id)] = {
             "alignment": alignment[start:end],
             "start": start,
         }
-
-    else:
-        for i in range(len(silence_start) - 1):
-            if silence_end[i] - silence_start[i] > hop:
-                start = silence_end[i] - hop
-            else:
-                start = silence_start[i]
-
-            if silence_end[i + 1] - silence_start[i + 1] > hop:
-                end = silence_start[i + 1] + hop
-            else:
-                end = silence_end[i + 1]
-
-            if end - start > threshold:
-                segments, size = same_split(alignment[start:end], shift_size)
-                pre_size = 0
-                for i in range(size):
-                    segment_info[pack_zero(start_id)] = {
-                        "alignment": segments[i],
-                        "start": start + pre_size,
-                    }
-                    start_id += 1
-                    pre_size += len(segments[i])
-                continue
-
-            segment_info[pack_zero(start_id)] = {
-                "alignment": alignment[start:end],
-                "start": start,
-            }
-            start_id += 1
+        start_id += 1
 
     if silence_end[-1] != len(alignment) - 1:
-        if silence_end[-1] - silence_start[-1] > hop:
+        if silence_end[-1] - silence_start[-1] > 5:
             segment_info[pack_zero(start_id)] = {
-                "alignment": alignment[silence_end[-1] - hop :],
-                "start": silence_end[-1] - hop,
+                "alignment": alignment[silence_end[-1] - 5 :],
+                "start": silence_end[-1] - 5,
             }
         else:
             segment_info[pack_zero(start_id)] = {
@@ -134,20 +100,13 @@ def make_segment(alignment, window_size, shift_size, sil="pau"):
     return segment_info
 
 
-def load_label(
-    label_file,
-    s_type="s",
-    sr=48000,
-    frame_shift=0.03,
-    sil="pau",
-    window_size=60,
-    shift_size=30,
-):
+def load_label(label_file, s_type="s", sr=48000, frame_shift=0.03, sil="pau"):
     label_data = open(label_file, "r")
     label_data = label_data.read().split("\n")
     quantized_align = []
+    # print('-------',label_data)
     for label in label_data:
-        label = label.split(" ")
+        label = label.split("\t")
         if len(label) < 3:
             continue
         if s_type == "s":
@@ -155,7 +114,7 @@ def load_label(
         else:
             length = (float(label[1]) - float(label[0])) / (frame_shift * 1e7)
         quantized_align.extend([label[-1]] * round(length))
-    segment = make_segment(quantized_align, window_size, shift_size, sil=sil)
+    segment = make_segment(quantized_align, sil=sil)
     return segment, list(set(quantized_align))
 
 
@@ -164,15 +123,14 @@ def process(args):
     f0_max = 1100.0
     f0_min = 50.0
 
-    if args.use_pyworld_vocoder == True:
-        assert args.shift_size == 5
-
-    frame_shift = args.shift_size / 1000
+    if args.model == "HMM":
+        frame_shift = 10 / 1000
+    elif args.model == "TDNN":
+        frame_shift = 30 / 1000
 
     hop_length = int(args.sr * frame_shift)
 
     lab_list = os.listdir(args.labdir)
-    lab_list.sort()
     phone_set = []
     idscp = {}
     index = 1
@@ -186,8 +144,6 @@ def process(args):
             sr=args.sr,
             frame_shift=frame_shift,
             sil=args.sil,
-            window_size=args.window_size,
-            shift_size=args.shift_size,
         )
 
         for p in phone:
@@ -212,10 +168,6 @@ def process(args):
         song_align = os.path.join(args.outdir, "alignment")
         song_wav = os.path.join(args.outdir, "wav_info", str(index))
         song_pitch_beat = os.path.join(args.outdir, "pitch_beat_extraction", str(index))
-        if args.use_pyworld_vocoder == True:
-            pw_path_f0 = os.path.join(args.outdir, "pyworld_f0", str(index))
-            pw_path_sp = os.path.join(args.outdir, "pyworld_sp", str(index))
-            pw_path_ap = os.path.join(args.outdir, "pyworld_ap", str(index))
 
         if not os.path.exists(song_align):
             os.makedirs(song_align)
@@ -223,13 +175,6 @@ def process(args):
             os.makedirs(song_wav)
         if not os.path.exists(song_pitch_beat):
             os.makedirs(song_pitch_beat)
-        if args.use_pyworld_vocoder == True:
-            if not os.path.exists(pw_path_f0):
-                os.makedirs(pw_path_f0)
-            if not os.path.exists(pw_path_sp):
-                os.makedirs(pw_path_sp)
-            if not os.path.exists(pw_path_ap):
-                os.makedirs(pw_path_ap)
         print("processing {}".format(song_wav))
         for seg in segments.keys():
             alignment = segments[seg]["alignment"]
@@ -240,18 +185,6 @@ def process(args):
                     start * hop_length + len(alignment) * hop_length
                 )
             ]
-
-            if args.use_pyworld_vocoder == True:
-                """extract pw_paras"""
-                pw_f0, pw_sp, pw_ap = pw.wav2world(
-                    seg_signal.astype("double"),
-                    args.sr,
-                    frame_period=pw.default_frame_period,
-                )
-                np.save(os.path.join(pw_path_f0, name) + "_f0", np.array(pw_f0))
-                np.save(os.path.join(pw_path_sp, name) + "_sp", np.array(pw_sp))
-                np.save(os.path.join(pw_path_ap, name) + "_ap", np.array(pw_ap))
-
             """extract beats"""
             tempo, beats = librosa.beat.beat_track(
                 y=seg_signal, sr=args.sr, hop_length=hop_length
@@ -284,15 +217,12 @@ def process(args):
             )
 
             sf.write(
-                os.path.join(song_wav, name) + ".wav", seg_signal, samplerate=args.sr
+                os.path.join(song_wav, name) + ".wav",
+                seg_signal,
+                samplerate=args.sr,
             )
             print("saved {}".format(os.path.join(song_wav, name) + ".wav"))
         index += 1
-
-    with open(os.path.join(args.outdir, "phone_set.txt"), "w") as f:
-        for p_id, p in enumerate(phone_set):
-            f.write(str(p_id) + " " + p)
-            f.write("\n")
 
 
 if __name__ == "__main__":
@@ -300,14 +230,9 @@ if __name__ == "__main__":
     parser.add_argument("wavdir", type=str, help="wav data directory")
     parser.add_argument("labdir", type=str, help="label data directory")
     parser.add_argument("outdir", type=str, help="output directory")
-    parser.add_argument(
-        "--window_size", type=int, default=60, help="window size in miliseconds"
-    )
-    parser.add_argument(
-        "--shift_size", type=float, default=30, help="shift size in miliseconds"
-    )
+    parser.add_argument("--model", type=str, default="TDNN", help="model type")
     parser.add_argument("--sr", type=int, default=48000)
-    parser.add_argument("--sil", nargs="+")
+    parser.add_argument("--sil", type=str, default="pau")
     parser.add_argument(
         "--label_type",
         type=str,
@@ -316,6 +241,5 @@ if __name__ == "__main__":
     )
     parser.add_argument("--label_extention", type=str, default=".txt")
     parser.add_argument("--wav_extention", type=str, default="wav")
-    parser.add_argument("--use_pyworld_vocoder", default=False, type=bool)
     args = parser.parse_args()
     process(args)

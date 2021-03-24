@@ -24,6 +24,8 @@ import random
 from SVS.model.utils.utils import melspectrogram
 import torch
 from torch.utils.data import Dataset
+import pyworld as pw
+import soundfile
 
 
 def _get_spectrograms(
@@ -281,10 +283,12 @@ class SVSCollator(object):
     def __init__(
         self,
         max_len,
+        vocoder_category,
         char_max_len=80,
         use_asr_post=False,
         phone_size=68,
         n_mels=80,
+        pw_dim=1025,
         db_joint=False,
         random_crop=False,
         crop_min_length=100,
@@ -297,6 +301,8 @@ class SVSCollator(object):
         self.use_asr_post = use_asr_post
         self.phone_size = phone_size - 1
         self.n_mels = n_mels
+        self.pw_dim = pw_dim
+        self.vocoder_category = vocoder_category
         self.db_joint = db_joint
         self.random_crop = random_crop
         self.crop_min_length = crop_min_length
@@ -307,11 +313,11 @@ class SVSCollator(object):
     def __call__(self, batch):
         """call."""
         # phone, beat, pitch, spectrogram, char, phase, mel
-
         batch_size = len(batch)
         # get spectrum dim
         spec_dim = len(batch[0]["spec"][0])
         len_list = [len(batch[i]["phone"]) for i in range(batch_size)]
+        len_pw = [len(batch[i]["pw_f0"]) for i in range(batch_size)]
         spec = np.zeros((batch_size, self.max_len, spec_dim))
         real = np.zeros((batch_size, self.max_len, spec_dim))
         imag = np.zeros((batch_size, self.max_len, spec_dim))
@@ -319,6 +325,10 @@ class SVSCollator(object):
             mel = np.zeros((batch_size, self.max_len, self.n_mels))
         pitch = np.zeros((batch_size, self.max_len))
         beat = np.zeros((batch_size, self.max_len))
+        if self.vocoder_category == "pyworld":
+            pw_f0 = np.zeros((batch_size, self.max_len, 1))
+            pw_sp = np.zeros((batch_size, self.max_len, self.pw_dim))
+            pw_ap = np.zeros((batch_size, self.max_len, self.pw_dim))
         length_mask = np.zeros((batch_size, self.max_len))
         semitone = np.zeros((batch_size, self.max_len))
 
@@ -355,6 +365,11 @@ class SVSCollator(object):
                         index_begin:index_end
                     ]
 
+                if self.vocoder_category == "pyworld":
+                    pw_f0[i, :crop_length, :] = batch[i]["pw_f0"][index_begin:index_end]
+                    pw_sp[i, :crop_length, :] = batch[i]["pw_sp"][index_begin:index_end]
+                    pw_ap[i, :crop_length, :] = batch[i]["pw_ap"][index_begin:index_end]
+
                 if self.n_mels > 0:
                     mel[i, :crop_length, :] = batch[i]["mel"][index_begin:index_end]
 
@@ -382,6 +397,11 @@ class SVSCollator(object):
                 if self.n_mels > 0:
                     mel[i, :length] = batch[i]["mel"][:length]
 
+                if self.vocoder_category == "pyworld":
+                    pw_f0[i, :length, :] = batch[i]["pw_f0"][:length]
+                    pw_sp[i, :length, :] = batch[i]["pw_sp"][:length]
+                    pw_ap[i, :length, :] = batch[i]["pw_ap"][:length]
+
                 if self.use_asr_post:
                     phone[i, :length, :] = batch[i]["phone"][:length]
                 else:
@@ -401,6 +421,10 @@ class SVSCollator(object):
         length_mask = torch.from_numpy(length_mask).long()
         pitch = torch.from_numpy(pitch).unsqueeze(dim=-1).long()
         beat = torch.from_numpy(beat).unsqueeze(dim=-1).long()
+        if self.vocoder_category == "pyworld":
+            pw_f0 = torch.from_numpy(pw_f0.astype(np.float))
+            pw_sp = torch.from_numpy(pw_sp.astype(np.float))
+            pw_ap = torch.from_numpy(pw_ap.astype(np.float))
         phone = torch.from_numpy(phone).unsqueeze(dim=-1).long()
 
         if not self.use_asr_post:
@@ -416,34 +440,77 @@ class SVSCollator(object):
             semitone = None
 
         if self.db_joint:
-            return (
-                phone,
-                beat,
-                pitch,
-                spec,
-                real,
-                imag,
-                length_mask,
-                chars,
-                char_len_mask,
-                mel,
-                singer_id,
-                semitone,
-            )
+            if self.vocoder_category == "pyworld":
+                return (
+                    phone,
+                    beat,
+                    pitch,
+                    spec,
+                    real,
+                    imag,
+                    length_mask,
+                    chars,
+                    char_len_mask,
+                    mel,
+                    singer_id,
+                    semitone,
+                    pw_f0,
+                    pw_sp,
+                    pw_ap,
+                )
+            else:
+                return (
+                    phone,
+                    beat,
+                    pitch,
+                    spec,
+                    real,
+                    imag,
+                    length_mask,
+                    chars,
+                    char_len_mask,
+                    mel,
+                    singer_id,
+                    semitone,
+                    None,
+                    None,
+                    None,
+                )
         else:
-            return (
-                phone,
-                beat,
-                pitch,
-                spec,
-                real,
-                imag,
-                length_mask,
-                chars,
-                char_len_mask,
-                mel,
-                semitone,
-            )
+            if self.vocoder_category == "pyworld":
+                return (
+                    phone,
+                    beat,
+                    pitch,
+                    spec,
+                    real,
+                    imag,
+                    length_mask,
+                    chars,
+                    char_len_mask,
+                    mel,
+                    semitone,
+                    pw_f0,
+                    pw_sp,
+                    pw_ap,
+                )
+            else:
+                return (
+                    phone,
+                    beat,
+                    pitch,
+                    spec,
+                    real,
+                    imag,
+                    length_mask,
+                    chars,
+                    char_len_mask,
+                    mel,
+                    semitone,
+                    None,
+                    None,
+                    None,
+                )
 
 
 class SVSDataset(Dataset):
@@ -454,6 +521,10 @@ class SVSDataset(Dataset):
         align_root_path,
         pitch_beat_root_path,
         wav_root_path,
+        pw_f0_root_path,
+        pw_sp_root_path,
+        pw_ap_root_path,
+        vocoder_category,
         char_max_len=80,
         max_len=500,
         sr=44100,
@@ -478,6 +549,9 @@ class SVSDataset(Dataset):
         self.align_root_path = align_root_path
         self.pitch_beat_root_path = pitch_beat_root_path
         self.wav_root_path = wav_root_path
+        self.pw_f0_root_path = pw_f0_root_path
+        self.pw_sp_root_path = pw_sp_root_path
+        self.pw_ap_root_path = pw_ap_root_path
         self.char_max_len = char_max_len
         self.max_len = max_len
         self.sr = sr
@@ -489,6 +563,7 @@ class SVSDataset(Dataset):
         self.power = power
         self.max_db = max_db
         self.ref_db = ref_db
+        self.vocoder_category = vocoder_category
         self.db_joint = db_joint
         self.Hz2semitone = Hz2semitone
         self.phone_shift_size = phone_shift_size
@@ -563,6 +638,28 @@ class SVSDataset(Dataset):
             wav_path = os.path.join(
                 self.wav_root_path, self.filename_list[i][:-4] + ".wav"
             )
+            if self.vocoder_category == "pyworld":
+                pw_f0_path = os.path.join(
+                    self.pw_f0_root_path,
+                    str(int(self.filename_list[i][1:4])),
+                    self.filename_list[i][4:-4] + "_f0.npy",
+                )
+                pw_f0 = np.load(pw_f0_path)
+                pw_f0 = pw_f0.reshape((-1, 1))
+
+                pw_sp_path = os.path.join(
+                    self.pw_sp_root_path,
+                    str(int(self.filename_list[i][1:4])),
+                    self.filename_list[i][4:-4] + "_sp.npy",
+                )
+                pw_sp = np.load(pw_sp_path)
+
+                pw_ap_path = os.path.join(
+                    self.pw_ap_root_path,
+                    str(int(self.filename_list[i][1:4])),
+                    self.filename_list[i][4:-4] + "_ap.npy",
+                )
+                pw_ap = np.load(pw_ap_path)
         else:
             # path is different between combine-db <-> single db
             beat_path = os.path.join(
@@ -585,6 +682,28 @@ class SVSDataset(Dataset):
                 str(int(self.filename_list[i][1:4])),
                 self.filename_list[i][4:-4] + ".wav",
             )
+            if self.vocoder_category == "pyworld":
+                pw_f0_path = os.path.join(
+                    self.pw_f0_root_path,
+                    str(int(self.filename_list[i][1:4])),
+                    self.filename_list[i][4:-4] + "_f0.npy",
+                )
+                pw_f0 = np.load(pw_f0_path)
+                pw_f0 = pw_f0.reshape((-1, 1))
+
+                pw_sp_path = os.path.join(
+                    self.pw_sp_root_path,
+                    str(int(self.filename_list[i][1:4])),
+                    self.filename_list[i][4:-4] + "_sp.npy",
+                )
+                pw_sp = np.load(pw_sp_path)
+
+                pw_ap_path = os.path.join(
+                    self.pw_ap_root_path,
+                    str(int(self.filename_list[i][1:4])),
+                    self.filename_list[i][4:-4] + "_ap.npy",
+                )
+                pw_ap = np.load(pw_ap_path)
 
         spectrogram, mel, phase = _get_spectrograms(
             wav_path,
@@ -599,16 +718,17 @@ class SVSDataset(Dataset):
         )
 
         # length check
-        if np.abs(len(phone) - np.shape(spectrogram)[0]) > 3:
-            logging.info("error file: %s" % self.filename_list[i])
-            logging.info(
-                "spectrum_size: {}, alignment_size: {}, "
-                "pitch_size: {}, beat_size: {}".format(
-                    np.shape(spectrogram)[0], len(phone), len(pitch), len(beat)
-                )
-            )
-        # fix me
-        # assert np.abs(len(phone) - np.shape(spectrogram)[0]) <= 15
+        #         if np.abs(len(phone) - np.shape(spectrogram)[0]) > 3:
+        #             logging.info("error file: %s" % self.filename_list[i])
+        #             logging.info(
+        #                 "spectrum_size: {}, alignment_size: {}, "
+        #                 "pitch_size: {}, beat_size: {}".format(
+        #                     np.shape(spectrogram)[0], len(phone), len(pitch), len(beat)
+        #                 )
+        #             )
+
+        assert np.abs(len(phone) - np.shape(spectrogram)[0]) <= 15
+
         # for post condition
         if len(phone.shape) > 1:
             char, trimed_length = None, len(phone)
@@ -638,25 +758,62 @@ class SVSDataset(Dataset):
         # logging.info(min_length)
 
         if self.db_joint:
-            return {
-                "phone": phone,
-                "beat": beat,
-                "pitch": pitch,
-                "spec": spectrogram,
-                "char": char,
-                "phase": phase,
-                "mel": mel,
-                "singer_id": singer_id,
-                "semitone": semitone,
-            }
+            if self.vocoder_category == "pyworld":
+                return {
+                    "phone": phone,
+                    "beat": beat,
+                    "pitch": pitch,
+                    "spec": spectrogram,
+                    "char": char,
+                    "phase": phase,
+                    "mel": mel,
+                    "singer_id": singer_id,
+                    "semitone": semitone,
+                    "pw_f0": pw_f0,
+                    "pw_sp": pw_sp,
+                    "pw_ap": pw_ap,
+                }
+            else:
+                return {
+                    "phone": phone,
+                    "beat": beat,
+                    "pitch": pitch,
+                    "spec": spectrogram,
+                    "char": char,
+                    "phase": phase,
+                    "mel": mel,
+                    "singer_id": singer_id,
+                    "semitone": semitone,
+                    "pw_f0": None,
+                    "pw_sp": None,
+                    "pw_ap": None,
+                }
         else:
-            return {
-                "phone": phone,
-                "beat": beat,
-                "pitch": pitch,
-                "spec": spectrogram,
-                "char": char,
-                "phase": phase,
-                "mel": mel,
-                "semitone": semitone,
-            }
+            if self.vocoder_category == "pyworld":
+                return {
+                    "phone": phone,
+                    "beat": beat,
+                    "pitch": pitch,
+                    "spec": spectrogram,
+                    "char": char,
+                    "phase": phase,
+                    "mel": mel,
+                    "semitone": semitone,
+                    "pw_f0": pw_f0,
+                    "pw_sp": pw_sp,
+                    "pw_ap": pw_ap,
+                }
+            else:
+                return {
+                    "phone": phone,
+                    "beat": beat,
+                    "pitch": pitch,
+                    "spec": spectrogram,
+                    "char": char,
+                    "phase": phase,
+                    "mel": mel,
+                    "semitone": semitone,
+                    "pw_f0": None,
+                    "pw_sp": None,
+                    "pw_ap": None,
+                }

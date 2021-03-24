@@ -38,3 +38,25 @@ mkdir -p ${data}/wav_info/${train}
 mv ${data}/wav_info/11 ${data}/wav_info/${dev}/
 mv ${data}/wav_info/16 ${data}/wav_info/${test}/
 mv ${data}/wav_info/{1..50} ${data}/wav_info/${train}/
+
+# process pw_paras
+mkdir -p ${data}/pyworld_ap/${dev}
+mkdir -p ${data}/pyworld_ap/${test}
+mkdir -p ${data}/pyworld_ap/${train}
+mv ${data}/pyworld_ap/11 ${data}/pyworld_ap/${dev}/
+mv ${data}/pyworld_ap/16 ${data}/pyworld_ap/${test}/
+mv ${data}/pyworld_ap/{1..50} ${data}/pyworld_ap/${train}/
+
+mkdir -p ${data}/pyworld_sp/${dev}
+mkdir -p ${data}/pyworld_sp/${test}
+mkdir -p ${data}/pyworld_sp/${train}
+mv ${data}/pyworld_sp/11 ${data}/pyworld_sp/${dev}/
+mv ${data}/pyworld_sp/16 ${data}/pyworld_sp/${test}/
+mv ${data}/pyworld_sp/{1..50} ${data}/pyworld_sp/${train}/
+
+mkdir -p ${data}/pyworld_f0/${dev}
+mkdir -p ${data}/pyworld_f0/${test}
+mkdir -p ${data}/pyworld_f0/${train}
+mv ${data}/pyworld_f0/11 ${data}/pyworld_f0/${dev}/
+mv ${data}/pyworld_f0/16 ${data}/pyworld_f0/${test}/
+mv ${data}/pyworld_f0/{1..50} ${data}/pyworld_f0/${train}/

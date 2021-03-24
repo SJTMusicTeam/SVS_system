@@ -71,5 +71,16 @@ voc_compute_dims: 128
 voc_res_out_dims: 128
 voc_res_blocks: 10
 hop_length: 275
-voc_mode: "MOL"
+voc_mode: "pyworld"
 wavernn_voc_model: downloads/model/wavernn/latest_weights.pyt
+
+train_pw_f0: data/pyworld_f0/train
+train_pw_sp: data/pyworld_sp/train
+train_pw_ap: data/pyworld_ap/train
+val_pw_f0: data/pyworld_f0/dev
+val_pw_sp: data/pyworld_sp/dev
+val_pw_ap: data/pyworld_ap/dev
+
+stats_f0_file: exp/conformer_Feb2021/model/feats_f0_stats.npz
+stats_sp_file: exp/conformer_Feb2021/model/feats_sp_stats.npz
+stats_ap_file: exp/conformer_Feb2021/model/feats_ap_stats.npz

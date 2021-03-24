@@ -10,13 +10,13 @@ val_wav: data/wav_info/dev
 # sing_quality: conf/sing_quality.csv
 
 model_type: LSTM
-# model_save_dir: exp/2020_1_21_rnn_norm_perp/model
+# model_save_dir: exp/3_18_rnn_norm/model
 # stats_file: exp/2020_1_21_rnn_norm_perp/model/feats_stats.npz
 # stats_mel_file: exp/2020_1_21_rnn_norm_perp/model/feats_mel_stats.npz
 
 normalize: True
 double_mel_loss: False
-# perceptual_loss: 1e-2
+perceptual_loss: 0
 
 
 accumulation_steps: 1
@@ -25,7 +25,7 @@ gpu_id: 1
 
 max_epochs: 150
 
-batchsize: 5
+batchsize: 10
 num_workers: 5
 
 mask_free: False
@@ -33,10 +33,11 @@ use_asr_post: False
 sampling_rate: 22050
 nfft: 2048
 feat_dim: 1025
-n_mels: 80
+pw_para_dim: 513
+n_mels: 0 # was 80
 
-frame_length: 0.06
-frame_shift: 0.03
+frame_length: 0.01
+frame_shift: 0.005
 
 hidden_size: 256
 embedding_size: 256
@@ -48,6 +49,20 @@ lr: 0.001
 phone_size: 68
 seed: 777
 
+resume: True
+
 train_step_log: 20
 dev_step_log: 2
 
+db_joint: False
+vocoder_category: pyworld
+train_pw_f0: data/pyworld_f0/train
+train_pw_sp: data/pyworld_sp/train
+train_pw_ap: data/pyworld_ap/train
+val_pw_f0: data/pyworld_f0/dev
+val_pw_sp: data/pyworld_sp/dev
+val_pw_ap: data/pyworld_ap/dev
+
+stats_f0_file: exp/3_18_rnn_norm/feats_f0_stats.npz
+stats_sp_file: exp/3_18_rnn_norm/feats_sp_stats.npz
+stats_ap_file: exp/3_18_rnn_norm/feats_ap_stats.npz
