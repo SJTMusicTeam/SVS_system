@@ -6,7 +6,7 @@
 . ./cmd.sh || exit 1;
 
 
-stage=2
+stage=3
 stop_stage=3
 ngpu=1
 raw_data_dir=downloads
@@ -47,7 +47,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
       --sil pau sil
   else
     python local/prepare_data.py ${raw_data_dir}/kiritan_singing/wav ${raw_data_dir}/kiritan_singing/mono_label data \
-      --sil pau sil --use_pyworld_vocoder Ture
+      --sil pau sil --use_pyworld_vocoder Ture --shift_size 5 --window_size 10 --sr 22050
   fi
   ./local/train_dev_test_split.sh data train dev test
 
@@ -61,7 +61,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 
   ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
   train.py \
-    -c conf/train_rnn_wavernn.yaml \
+    -c conf/train_rnn_norm_perp.yaml \
     --collect_stats True \
     --model_save_dir ${expdir} \
     --stats_file ${expdir}/feats_stats.npz \
