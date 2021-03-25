@@ -358,7 +358,7 @@ def train_one_epoch(
                             log_save_dir,
                             args,
                             voc_model,
-                            gen_wave=False
+                            gen_wave=False,
                         )
                 else:
                     log_figure(
@@ -1277,7 +1277,9 @@ def log_figure(step, output, spec, att, length, save_dir, args):
         plt.savefig(os.path.join(save_dir, "{}_att.png".format(step)))
 
 
-def log_mel(step, output_mel, ori_mel, att, length, save_dir, args, voc_model, gen_wave=True):
+def log_mel(
+    step, output_mel, ori_mel, att, length, save_dir, args, voc_model, gen_wave=True
+):
     """log_mel."""
     # only get one sample from a batch
     # save wav and plot spectrogram
