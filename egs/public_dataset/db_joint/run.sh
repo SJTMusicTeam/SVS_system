@@ -108,7 +108,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   echo ===============
 
   if [ ${download_wavernn_vocoder} = True ]; then
-    ${cuda_cmd} -gpu ${ngpu} ${expdir}/svs_infer.log \
+    ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_infer.log \
     infer.py \
       --db_joint True \
       -c conf/infer_${model_name}_wavernn.yaml \
@@ -119,7 +119,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
       --vocoder_category ${vocoder} \
       --wavernn_voc_model ${expdir}/model/wavernn/latest_weights.pyt
   else
-    ${cuda_cmd} -gpu ${ngpu} ${expdir}/svs_infer.log \
+    ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_infer.log \
     infer.py \
       --db_joint True \
       -c conf/infer_${model_name}.yaml \

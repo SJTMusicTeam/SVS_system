@@ -2394,6 +2394,7 @@ class WaveRNN(nn.Module):
 
                 x = torch.cat([x, m_t, a1_t], dim=1)
                 x = self.I(x)
+                # x = self.I(x)
                 h1 = rnn1(x, h1)
 
                 x = x + h1

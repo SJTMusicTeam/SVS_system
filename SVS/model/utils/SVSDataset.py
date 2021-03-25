@@ -57,7 +57,7 @@ def _get_spectrograms(
         # mel = 20 * np.log10(np.maximum(1e-5, mel))
         # mel = np.clip((mel - ref_db + max_db) / max_db, 1e-8, 1)
         # mel = mel.T.astype(np.float32)
-        mel = melspectrogram(y, n_fft, hop_length, win_length, sr, n_mels)
+        mel = melspectrogram(y, n_fft, hop_length, win_length, require_sr, n_mels)
         mel = mel.T.astype(np.float32)
 
     y = np.append(y[0], y[1:] - preemphasis * y[:-1])
@@ -607,6 +607,7 @@ class SVSDataset(Dataset):
                     np.shape(spectrogram)[0], len(phone), len(pitch), len(beat)
                 )
             )
+        # fix me
         # assert np.abs(len(phone) - np.shape(spectrogram)[0]) <= 15
         # for post condition
         if len(phone.shape) > 1:
