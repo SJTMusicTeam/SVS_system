@@ -122,7 +122,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_infer.log \
     infer.py \
       --db_joint True \
-      -c conf/infer_${model_name}.yaml \
+      -c ${infer_config} \
       --prediction_path ${expdir}/infer_result \
       --model_file ${expdir}/epoch_loss_65.pth.tar \
       --stats_file ${expdir}/feats_stats.npz \
