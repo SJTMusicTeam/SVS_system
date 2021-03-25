@@ -113,7 +113,7 @@ def collect_stats(train_loader, args):
                 sum_pw_ap += seq.sum(0)
                 sum_square_pw_ap += (seq ** 2).sum(0)
                 count_pw_ap += len(seq)
-                
+
         else:
             for i, seq in enumerate(mel.cpu().numpy()):
                 seq_length = torch.max(length[i])
@@ -122,7 +122,7 @@ def collect_stats(train_loader, args):
                 sum_square_mel += (seq ** 2).sum(0)
                 count_mel += len(seq)
 
-                assert count_mel == count                
+                assert count_mel == count
 
     if args.vocoder_category == "pyworld":
         dirnames = [
@@ -141,12 +141,12 @@ def collect_stats(train_loader, args):
             sum=sum,
             sum_square=sum_square,
         )
-#         np.savez(
-#             args.stats_mel_file,
-#             count=count_mel,
-#             sum=sum_mel,
-#             sum_square=sum_square_mel,
-#         )
+        #         np.savez(
+        #             args.stats_mel_file,
+        #             count=count_mel,
+        #             sum=sum_mel,
+        #             sum_square=sum_square_mel,
+        #         )
 
         np.savez(
             args.stats_f0_file,
@@ -378,8 +378,12 @@ def train_one_epoch(
                 mel_normalizer = GlobalMVN(args.stats_mel_file)
                 mel, _ = mel_normalizer(mel, length)
 
-        logging.info("&&& GT &&& ######## No-Norm: {}; ***** Norm: {} ######".format(torch.mean(pw_sp_origin), torch.mean(pw_sp)))
-                
+        logging.info(
+            "&&& GT &&& ######## No-Norm: {}; ***** Norm: {} ######".format(
+                torch.mean(pw_sp_origin), torch.mean(pw_sp)
+            )
+        )
+
         if args.model_type == "USTC_DAR" and args.vocoder_category != "pyworld":
             spec_loss = 0
         elif args.vocoder_category == "pyworld":
@@ -459,7 +463,11 @@ def train_one_epoch(
                 out_pw_sp = output[
                     :, :, args.pw_para_dim + 1 : args.pw_para_dim * 2 + 1
                 ]
-                logging.info("&&& Pred - sp &&& ######## Norm: {} ######".format(np.mean(out_pw_sp[0])))                
+                logging.info(
+                    "&&& Pred - sp &&& ######## Norm: {} ######".format(
+                        np.mean(out_pw_sp[0])
+                    )
+                )
                 if args.normalize and args.stats_file:
                     out_pw_f0 = (
                         torch.from_numpy(out_pw_f0.astype(np.float)).to(device).float()
@@ -473,7 +481,7 @@ def train_one_epoch(
 
                     out_pw_f0, _ = pw_f0_normalizer.inverse(out_pw_f0, length_temp)
                     out_pw_sp, _ = pw_sp_normalizer.inverse(out_pw_sp, length_temp)
-                    out_pw_ap, _ = pw_ap_normalizer.inverse(out_pw_ap, length_temp)                   
+                    out_pw_ap, _ = pw_ap_normalizer.inverse(out_pw_ap, length_temp)
                     out_pw_f0 = out_pw_f0.cpu().detach().numpy()
                     out_pw_sp = out_pw_sp.cpu().detach().numpy()
                     out_pw_ap = out_pw_ap.cpu().detach().numpy()
@@ -483,7 +491,11 @@ def train_one_epoch(
                         :, :, args.pw_para_dim + 1 : args.pw_para_dim * 2 + 1
                     ] = out_pw_sp
                     output = output[0]
-                    logging.info("&&& Pred - sp &&& ######## No-Norm: {} ######".format(np.mean(out_pw_sp[0])))
+                    logging.info(
+                        "&&& Pred - sp &&& ######## No-Norm: {} ######".format(
+                            np.mean(out_pw_sp[0])
+                        )
+                    )
                 log_figure_pw(
                     step,
                     output,
