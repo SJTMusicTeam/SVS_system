@@ -16,6 +16,7 @@ limitations under the License.
 from pathlib import Path
 
 import copy
+import logging
 import librosa
 from librosa.display import specshow
 import matplotlib.pyplot as plt
@@ -37,7 +38,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def collect_stats(train_loader, args):
     """collect_stats."""
-    print("get in collect stats", flush=True)
+    logging.info("get in collect stats")
     count, sum, sum_square = 0, 0, 0
     count_mel, sum_mel, sum_square_mel = 0, 0, 0
     for (step, data_step) in enumerate(train_loader, 1):
@@ -374,7 +375,7 @@ def train_one_epoch(
                 out_log += "mel_loss {:.4f}; ".format(mel_losses.avg)
                 if args.double_mel_loss:
                     out_log += "dmel_loss {:.4f}; ".format(double_mel_losses.avg)
-            print("{} -- sum_time: {:.2f}s".format(out_log, (end - start)))
+            logging.info("{} -- sum_time: {:.2f}s".format(out_log, (end - start)))
 
     info = {"loss": losses.avg, "spec_loss": spec_losses.avg}
     if args.perceptual_loss > 0:
@@ -631,7 +632,7 @@ def validate(
                                 log_save_dir,
                                 args,
                                 voc_model,
-                                gen_wave=False,
+                                gen_wave=True,
                             )
                     else:
                         log_figure(
@@ -650,7 +651,7 @@ def validate(
                     if args.double_mel_loss:
                         out_log += "dmel_loss {:.4f}; ".format(double_mel_losses.avg)
                 end = time.time()
-                print("{} -- sum_time: {}s".format(out_log, (end - start)))
+                logging.info("{} -- sum_time: {}s".format(out_log, (end - start)))
 
     info = {
         "loss": losses.avg,
@@ -834,7 +835,7 @@ def train_one_epoch_discriminator(
             out_log += "phone_accuracy: {:.4f}% ".format(phone_count.avg * 100)
             out_log += "semitone_accuracy: {:.4f}% ".format(semitone_count.avg * 100)
 
-            print("{} -- sum_time: {:.2f}s".format(out_log, (end - start)))
+            logging.info("{} -- sum_time: {:.2f}s".format(out_log, (end - start)))
 
     info = {
         "loss": singer_losses.avg + phone_losses.avg + semitone_losses.avg,
@@ -1011,7 +1012,7 @@ def validate_one_epoch_discriminator(
                     semitone_count.avg * 100
                 )
 
-                print("{} -- sum_time: {:.2f}s".format(out_log, (end - start)))
+                logging.info("{} -- sum_time: {:.2f}s".format(out_log, (end - start)))
 
     info = {
         "loss": singer_losses.avg + phone_losses.avg + semitone_losses.avg,
