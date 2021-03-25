@@ -212,7 +212,7 @@ def process(args):
         if args.use_pyworld_vocoder == True:
             pw_path_f0 = os.path.join(args.outdir, "pyworld_f0", str(index))
             pw_path_sp = os.path.join(args.outdir, "pyworld_sp", str(index))
-            pw_path_ap = os.path.join(args.outdir, "pyworld_ap", str(index))        
+            pw_path_ap = os.path.join(args.outdir, "pyworld_ap", str(index))
 
         if not os.path.exists(song_align):
             os.makedirs(song_align)
@@ -227,7 +227,7 @@ def process(args):
                 os.makedirs(pw_path_sp)
             if not os.path.exists(pw_path_ap):
                 os.makedirs(pw_path_ap)
-            
+
         print("processing {}".format(song_wav))
         for seg in segments.keys():
             alignment = segments[seg]["alignment"]
@@ -238,7 +238,7 @@ def process(args):
                     start * hop_length + len(alignment) * hop_length
                 )
             ]
-            
+
             if args.use_pyworld_vocoder == True:
                 """extract pw_paras"""
                 pw_f0, pw_sp, pw_ap = pw.wav2world(
@@ -249,7 +249,7 @@ def process(args):
                 np.save(os.path.join(pw_path_f0, name) + "_f0", np.array(pw_f0))
                 np.save(os.path.join(pw_path_sp, name) + "_sp", np.array(pw_sp))
                 np.save(os.path.join(pw_path_ap, name) + "_ap", np.array(pw_ap))
-            
+
             """extract beats"""
             tempo, beats = librosa.beat.beat_track(
                 y=seg_signal, sr=args.sr, hop_length=hop_length

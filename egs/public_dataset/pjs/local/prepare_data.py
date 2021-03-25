@@ -233,7 +233,7 @@ def process(args):
                 os.makedirs(pw_path_sp)
             if not os.path.exists(pw_path_ap):
                 os.makedirs(pw_path_ap)
-            
+
         print("processing {}".format(song_wav))
         for seg in segments.keys():
             alignment = segments[seg]["alignment"]
@@ -244,7 +244,7 @@ def process(args):
                     start * hop_length + len(alignment) * hop_length
                 )
             ]
-            
+
             if args.use_pyworld_vocoder == True:
                 """extract pw_paras"""
                 pw_f0, pw_sp, pw_ap = pw.wav2world(
