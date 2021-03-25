@@ -627,6 +627,7 @@ def infer(args):
                         args.prediction_path,
                         args,
                         voc_model,
+                        gen_wave=True,
                     )
                 out_log = (
                     "step {}:train_loss{:.4f};"

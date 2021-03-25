@@ -677,6 +677,7 @@ def train(args):
     # preload vocoder model
     voc_model = []
     if args.vocoder_category == "wavernn":
+        logging.info("load voc_model from {}".format(args.wavernn_voc_model))
         voc_model = WaveRNN(
             rnn_dims=args.voc_rnn_dims,
             fc_dims=args.voc_fc_dims,

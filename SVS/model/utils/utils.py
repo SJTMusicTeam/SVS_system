@@ -631,6 +631,7 @@ def validate(
                                 log_save_dir,
                                 args,
                                 voc_model,
+                                gen_wave=False,
                             )
                     else:
                         log_figure(

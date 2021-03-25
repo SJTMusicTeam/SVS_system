@@ -6,18 +6,23 @@
 . ./cmd.sh || exit 1;
 
 
-stage=0
-stop_stage=3
+stage=1
+stop_stage=2
 ngpu=1
 raw_data_dir=data
-download_wavernn_vocoder=True
+download_wavernn_vocoder=False
 vocoder=wavernn
 
 # model_name=conformer_full
-# model_name=glu
-model_name=rnn
+model_name=glu
+# model_name=rnn
 
-expdir=exp/3_3_rnn_pe_1e-2
+train_config=conf/train_${model_name}.yaml
+infer_config=conf/infer_${model_name}.yaml
+
+expdir=exp/glu_norm_pe_1e-4_augment
+# expdir=exp/conformer_norm_pe_1e-4
+# expdir=exp/conformer_norm_pe_1e-4_augment
 
 # Set bash to 'debug' mode, it will exit on :
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
@@ -47,16 +52,25 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   echo " Stage2: collect_stats "
   echo =======================
 
-  ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
-  train.py \
-    --db_joint True \
-    --gpu_id 0 \
-    -c conf/train_${model_name}_wavernn.yaml \
-    --collect_stats True \
-    --model_save_dir ${expdir} \
-    --stats_file ${expdir}/feats_stats.npz \
-    --stats_mel_file ${expdir}/feats_mel_stats.npz
-
+  if [ ${download_wavernn_vocoder} = True ]; then
+    ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
+    train.py \
+      --db_joint True \
+       -c conf/train_${model_name}_wavernn.yaml \
+      --collect_stats True \
+      --model_save_dir ${expdir} \
+      --stats_file ${expdir}/feats_stats.npz \
+      --stats_mel_file ${expdir}/feats_mel_stats.npz
+    else
+    ${cuda_cmd} --gpu ${ngpu} ${expdir}/stats.log \
+    train.py \
+      --db_joint True \
+       -c ${train_config} \
+      --collect_stats True \
+      --model_save_dir ${expdir} \
+      --stats_file ${expdir}/feats_stats.npz \
+      --stats_mel_file ${expdir}/feats_mel_stats.npz
+    fi
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
@@ -69,7 +83,6 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_train.log \
     train.py \
       --db_joint True \
-      --gpu_id 0 \
       -c conf/train_${model_name}_wavernn.yaml \
       --model_save_dir ${expdir} \
       --stats_file ${expdir}/feats_stats.npz \
@@ -80,8 +93,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     ${cuda_cmd} --gpu ${ngpu} ${expdir}/svs_train.log \
     train.py \
       --db_joint True \
-      --gpu_id 0 \
-      -c conf/train_${model_name}.yaml \
+      -c ${train_config} \
       --model_save_dir ${expdir} \
       --stats_file ${expdir}/feats_stats.npz \
       --stats_mel_file ${expdir}/feats_mel_stats.npz
@@ -99,7 +111,6 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     ${cuda_cmd} -gpu ${ngpu} ${expdir}/svs_infer.log \
     infer.py \
       --db_joint True \
-      --gpu_id 0 \
       -c conf/infer_${model_name}_wavernn.yaml \
       --prediction_path ${expdir}/infer_result \
       --model_file ${expdir}/epoch_loss_65.pth.tar \
@@ -111,7 +122,6 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     ${cuda_cmd} -gpu ${ngpu} ${expdir}/svs_infer.log \
     infer.py \
       --db_joint True \
-      --gpu_id 0 \
       -c conf/infer_${model_name}.yaml \
       --prediction_path ${expdir}/infer_result \
       --model_file ${expdir}/epoch_loss_65.pth.tar \
