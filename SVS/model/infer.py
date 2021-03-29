@@ -439,6 +439,7 @@ def infer(args):
                     mel,
                     singer_id,
                     semitone,
+                    filename_list,
                 ) = data_step
 
                 singer_id = np.array(singer_id).reshape(
@@ -462,6 +463,7 @@ def infer(args):
                     char_len_list,
                     mel,
                     semitone,
+                    filename_list,
                 ) = data_step
 
             phone = phone.to(device)
@@ -609,7 +611,7 @@ def infer(args):
             if step % 1 == 0:
                 if args.vocoder_category == "griffin":
                     log_figure(
-                        step,
+                        filename_list[0],
                         output,
                         spec_origin,
                         att,
@@ -619,7 +621,7 @@ def infer(args):
                     )
                 elif args.vocoder_category == "wavernn":
                     log_mel(
-                        step,
+                        filename_list[0],
                         output_mel,
                         mel,
                         att,
