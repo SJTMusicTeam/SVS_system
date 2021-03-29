@@ -321,7 +321,7 @@ class SVSCollator(object):
         beat = np.zeros((batch_size, self.max_len))
         length_mask = np.zeros((batch_size, self.max_len))
         semitone = np.zeros((batch_size, self.max_len))
-        
+
         filename_list = [batch[i]["filename"] for i in range(batch_size)]
 
         if self.db_joint:
@@ -652,7 +652,7 @@ class SVSDataset(Dataset):
                 "mel": mel,
                 "singer_id": singer_id,
                 "semitone": semitone,
-                "filename": self.filename_list[i][:-4]
+                "filename": self.filename_list[i][:-4],
             }
         else:
             return {
@@ -664,5 +664,5 @@ class SVSDataset(Dataset):
                 "phase": phase,
                 "mel": mel,
                 "semitone": semitone,
-                "filename": self.filename_list[i][:-4]
+                "filename": self.filename_list[i][:-4],
             }
