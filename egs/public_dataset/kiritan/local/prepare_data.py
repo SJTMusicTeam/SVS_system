@@ -164,9 +164,6 @@ def process(args):
     f0_max = 1100.0
     f0_min = 50.0
 
-    if args.use_pyworld_vocoder == True:
-        assert args.shift_size == 5
-
     frame_shift = args.shift_size / 1000
 
     hop_length = int(args.sr * frame_shift)
@@ -246,7 +243,7 @@ def process(args):
                 pw_f0, pw_sp, pw_ap = pw.wav2world(
                     seg_signal.astype("double"),
                     args.sr,
-                    frame_period=pw.default_frame_period,
+                    frame_period=args.shift_size,
                 )
                 np.save(os.path.join(pw_path_f0, name) + "_f0", np.array(pw_f0))
                 np.save(os.path.join(pw_path_sp, name) + "_sp", np.array(pw_sp))

@@ -191,6 +191,7 @@ def train_one_epoch(
     epoch,
     args,
     voc_model,
+    pw_model_type=None,
 ):
     """train_one_epoch."""
     losses = AverageMeter()
@@ -216,7 +217,8 @@ def train_one_epoch(
 
     # f0_ground_truth_all = np.reshape(np.array([]), (-1, 1))
     # f0_synthesis_all = np.reshape(np.array([]), (-1, 1))
-
+    output_one_epoch = []
+    output_length = []
     for (step, data_step) in enumerate(train_loader, 1):
         if args.db_joint:
             (
@@ -281,7 +283,12 @@ def train_one_epoch(
             length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
             length_mel_mask = length_mel_mask.to(device)
         if args.vocoder_category == "pyworld":
-            length_mask_pw = length_mask.repeat(1, 1, args.pw_para_dim * 2 + 1).float()
+            if pw_model_type == "f0":
+                length_mask_pw = length_mask.repeat(1, 1, 1).float()
+            if pw_model_type == "sp":
+                length_mask_pw = length_mask.repeat(1, 1, args.pw_para_dim).float()
+            if pw_model_type == "ap":
+                length_mask_pw = length_mask.repeat(1, 1, args.pw_para_dim).float()              
             length_mask_pw = length_mask_pw.to(device)
         length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
         length_mask = length_mask.to(device)
@@ -378,16 +385,21 @@ def train_one_epoch(
                 mel_normalizer = GlobalMVN(args.stats_mel_file)
                 mel, _ = mel_normalizer(mel, length)
 
-        logging.info(
-            "&&& GT &&& ######## No-Norm: {}; ***** Norm: {} ######".format(
-                torch.mean(pw_sp_origin), torch.mean(pw_sp)
-            )
-        )
+#         logging.info(
+#             "&&& GT &&& ######## No-Norm: {}; ***** Norm: {} ######".format(
+#                 torch.mean(pw_sp_origin), torch.mean(pw_sp)
+#             )
+#         )
 
         if args.model_type == "USTC_DAR" and args.vocoder_category != "pyworld":
             spec_loss = 0
         elif args.vocoder_category == "pyworld":
-            label_pw = torch.cat((pw_f0, pw_ap, pw_sp), dim=2)
+            if pw_model_type == "f0":
+                label_pw = pw_f0
+            if pw_model_type == "sp":
+                label_pw = pw_sp
+            if pw_model_type == "ap":
+                label_pw = pw_ap            
             pw_loss = criterion(output, label_pw, length_mask_pw)
             spec_loss = pw_loss
         else:
@@ -455,47 +467,13 @@ def train_one_epoch(
                     step, losses.avg, spec_losses.avg
                 )
             elif args.vocoder_category == "pyworld":
-                # length_temp = np.max(length.cpu().detach().numpy()[0])
-                length_temp = length
-                output = output.cpu().detach().numpy()
-                out_pw_f0 = output[:, :, :1]
-                out_pw_ap = output[:, :, 1 : args.pw_para_dim + 1]
-                out_pw_sp = output[
-                    :, :, args.pw_para_dim + 1 : args.pw_para_dim * 2 + 1
-                ]
-                logging.info(
-                    "&&& Pred - sp &&& ######## Norm: {} ######".format(
-                        np.mean(out_pw_sp[0])
-                    )
-                )
                 if args.normalize and args.stats_file:
-                    out_pw_f0 = (
-                        torch.from_numpy(out_pw_f0.astype(np.float)).to(device).float()
-                    )
-                    out_pw_sp = (
-                        torch.from_numpy(out_pw_sp.astype(np.float)).to(device).float()
-                    )
-                    out_pw_ap = (
-                        torch.from_numpy(out_pw_ap.astype(np.float)).to(device).float()
-                    )
-
-                    out_pw_f0, _ = pw_f0_normalizer.inverse(out_pw_f0, length_temp)
-                    out_pw_sp, _ = pw_sp_normalizer.inverse(out_pw_sp, length_temp)
-                    out_pw_ap, _ = pw_ap_normalizer.inverse(out_pw_ap, length_temp)
-                    out_pw_f0 = out_pw_f0.cpu().detach().numpy()
-                    out_pw_sp = out_pw_sp.cpu().detach().numpy()
-                    out_pw_ap = out_pw_ap.cpu().detach().numpy()
-                    output[:, :, :1] = out_pw_f0
-                    output[:, :, 1 : args.pw_para_dim + 1] = out_pw_ap
-                    output[
-                        :, :, args.pw_para_dim + 1 : args.pw_para_dim * 2 + 1
-                    ] = out_pw_sp
-                    output = output[0]
-                    logging.info(
-                        "&&& Pred - sp &&& ######## No-Norm: {} ######".format(
-                            np.mean(out_pw_sp[0])
-                        )
-                    )
+                    if pw_model_type == "f0":
+                        output, _ = pw_f0_normalizer.inverse(output, length)
+                    if pw_model_type == "sp":
+                        output, _ = pw_sp_normalizer.inverse(output, length)
+                    if pw_model_type == "ap":
+                        output, _ = pw_ap_normalizer.inverse(output, length)
                 log_figure_pw(
                     step,
                     output,
@@ -506,9 +484,10 @@ def train_one_epoch(
                     length,
                     log_save_dir,
                     args,
+                    pw_model_type,
                 )
-                out_log = "step {}: train_loss {:.4f}; pw_loss {:.4f};".format(
-                    step, losses.avg, spec_losses.avg
+                out_log = "step {}: train_loss {:.4f}; pw_loss_{} {:.4f};".format(
+                    step, losses.avg, pw_model_type, spec_losses.avg
                 )
 
             else:
@@ -550,18 +529,25 @@ def train_one_epoch(
                 if args.double_mel_loss:
                     out_log += "dmel_loss {:.4f}; ".format(double_mel_losses.avg)
             print("{} -- sum_time: {:.2f}s".format(out_log, (end - start)))
-
+            
+            if args.vocoder_category == "pyworld":
+                output_one_epoch.append((step,output))
+                output_length.append(length)
+                
     info = {"loss": losses.avg, "spec_loss": spec_losses.avg}
 
     if args.perceptual_loss > 0 and args.vocoder_category != "pyworld":
         info["pe_loss"] = pe_losses.avg
     if args.n_mels > 0 and args.vocoder_category != "pyworld":
         info["mel_loss"] = mel_losses.avg
+    if args.vocoder_category == "pyworld":
+        info["output_one_epoch"] = output_one_epoch
+        info["output_length"] = output_length
     return info
 
 
 def validate(
-    dev_loader, model, device, criterion, perceptual_entropy, epoch, args, voc_model
+    dev_loader, model, device, criterion, perceptual_entropy, epoch, args, voc_model, pw_model_type=None,
 ):
     """validate."""
     losses = AverageMeter()
@@ -582,7 +568,8 @@ def validate(
         os.makedirs(log_save_dir)
 
     start = time.time()
-
+    output_one_epoch = []
+    output_length = []
     with torch.no_grad():
         for (step, data_step) in enumerate(dev_loader, 1):
             if args.db_joint:
@@ -649,9 +636,12 @@ def validate(
                 length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
                 length_mel_mask = length_mel_mask.to(device)
             if args.vocoder_category == "pyworld":
-                length_mask_pw = length_mask.repeat(
-                    1, 1, args.pw_para_dim * 2 + 1
-                ).float()
+                if pw_model_type == "f0":
+                    length_mask_pw = length_mask.repeat(1, 1, 1).float()
+                if pw_model_type == "sp":
+                    length_mask_pw = length_mask.repeat(1, 1, args.pw_para_dim).float()
+                if pw_model_type == "ap":
+                    length_mask_pw = length_mask.repeat(1, 1, args.pw_para_dim).float() 
                 length_mask_pw = length_mask_pw.to(device)
             length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
             length_mask = length_mask.to(device)
@@ -755,7 +745,12 @@ def validate(
             if args.model_type == "USTC_DAR" and args.vocoder_category != "pyworld":
                 spec_loss = 0
             elif args.vocoder_category == "pyworld":
-                label_pw = torch.cat((pw_f0, pw_ap, pw_sp), dim=2)
+                if pw_model_type == "f0":
+                    label_pw = pw_f0
+                if pw_model_type == "sp":
+                    label_pw = pw_sp
+                if pw_model_type == "ap":
+                    label_pw = pw_ap  
                 pw_loss = criterion(output, label_pw, length_mask_pw)
                 spec_loss = pw_loss
             else:
@@ -808,36 +803,13 @@ def validate(
                     1,
                 )  # FIX ME! Calculate_melcd_fromMelSpectrum
             elif args.vocoder_category == "pyworld":
-                length_temp = length
-                output = output.cpu().detach().numpy()
-                out_pw_f0 = output[:, :, :1]
-                out_pw_ap = output[:, :, 1 : args.pw_para_dim + 1]
-                out_pw_sp = output[
-                    :, :, args.pw_para_dim + 1 : args.pw_para_dim * 2 + 1
-                ]
                 if args.normalize and args.stats_file:
-                    # out_pw_f0 = out_pw_f0.reshape(-1)
-                    out_pw_f0 = (
-                        torch.from_numpy(out_pw_f0.astype(np.float)).to(device).float()
-                    )
-                    out_pw_sp = (
-                        torch.from_numpy(out_pw_sp.astype(np.float)).to(device).float()
-                    )
-                    out_pw_ap = (
-                        torch.from_numpy(out_pw_ap.astype(np.float)).to(device).float()
-                    )
-                    out_pw_f0, _ = pw_f0_normalizer.inverse(out_pw_f0, length_temp)
-                    out_pw_sp, _ = pw_sp_normalizer.inverse(out_pw_sp, length_temp)
-                    out_pw_ap, _ = pw_ap_normalizer.inverse(out_pw_ap, length_temp)
-                    out_pw_f0 = out_pw_f0.cpu().detach().numpy()
-                    out_pw_sp = out_pw_sp.cpu().detach().numpy()
-                    out_pw_ap = out_pw_ap.cpu().detach().numpy()
-                    output[:, :, :1] = out_pw_f0
-                    output[:, :, 1 : args.pw_para_dim + 1] = out_pw_ap
-                    output[
-                        :, :, args.pw_para_dim + 1 : args.pw_para_dim * 2 + 1
-                    ] = out_pw_sp
-                    output = output[0]
+                    if pw_model_type == "f0":
+                        output, _ = pw_f0_normalizer.inverse(output, length)
+                    if pw_model_type == "sp":
+                        output, _ = pw_sp_normalizer.inverse(output, length)
+                    if pw_model_type == "ap":
+                        output, _ = pw_ap_normalizer.inverse(output, length)
                 mcd_value, length_sum = (
                     0,
                     1,
@@ -872,6 +844,7 @@ def validate(
                         length,
                         log_save_dir,
                         args,
+                        pw_model_type,
                     )
                 else:
                     if args.vocoder_category == "wavernn":
@@ -894,8 +867,8 @@ def validate(
                         )
 
                 if args.vocoder_category == "pyworld":
-                    out_log = "step {}: train_loss {:.4f}; " "pw_loss {:.4f};".format(
-                        step, losses.avg, spec_losses.avg
+                    out_log = "step {}: train_loss {:.4f}; " "pw_loss_{} {:.4f};".format(
+                        step, losses.avg, pw_model_type, spec_losses.avg
                     )
                 else:
                     out_log = (
@@ -912,7 +885,10 @@ def validate(
                         out_log += "dmel_loss {:.4f}; ".format(double_mel_losses.avg)
                 end = time.time()
                 print("{} -- sum_time: {}s".format(out_log, (end - start)))
-
+                if args.vocoder_category == "pyworld":
+                    output_one_epoch.append((step,output))
+                    output_length.append(length)
+                
     info = {
         "loss": losses.avg,
         "spec_loss": spec_losses.avg,
@@ -923,6 +899,9 @@ def validate(
         info["pe_loss"] = pe_losses.avg
     if args.n_mels > 0 and args.vocoder_category != "pyworld":
         info["mel_loss"] = mel_losses.avg
+    if args.vocoder_category == "pyworld":
+        info["output_one_epoch"] = output_one_epoch
+        info["output_length"] = output_length
     return info
 
 
@@ -1316,27 +1295,47 @@ def save_checkpoint(state, model_filename):
 
 
 def save_model(
-    args, epoch, model, optimizer, train_info, dev_info, logger, save_loss_select
+    args, epoch, model, optimizer, train_info, dev_info, logger, save_loss_select, pw_model_type=None
 ):
     """save_model."""
     if args.optimizer == "noam":
-        save_checkpoint(
-            {
-                "epoch": epoch,
-                "state_dict": model.state_dict(),
-                "optimizer": optimizer._optimizer.state_dict(),
-            },
-            "{}/epoch_{}_{}.pth.tar".format(
-                args.model_save_dir, save_loss_select, epoch
-            ),
-        )
+        if args.vocoder_category == "pyworld":
+            save_checkpoint(
+                {
+                    "epoch": epoch,
+                    "state_dict": model.state_dict(),
+                    "optimizer": optimizer._optimizer.state_dict(),
+                },
+                "{}/epoch_{}_{}_{}.pth.tar".format(
+                    args.model_save_dir, save_loss_select, pw_model_type, epoch
+                ),
+            )
+        else:
+            save_checkpoint(
+                {
+                    "epoch": epoch,
+                    "state_dict": model.state_dict(),
+                    "optimizer": optimizer._optimizer.state_dict(),
+                },
+                "{}/epoch_{}_{}.pth.tar".format(
+                    args.model_save_dir, save_loss_select, epoch
+                ),
+            )
     else:
-        save_checkpoint(
-            {"epoch": epoch, "state_dict": model.state_dict()},
-            "{}/epoch_{}_{}.pth.tar".format(
-                args.model_save_dir, save_loss_select, epoch
-            ),
-        )
+        if args.vocoder_category == "pyworld":
+            save_checkpoint(
+                {"epoch": epoch, "state_dict": model.state_dict()},
+                "{}/epoch_{}_{}_{}.pth.tar".format(
+                    args.model_save_dir, save_loss_select, pw_model_type, epoch
+                ),
+            )
+        else:
+            save_checkpoint(
+                {"epoch": epoch, "state_dict": model.state_dict()},
+                "{}/epoch_{}_{}.pth.tar".format(
+                    args.model_save_dir, save_loss_select, epoch
+                ),
+            )
 
     # record training and validation information
     if args.use_tfboard:
@@ -1616,59 +1615,74 @@ def log_mel(step, output_mel, ori_mel, att, length, save_dir, args, voc_model):
 
 
 def log_figure_pw(
-    step, output, pw_f0_true, pw_sp_true, pw_ap_true, att, length, save_dir, args
+    step, output, pw_f0_true, pw_sp_true, pw_ap_true, att, length, save_dir, args, pw_model_type,
 ):
     """log_figure."""
     # only get one sample from a batch
     # save wav and plot spectrogram
-    # output = output.cpu().detach().numpy()[0]
+    output = output.cpu().detach().numpy()[0]
     length = np.max(length.cpu().detach().numpy()[0])
+    output = output[:length]
     pw_f0_true = pw_f0_true.cpu().detach().numpy()[0]
     pw_sp_true = pw_sp_true.cpu().detach().numpy()[0]
     pw_ap_true = pw_ap_true.cpu().detach().numpy()[0]
-    # output = output[:length]
 
-    pw_f0 = output[:length, :1]
-    pw_ap = output[:length, 1 : args.pw_para_dim + 1]
-    pw_sp = output[:length, args.pw_para_dim + 1 : args.pw_para_dim * 2 + 1]
     pw_f0_true = pw_f0_true[:length, :]
     pw_sp_true = pw_sp_true[:length, :]
     pw_ap_true = pw_ap_true[:length, :]
 
-    plt.subplot(1, 2, 1)
-    specshow(pw_f0.T)
-    plt.title("prediction")
-    plt.subplot(1, 2, 2)
-    specshow(pw_f0_true.T)
-    plt.title("ground_truth")
-    plt.savefig(os.path.join(save_dir, "{}_pw_f0.png".format(step)))
-
-    plt.subplot(1, 2, 1)
-    specshow(pw_ap.T)
-    plt.title("prediction")
-    plt.subplot(1, 2, 2)
-    specshow(pw_ap_true.T)
-    plt.title("ground_truth")
-    plt.savefig(os.path.join(save_dir, "{}_pw_ap.png".format(step)))
-
-    plt.subplot(1, 2, 1)
-    specshow(pw_sp.T)
-    plt.title("prediction")
-    plt.subplot(1, 2, 2)
-    specshow(pw_sp_true.T)
-    plt.title("ground_truth")
-    plt.savefig(os.path.join(save_dir, "{}_pw_sp.png".format(step)))
-
-    pw_f0 = pw_f0.reshape(-1)
+    if pw_model_type == "f0":
+        plt.subplot(1, 2, 1)
+        specshow(output.T)
+        plt.title("prediction")
+        plt.subplot(1, 2, 2)
+        specshow(pw_f0_true.T)
+        plt.title("ground_truth")
+        plt.savefig(os.path.join(save_dir, "{}_pw_f0.png".format(step)))
+    if pw_model_type == "ap":
+        plt.subplot(1, 2, 1)
+        specshow(output.T)
+        plt.title("prediction")
+        plt.subplot(1, 2, 2)
+        specshow(pw_ap_true.T)
+        plt.title("ground_truth")
+        plt.savefig(os.path.join(save_dir, "{}_pw_ap.png".format(step)))
+    if pw_model_type == "sp":
+        plt.subplot(1, 2, 1)
+        specshow(output.T)
+        plt.title("prediction")
+        plt.subplot(1, 2, 2)
+        specshow(pw_sp_true.T)
+        plt.title("ground_truth")
+        plt.savefig(os.path.join(save_dir, "{}_pw_sp.png".format(step)))
+    if pw_model_type == "f0":
+        output = output.reshape(-1)
+        
     pw_f0_true = pw_f0_true.reshape(-1)
-
-    wav_pw = pw.synthesize(
-        np.ascontiguousarray(pw_f0, dtype=np.double),
-        np.ascontiguousarray(pw_sp, dtype=np.double),
-        np.ascontiguousarray(pw_ap, dtype=np.double),
-        args.sampling_rate,
-        frame_period=args.frame_shift * 1000,
-    )
+    if pw_model_type == "f0":
+        wav_pw = pw.synthesize(
+            np.ascontiguousarray(output, dtype=np.double),
+            np.ascontiguousarray(pw_sp_true, dtype=np.double),
+            np.ascontiguousarray(pw_ap_true, dtype=np.double),
+            args.sampling_rate,
+            frame_period=args.frame_shift * 1000,
+        )
+    if pw_model_type == "sp":
+        wav_pw = pw.synthesize(
+            np.ascontiguousarray(pw_f0_true, dtype=np.double),
+            np.ascontiguousarray(output, dtype=np.double),
+            np.ascontiguousarray(pw_ap_true, dtype=np.double),
+            args.sampling_rate,
+            frame_period=args.frame_shift * 1000,
+        )
+    if pw_model_type == "ap":
+        wav_pw = pw.synthesize(
+            np.ascontiguousarray(pw_f0_true, dtype=np.double),
+            np.ascontiguousarray(pw_sp_true, dtype=np.double),
+            np.ascontiguousarray(output, dtype=np.double),
+            args.sampling_rate,
+            frame_period=args.frame_shift * 1000,
+        )
     wav_true = pw.synthesize(
         np.ascontiguousarray(pw_f0_true, dtype=np.double),
         np.ascontiguousarray(pw_sp_true, dtype=np.double),
@@ -1679,7 +1693,7 @@ def log_figure_pw(
 
     if librosa.__version__ < "0.8.0":
         librosa.output.write_wav(
-            os.path.join(save_dir, "{}_pw.wav".format(step)),
+            os.path.join(save_dir, "{}_pw_{}.wav".format(step, pw_model_type)),
             wav_pw,
             args.sampling_rate,
         )
@@ -1691,7 +1705,7 @@ def log_figure_pw(
     else:
         # librosa > 0.8 remove librosa.output.write_wav module
         sf.write(
-            os.path.join(save_dir, "{}_pw.wav".format(step)),
+            os.path.join(save_dir, "{}_pw_{}.wav".format(step, pw_model_type)),
             wav_pw,
             args.sampling_rate,
             format="wav",

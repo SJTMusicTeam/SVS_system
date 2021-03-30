@@ -924,6 +924,7 @@ class LSTMSVS(nn.Module):
         Hz2semitone=False,
         feat_dim_pw=513,
         vocoder_category="others",
+        is_pw_f0 = True,
     ):
         """init."""
         super(LSTMSVS, self).__init__()
@@ -1009,7 +1010,9 @@ class LSTMSVS(nn.Module):
         self.d_model = d_model
         self.feat_dim_pw = feat_dim_pw
         self.vocoder_category = vocoder_category
-        self.output_fc_pw = nn.Linear(d_output, self.feat_dim_pw * 2 + 1)
+        self.is_pw_f0 = is_pw_f0
+        self.output_fc_pw_f0 = nn.Linear(d_output, 1)
+        self.output_fc_pw_sp_ap = nn.Linear(d_output, self.feat_dim_pw)
 
     def forward(self, phone, pitch, beats):
         """forward."""
@@ -1052,7 +1055,10 @@ class LSTMSVS(nn.Module):
 
         elif self.vocoder_category == "pyworld":
             out = self.output_fc(out)
-            out = self.output_fc_pw(out)
+            if self.is_pw_f0:
+                out = self.output_fc_pw_f0(out)
+            else:
+                out = self.output_fc_pw_sp_ap(out)
             return out, (h0, c0), None, None
 
         else:

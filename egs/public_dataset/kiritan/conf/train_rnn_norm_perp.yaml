@@ -21,12 +21,12 @@ perceptual_loss: 0
 
 accumulation_steps: 1
 auto_select_gpu: False
-gpu_id: 1
+gpu_id: 3
 
 max_epochs: 150
 
-batchsize: 10
-num_workers: 5
+batchsize: 6
+num_workers: 4
 
 mask_free: False
 use_asr_post: False
@@ -42,14 +42,14 @@ frame_shift: 0.005
 hidden_size: 256
 embedding_size: 256
 num_rnn_layers: 3
-num_frames: 500
+num_frames: 2700
 char_max_len: 100
 optimizer: adam
 lr: 0.001
 phone_size: 68
 seed: 777
 
-resume: True
+# resume: True
 
 train_step_log: 20
 dev_step_log: 2
@@ -63,6 +63,6 @@ val_pw_f0: data/pyworld_f0/dev
 val_pw_sp: data/pyworld_sp/dev
 val_pw_ap: data/pyworld_ap/dev
 
-stats_f0_file: exp/3_18_rnn_norm/feats_f0_stats.npz
-stats_sp_file: exp/3_18_rnn_norm/feats_sp_stats.npz
-stats_ap_file: exp/3_18_rnn_norm/feats_ap_stats.npz
+stats_f0_file: exp/3_28_rnn_norm/feats_f0_stats.npz
+stats_sp_file: exp/3_28_rnn_norm/feats_sp_stats.npz
+stats_ap_file: exp/3_28_rnn_norm/feats_ap_stats.npz
