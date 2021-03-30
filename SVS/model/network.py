@@ -924,7 +924,7 @@ class LSTMSVS(nn.Module):
         Hz2semitone=False,
         feat_dim_pw=513,
         vocoder_category="others",
-        is_pw_f0 = True,
+        is_pw_f0=True,
     ):
         """init."""
         super(LSTMSVS, self).__init__()

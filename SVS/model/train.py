@@ -52,6 +52,7 @@ import soundfile as sf
 import librosa
 from librosa.display import specshow
 
+
 def load_model(model_load_dir, model):
     if model_load_dir != "":
         logging.info(f"Model Start to Load, dir: {model_load_dir}")
@@ -85,8 +86,11 @@ def load_model(model_load_dir, model):
         model_dict.update(state_dict_new)
         model.load_state_dict(model_dict)
         logging.info(f"Loaded checkpoint {args.initmodel}")
-        
-def log_infer_pw(output_f0_all, output_sp_all, output_ap_all, length_all, save_dir, args):
+
+
+def log_infer_pw(
+    output_f0_all, output_sp_all, output_ap_all, length_all, save_dir, args
+):
     """log_figure."""
     # only get one sample from a batch
     # save wav and plot spectrogram
@@ -96,18 +100,18 @@ def log_infer_pw(output_f0_all, output_sp_all, output_ap_all, length_all, save_d
         output_f0 = output_f0_all[i][1]
         output_sp = output_sp_all[i][1]
         output_ap = output_ap_all[i][1]
-    
+
         output_f0 = output_f0.cpu().detach().numpy()[0]
         output_sp = output_sp.cpu().detach().numpy()[0]
         output_ap = output_ap.cpu().detach().numpy()[0]
         length = np.max(length.cpu().detach().numpy()[0])
         output_f0 = output_f0[:length]
         output_sp = output_sp[:length]
-        
-#         #### Temp ####
-#         output_sp = output_sp / 10000
-#         #### Temp ####
-        
+
+        #         #### Temp ####
+        #         output_sp = output_sp / 10000
+        #         #### Temp ####
+
         output_ap = output_ap[:length]
         output_f0 = output_f0.reshape(-1)
 
@@ -134,8 +138,8 @@ def log_infer_pw(output_f0_all, output_sp_all, output_ap_all, length_all, save_d
                 format="wav",
                 subtype="PCM_24",
             )
-            
-        
+
+
 def count_parameters(model):
     """count_parameters."""
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -250,7 +254,11 @@ def Auto_save_model_pyworld(
         # if dev_info[save_loss_select] in epoch_to_save.keys():
         #     counter -= 1
         #     continue
-        epoch_to_save[dev_info_f0[save_loss_select]+dev_info_sp[save_loss_select]+dev_info_ap[save_loss_select]] = epoch
+        epoch_to_save[
+            dev_info_f0[save_loss_select]
+            + dev_info_sp[save_loss_select]
+            + dev_info_ap[save_loss_select]
+        ] = epoch
         save_model(
             args,
             epoch,
@@ -288,7 +296,11 @@ def Auto_save_model_pyworld(
     else:
         sorted_dict_keys = sorted(epoch_to_save.keys(), reverse=True)
         select_loss = sorted_dict_keys[0]  # biggest spec_loss of saved models
-        pw_loss_all = dev_info_f0[save_loss_select] + dev_info_sp[save_loss_select] + dev_info_ap[save_loss_select]
+        pw_loss_all = (
+            dev_info_f0[save_loss_select]
+            + dev_info_sp[save_loss_select]
+            + dev_info_ap[save_loss_select]
+        )
         if pw_loss_all < select_loss:
             epoch_to_save[pw_loss_all] = epoch
             logging.info(f"### - {save_loss_select} - ###")
@@ -626,7 +638,7 @@ def train(args):
                     vocoder_category="pyworld",
                     Hz2semitone=args.Hz2semitone,
                     semitone_size=args.semitone_size,
-                    is_pw_f0 = True,
+                    is_pw_f0=True,
                 )
                 model_sp = LSTMSVS_combine(
                     phone_size=args.phone_size,
@@ -644,7 +656,7 @@ def train(args):
                     vocoder_category="pyworld",
                     Hz2semitone=args.Hz2semitone,
                     semitone_size=args.semitone_size,
-                    is_pw_f0 = False,
+                    is_pw_f0=False,
                 )
                 model_ap = LSTMSVS_combine(
                     phone_size=args.phone_size,
@@ -662,8 +674,8 @@ def train(args):
                     vocoder_category="pyworld",
                     Hz2semitone=args.Hz2semitone,
                     semitone_size=args.semitone_size,
-                    is_pw_f0 = False,
-                )                
+                    is_pw_f0=False,
+                )
             else:
                 model = LSTMSVS_combine(
                     phone_size=args.phone_size,
@@ -698,7 +710,7 @@ def train(args):
                     use_asr_post=args.use_asr_post,
                     feat_dim_pw=args.pw_para_dim,
                     vocoder_category="pyworld",
-                    is_pw_f0 = True,
+                    is_pw_f0=True,
                 )
                 model_sp = LSTMSVS(
                     phone_size=args.phone_size,
@@ -715,7 +727,7 @@ def train(args):
                     use_asr_post=args.use_asr_post,
                     feat_dim_pw=args.pw_para_dim,
                     vocoder_category="pyworld",
-                    is_pw_f0 = False,
+                    is_pw_f0=False,
                 )
                 model_ap = LSTMSVS(
                     phone_size=args.phone_size,
@@ -732,8 +744,8 @@ def train(args):
                     use_asr_post=args.use_asr_post,
                     feat_dim_pw=args.pw_para_dim,
                     vocoder_category="pyworld",
-                    is_pw_f0 = False,
-                )                
+                    is_pw_f0=False,
+                )
             else:
                 model = LSTMSVS(
                     phone_size=args.phone_size,
@@ -939,17 +951,23 @@ def train(args):
 
     else:
         raise ValueError("Not Support Model Type %s" % args.model_type)
-    
+
     if args.vocoder_category == "pyworld":
         logging.info(f"{model_sp}")
         model_sp = model_sp.to(device)
-        logging.info(f"The pw_sp model has {count_parameters(model_sp):,} trainable parameters")
+        logging.info(
+            f"The pw_sp model has {count_parameters(model_sp):,} trainable parameters"
+        )
         logging.info(f"{model_ap}")
         model_ap = model_ap.to(device)
-        logging.info(f"The pw_ap model has {count_parameters(model_ap):,} trainable parameters")
+        logging.info(
+            f"The pw_ap model has {count_parameters(model_ap):,} trainable parameters"
+        )
         logging.info(f"{model_f0}")
         model_f0 = model_f0.to(device)
-        logging.info(f"The pw_f0 model has {count_parameters(model_f0):,} trainable parameters")
+        logging.info(
+            f"The pw_f0 model has {count_parameters(model_f0):,} trainable parameters"
+        )
     else:
         logging.info(f"{model}")
         model = model.to(device)
@@ -959,7 +977,7 @@ def train(args):
     if args.vocoder_category == "pyworld":
         model_load_dir_sp = ""
         model_load_dir_ap = ""
-        model_load_dir_f0 = ""    
+        model_load_dir_f0 = ""
     pretrain_encoder_dir = ""
     start_epoch = 1  # FIX ME
     if args.pretrain_encoder != "":
@@ -1017,7 +1035,7 @@ def train(args):
                 model_load_dir_ap = "{}/epoch_spec_loss_ap_{}.pth.tar".format(
                     args.model_save_dir, start_epoch
                 )
-            else:    
+            else:
                 model_load_dir = "{}/epoch_spec_loss_{}.pth.tar".format(
                     args.model_save_dir, start_epoch
                 )
@@ -1042,7 +1060,7 @@ def train(args):
         model.load_state_dict(model_dict)
         logging.info(f"Load {i} layers total. Load pretrain encoder success !")
 
-    # load weights for pre-trained 
+    # load weights for pre-trained
     if args.vocoder_category == "pyworld":
         load_model(model_load_dir_f0, model_f0)
         load_model(model_load_dir_sp, model_sp)
@@ -1258,19 +1276,26 @@ def train(args):
                 voc_model,
                 pw_model_type="ap",
             )
-            
+
             log_save_dir = os.path.join(
                 args.model_save_dir, "epoch{}/log_train_figure".format(epoch)
             )
             if not os.path.exists(log_save_dir):
-                os.makedirs(log_save_dir) 
-            
-            output_f0_all = train_info_f0["output_one_epoch"]    
-            output_sp_all = train_info_sp["output_one_epoch"] 
-            output_ap_all = train_info_ap["output_one_epoch"] 
+                os.makedirs(log_save_dir)
+
+            output_f0_all = train_info_f0["output_one_epoch"]
+            output_sp_all = train_info_sp["output_one_epoch"]
+            output_ap_all = train_info_ap["output_one_epoch"]
             length_all = train_info_sp["output_length"]
-            log_infer_pw(output_f0_all, output_sp_all, output_ap_all, length_all, log_save_dir, args)
-            
+            log_infer_pw(
+                output_f0_all,
+                output_sp_all,
+                output_ap_all,
+                length_all,
+                log_save_dir,
+                args,
+            )
+
         else:
             train_info = train_one_epoch(
                 train_loader,
@@ -1288,9 +1313,13 @@ def train(args):
         out_log = "Train epoch: {:04d}, ".format(epoch)
         if args.optimizer == "noam":
             if args.vocoder_category == "pyworld":
-                out_log += "lr: {:.6f}, ".format(optimizer_f0._optimizer.param_groups[0]["lr"])
+                out_log += "lr: {:.6f}, ".format(
+                    optimizer_f0._optimizer.param_groups[0]["lr"]
+                )
             else:
-                out_log += "lr: {:.6f}, ".format(optimizer._optimizer.param_groups[0]["lr"])
+                out_log += "lr: {:.6f}, ".format(
+                    optimizer._optimizer.param_groups[0]["lr"]
+                )
         elif args.optimizer == "adam":
             if args.vocoder_category == "pyworld":
                 out_log += "lr: {:.6f}, ".format(optimizer_f0.param_groups[0]["lr"])
@@ -1352,19 +1381,26 @@ def train(args):
                 voc_model,
                 pw_model_type="ap",
             )
-            
+
             log_save_dir = os.path.join(
                 args.model_save_dir, "epoch{}/log_val_figure".format(epoch)
             )
             if not os.path.exists(log_save_dir):
-                os.makedirs(log_save_dir) 
-            
-            output_f0_all = dev_info_f0["output_one_epoch"]    
-            output_sp_all = dev_info_sp["output_one_epoch"] 
-            output_ap_all = dev_info_ap["output_one_epoch"] 
+                os.makedirs(log_save_dir)
+
+            output_f0_all = dev_info_f0["output_one_epoch"]
+            output_sp_all = dev_info_sp["output_one_epoch"]
+            output_ap_all = dev_info_ap["output_one_epoch"]
             length_all = dev_info_sp["output_length"]
-            log_infer_pw(output_f0_all, output_sp_all, output_ap_all, length_all, log_save_dir, args)
-            
+            log_infer_pw(
+                output_f0_all,
+                output_sp_all,
+                output_ap_all,
+                length_all,
+                log_save_dir,
+                args,
+            )
+
         else:
             dev_info = validate(
                 dev_loader,
@@ -1380,7 +1416,7 @@ def train(args):
         if args.vocoder_category == "pyworld":
             dev_log = "Dev epoch: {:04d}, f0_loss: {:.4f}, sp_loss: {:.4f}, ap_loss: {:.4f}, ".format(
                 epoch, dev_info_f0["loss"], dev_info_sp["loss"], dev_info_ap["loss"]
-            )                
+            )
         else:
             dev_log = "Dev epoch: {:04d}, loss: {:.4f}, spec_loss: {:.4f}, ".format(
                 epoch, dev_info["loss"], dev_info["spec_loss"]
@@ -1426,7 +1462,7 @@ def train(args):
         """Save model Stage"""
         if not os.path.exists(args.model_save_dir):
             os.makedirs(args.model_save_dir)
-                
+
         if args.vocoder_category == "pyworld":
             (total_loss_counter, total_loss_epoch_to_save) = Auto_save_model_pyworld(
                 args,
@@ -1464,7 +1500,11 @@ def train(args):
             )
 
         if args.vocoder_category == "pyworld":
-            if (dev_info_f0["spec_loss"] != 0 and dev_info_sp["spec_loss"] != 0 and dev_info_ap["spec_loss"] != 0):
+            if (
+                dev_info_f0["spec_loss"] != 0
+                and dev_info_sp["spec_loss"] != 0
+                and dev_info_ap["spec_loss"] != 0
+            ):
                 (spec_loss_counter, spec_loss_epoch_to_save) = Auto_save_model_pyworld(
                     args,
                     epoch,
@@ -1487,7 +1527,7 @@ def train(args):
                 )
 
         else:
-            if (dev_info["spec_loss"] != 0):
+            if dev_info["spec_loss"] != 0:
                 (spec_loss_counter, spec_loss_epoch_to_save) = Auto_save_model(
                     args,
                     epoch,

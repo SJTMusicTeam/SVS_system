@@ -288,7 +288,7 @@ def train_one_epoch(
             if pw_model_type == "sp":
                 length_mask_pw = length_mask.repeat(1, 1, args.pw_para_dim).float()
             if pw_model_type == "ap":
-                length_mask_pw = length_mask.repeat(1, 1, args.pw_para_dim).float()              
+                length_mask_pw = length_mask.repeat(1, 1, args.pw_para_dim).float()
             length_mask_pw = length_mask_pw.to(device)
         length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
         length_mask = length_mask.to(device)
@@ -385,11 +385,11 @@ def train_one_epoch(
                 mel_normalizer = GlobalMVN(args.stats_mel_file)
                 mel, _ = mel_normalizer(mel, length)
 
-#         logging.info(
-#             "&&& GT &&& ######## No-Norm: {}; ***** Norm: {} ######".format(
-#                 torch.mean(pw_sp_origin), torch.mean(pw_sp)
-#             )
-#         )
+        #         logging.info(
+        #             "&&& GT &&& ######## No-Norm: {}; ***** Norm: {} ######".format(
+        #                 torch.mean(pw_sp_origin), torch.mean(pw_sp)
+        #             )
+        #         )
 
         if args.model_type == "USTC_DAR" and args.vocoder_category != "pyworld":
             spec_loss = 0
@@ -399,7 +399,7 @@ def train_one_epoch(
             if pw_model_type == "sp":
                 label_pw = pw_sp
             if pw_model_type == "ap":
-                label_pw = pw_ap            
+                label_pw = pw_ap
             pw_loss = criterion(output, label_pw, length_mask_pw)
             spec_loss = pw_loss
         else:
@@ -529,11 +529,11 @@ def train_one_epoch(
                 if args.double_mel_loss:
                     out_log += "dmel_loss {:.4f}; ".format(double_mel_losses.avg)
             print("{} -- sum_time: {:.2f}s".format(out_log, (end - start)))
-            
+
             if args.vocoder_category == "pyworld":
-                output_one_epoch.append((step,output))
+                output_one_epoch.append((step, output))
                 output_length.append(length)
-                
+
     info = {"loss": losses.avg, "spec_loss": spec_losses.avg}
 
     if args.perceptual_loss > 0 and args.vocoder_category != "pyworld":
@@ -547,7 +547,15 @@ def train_one_epoch(
 
 
 def validate(
-    dev_loader, model, device, criterion, perceptual_entropy, epoch, args, voc_model, pw_model_type=None,
+    dev_loader,
+    model,
+    device,
+    criterion,
+    perceptual_entropy,
+    epoch,
+    args,
+    voc_model,
+    pw_model_type=None,
 ):
     """validate."""
     losses = AverageMeter()
@@ -641,7 +649,7 @@ def validate(
                 if pw_model_type == "sp":
                     length_mask_pw = length_mask.repeat(1, 1, args.pw_para_dim).float()
                 if pw_model_type == "ap":
-                    length_mask_pw = length_mask.repeat(1, 1, args.pw_para_dim).float() 
+                    length_mask_pw = length_mask.repeat(1, 1, args.pw_para_dim).float()
                 length_mask_pw = length_mask_pw.to(device)
             length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
             length_mask = length_mask.to(device)
@@ -750,7 +758,7 @@ def validate(
                 if pw_model_type == "sp":
                     label_pw = pw_sp
                 if pw_model_type == "ap":
-                    label_pw = pw_ap  
+                    label_pw = pw_ap
                 pw_loss = criterion(output, label_pw, length_mask_pw)
                 spec_loss = pw_loss
             else:
@@ -867,8 +875,11 @@ def validate(
                         )
 
                 if args.vocoder_category == "pyworld":
-                    out_log = "step {}: train_loss {:.4f}; " "pw_loss_{} {:.4f};".format(
-                        step, losses.avg, pw_model_type, spec_losses.avg
+                    out_log = (
+                        "step {}: train_loss {:.4f}; "
+                        "pw_loss_{} {:.4f};".format(
+                            step, losses.avg, pw_model_type, spec_losses.avg
+                        )
                     )
                 else:
                     out_log = (
@@ -886,9 +897,9 @@ def validate(
                 end = time.time()
                 print("{} -- sum_time: {}s".format(out_log, (end - start)))
                 if args.vocoder_category == "pyworld":
-                    output_one_epoch.append((step,output))
+                    output_one_epoch.append((step, output))
                     output_length.append(length)
-                
+
     info = {
         "loss": losses.avg,
         "spec_loss": spec_losses.avg,
@@ -1295,7 +1306,15 @@ def save_checkpoint(state, model_filename):
 
 
 def save_model(
-    args, epoch, model, optimizer, train_info, dev_info, logger, save_loss_select, pw_model_type=None
+    args,
+    epoch,
+    model,
+    optimizer,
+    train_info,
+    dev_info,
+    logger,
+    save_loss_select,
+    pw_model_type=None,
 ):
     """save_model."""
     if args.optimizer == "noam":
@@ -1615,7 +1634,16 @@ def log_mel(step, output_mel, ori_mel, att, length, save_dir, args, voc_model):
 
 
 def log_figure_pw(
-    step, output, pw_f0_true, pw_sp_true, pw_ap_true, att, length, save_dir, args, pw_model_type,
+    step,
+    output,
+    pw_f0_true,
+    pw_sp_true,
+    pw_ap_true,
+    att,
+    length,
+    save_dir,
+    args,
+    pw_model_type,
 ):
     """log_figure."""
     # only get one sample from a batch
@@ -1657,7 +1685,7 @@ def log_figure_pw(
         plt.savefig(os.path.join(save_dir, "{}_pw_sp.png".format(step)))
     if pw_model_type == "f0":
         output = output.reshape(-1)
-        
+
     pw_f0_true = pw_f0_true.reshape(-1)
     if pw_model_type == "f0":
         wav_pw = pw.synthesize(
