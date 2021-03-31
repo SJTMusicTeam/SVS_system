@@ -654,6 +654,10 @@ class SVSDataset(Dataset):
                 )
                 pw_sp = np.load(pw_sp_path)
 
+                #### Temp ####
+                pw_sp = pw_sp * 10000
+                #### Temp ####
+
                 pw_ap_path = os.path.join(
                     self.pw_ap_root_path,
                     str(int(self.filename_list[i][1:4])),
@@ -697,6 +701,10 @@ class SVSDataset(Dataset):
                     self.filename_list[i][4:-4] + "_sp.npy",
                 )
                 pw_sp = np.load(pw_sp_path)
+
+                #### Temp ####
+                pw_sp = pw_sp * 10000
+                #### Temp ####
 
                 pw_ap_path = os.path.join(
                     self.pw_ap_root_path,

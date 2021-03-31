@@ -92,13 +92,6 @@ def collect_stats(train_loader, args):
             sum_square += (seq ** 2).sum(0)
             count += len(seq)
 
-        for i, seq in enumerate(mel.cpu().numpy()):
-            seq_length = torch.max(length[i])
-            seq = seq[:seq_length]
-            sum_mel += seq.sum(0)
-            sum_square_mel += (seq ** 2).sum(0)
-            count_mel += len(seq)
-
         if args.vocoder_category == "pyworld":
 
             for i, seq in enumerate(pw_f0.cpu().numpy()):
@@ -121,7 +114,15 @@ def collect_stats(train_loader, args):
                 sum_square_pw_ap += (seq ** 2).sum(0)
                 count_pw_ap += len(seq)
 
-    assert count_mel == count
+        else:
+            for i, seq in enumerate(mel.cpu().numpy()):
+                seq_length = torch.max(length[i])
+                seq = seq[:seq_length]
+                sum_mel += seq.sum(0)
+                sum_square_mel += (seq ** 2).sum(0)
+                count_mel += len(seq)
+
+                assert count_mel == count
 
     if args.vocoder_category == "pyworld":
         dirnames = [
@@ -140,12 +141,12 @@ def collect_stats(train_loader, args):
             sum=sum,
             sum_square=sum_square,
         )
-        np.savez(
-            args.stats_mel_file,
-            count=count_mel,
-            sum=sum_mel,
-            sum_square=sum_square_mel,
-        )
+        #         np.savez(
+        #             args.stats_mel_file,
+        #             count=count_mel,
+        #             sum=sum_mel,
+        #             sum_square=sum_square_mel,
+        #         )
 
         np.savez(
             args.stats_f0_file,
@@ -280,7 +281,12 @@ def train_one_epoch(
             length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
             length_mel_mask = length_mel_mask.to(device)
         if args.vocoder_category == "pyworld":
-            length_mask_pw = length_mask.repeat(1, 1, args.pw_para_dim * 2 + 1).float()
+            if args.pw_para_type == "f0":
+                length_mask_pw = length_mask.repeat(1, 1, 1).float()
+            if args.pw_para_type == "sp":
+                length_mask_pw = length_mask.repeat(1, 1, args.pw_para_dim).float()
+            if args.pw_para_type == "ap":
+                length_mask_pw = length_mask.repeat(1, 1, args.pw_para_dim).float()
             length_mask_pw = length_mask_pw.to(device)
         length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
         length_mask = length_mask.to(device)
@@ -380,7 +386,12 @@ def train_one_epoch(
         if args.model_type == "USTC_DAR" and args.vocoder_category != "pyworld":
             spec_loss = 0
         elif args.vocoder_category == "pyworld":
-            label_pw = torch.cat((pw_f0, pw_ap, pw_sp), dim=2)
+            if args.pw_para_type == "f0":
+                label_pw = pw_f0
+            if args.pw_para_type == "sp":
+                label_pw = pw_sp
+            if args.pw_para_type == "ap":
+                label_pw = pw_ap
             pw_loss = criterion(output, label_pw, length_mask_pw)
             spec_loss = pw_loss
         else:
@@ -448,36 +459,13 @@ def train_one_epoch(
                     step, losses.avg, spec_losses.avg
                 )
             elif args.vocoder_category == "pyworld":
-                # length_temp = np.max(length.cpu().detach().numpy()[0])
-                length_temp = length
-                output = output.cpu().detach().numpy()
-                out_pw_f0 = output[:, :, :1]
-                out_pw_ap = output[:, :, 1 : args.pw_para_dim + 1]
-                out_pw_sp = output[
-                    :, :, args.pw_para_dim + 1 : args.pw_para_dim * 2 + 1
-                ]
                 if args.normalize and args.stats_file:
-                    out_pw_f0 = (
-                        torch.from_numpy(out_pw_f0.astype(np.float)).to(device).float()
-                    )
-                    out_pw_sp = (
-                        torch.from_numpy(out_pw_sp.astype(np.float)).to(device).float()
-                    )
-                    out_pw_ap = (
-                        torch.from_numpy(out_pw_ap.astype(np.float)).to(device).float()
-                    )
-                    out_pw_f0, _ = pw_f0_normalizer.inverse(out_pw_f0, length_temp)
-                    out_pw_sp, _ = pw_sp_normalizer.inverse(out_pw_sp, length_temp)
-                    out_pw_ap, _ = pw_ap_normalizer.inverse(out_pw_ap, length_temp)
-                    out_pw_f0 = out_pw_f0.cpu().detach().numpy()
-                    out_pw_sp = out_pw_sp.cpu().detach().numpy()
-                    out_pw_ap = out_pw_ap.cpu().detach().numpy()
-                    output[:, :, :1] = out_pw_f0
-                    output[:, :, 1 : args.pw_para_dim + 1] = out_pw_ap
-                    output[
-                        :, :, args.pw_para_dim + 1 : args.pw_para_dim * 2 + 1
-                    ] = out_pw_sp
-                    output = output[0]
+                    if args.pw_para_type == "f0":
+                        output, _ = pw_f0_normalizer.inverse(output, length)
+                    if args.pw_para_type == "sp":
+                        output, _ = pw_sp_normalizer.inverse(output, length)
+                    if args.pw_para_type == "ap":
+                        output, _ = pw_ap_normalizer.inverse(output, length)
                 log_figure_pw(
                     step,
                     output,
@@ -488,9 +476,10 @@ def train_one_epoch(
                     length,
                     log_save_dir,
                     args,
+                    args.pw_para_type,
                 )
-                out_log = "step {}: train_loss {:.4f}; pw_loss {:.4f};".format(
-                    step, losses.avg, spec_losses.avg
+                out_log = "step {}: train_loss {:.4f}; pw_loss_{} {:.4f};".format(
+                    step, losses.avg, args.pw_para_type, spec_losses.avg
                 )
 
             else:
@@ -631,9 +620,12 @@ def validate(
                 length_mel_mask = length_mask.repeat(1, 1, mel.shape[2]).float()
                 length_mel_mask = length_mel_mask.to(device)
             if args.vocoder_category == "pyworld":
-                length_mask_pw = length_mask.repeat(
-                    1, 1, args.pw_para_dim * 2 + 1
-                ).float()
+                if args.pw_para_type == "f0":
+                    length_mask_pw = length_mask.repeat(1, 1, 1).float()
+                if args.pw_para_type == "sp":
+                    length_mask_pw = length_mask.repeat(1, 1, args.pw_para_dim).float()
+                if args.pw_para_type == "ap":
+                    length_mask_pw = length_mask.repeat(1, 1, args.pw_para_dim).float()
                 length_mask_pw = length_mask_pw.to(device)
             length_mask = length_mask.repeat(1, 1, spec.shape[2]).float()
             length_mask = length_mask.to(device)
@@ -737,7 +729,12 @@ def validate(
             if args.model_type == "USTC_DAR" and args.vocoder_category != "pyworld":
                 spec_loss = 0
             elif args.vocoder_category == "pyworld":
-                label_pw = torch.cat((pw_f0, pw_ap, pw_sp), dim=2)
+                if args.pw_para_type == "f0":
+                    label_pw = pw_f0
+                if args.pw_para_type == "sp":
+                    label_pw = pw_sp
+                if args.pw_para_type == "ap":
+                    label_pw = pw_ap
                 pw_loss = criterion(output, label_pw, length_mask_pw)
                 spec_loss = pw_loss
             else:
@@ -790,36 +787,13 @@ def validate(
                     1,
                 )  # FIX ME! Calculate_melcd_fromMelSpectrum
             elif args.vocoder_category == "pyworld":
-                length_temp = length
-                output = output.cpu().detach().numpy()
-                out_pw_f0 = output[:, :, :1]
-                out_pw_ap = output[:, :, 1 : args.pw_para_dim + 1]
-                out_pw_sp = output[
-                    :, :, args.pw_para_dim + 1 : args.pw_para_dim * 2 + 1
-                ]
                 if args.normalize and args.stats_file:
-                    # out_pw_f0 = out_pw_f0.reshape(-1)
-                    out_pw_f0 = (
-                        torch.from_numpy(out_pw_f0.astype(np.float)).to(device).float()
-                    )
-                    out_pw_sp = (
-                        torch.from_numpy(out_pw_sp.astype(np.float)).to(device).float()
-                    )
-                    out_pw_ap = (
-                        torch.from_numpy(out_pw_ap.astype(np.float)).to(device).float()
-                    )
-                    out_pw_f0, _ = pw_f0_normalizer.inverse(out_pw_f0, length_temp)
-                    out_pw_sp, _ = pw_sp_normalizer.inverse(out_pw_sp, length_temp)
-                    out_pw_ap, _ = pw_ap_normalizer.inverse(out_pw_ap, length_temp)
-                    out_pw_f0 = out_pw_f0.cpu().detach().numpy()
-                    out_pw_sp = out_pw_sp.cpu().detach().numpy()
-                    out_pw_ap = out_pw_ap.cpu().detach().numpy()
-                    output[:, :, :1] = out_pw_f0
-                    output[:, :, 1 : args.pw_para_dim + 1] = out_pw_ap
-                    output[
-                        :, :, args.pw_para_dim + 1 : args.pw_para_dim * 2 + 1
-                    ] = out_pw_sp
-                    output = output[0]
+                    if args.pw_para_type == "f0":
+                        output, _ = pw_f0_normalizer.inverse(output, length)
+                    if args.pw_para_type == "sp":
+                        output, _ = pw_sp_normalizer.inverse(output, length)
+                    if args.pw_para_type == "ap":
+                        output, _ = pw_ap_normalizer.inverse(output, length)
                 mcd_value, length_sum = (
                     0,
                     1,
@@ -854,6 +828,7 @@ def validate(
                         length,
                         log_save_dir,
                         args,
+                        args.pw_para_type,
                     )
                 else:
                     if args.vocoder_category == "wavernn":
@@ -1598,70 +1573,94 @@ def log_mel(step, output_mel, ori_mel, att, length, save_dir, args, voc_model):
 
 
 def log_figure_pw(
-    step, output, pw_f0_ture, pw_sp_ture, pw_ap_ture, att, length, save_dir, args
+    step,
+    output,
+    pw_f0_true,
+    pw_sp_true,
+    pw_ap_true,
+    att,
+    length,
+    save_dir,
+    args,
+    pw_model_type,
 ):
     """log_figure."""
     # only get one sample from a batch
     # save wav and plot spectrogram
-    # output = output.cpu().detach().numpy()[0]
+    output = output.cpu().detach().numpy()[0]
     length = np.max(length.cpu().detach().numpy()[0])
-    pw_f0_ture = pw_f0_ture.cpu().detach().numpy()[0]
-    pw_sp_ture = pw_sp_ture.cpu().detach().numpy()[0]
-    pw_ap_ture = pw_ap_ture.cpu().detach().numpy()[0]
-    # output = output[:length]
+    output = output[:length]
+    pw_f0_true = pw_f0_true.cpu().detach().numpy()[0]
+    pw_sp_true = pw_sp_true.cpu().detach().numpy()[0]
+    pw_ap_true = pw_ap_true.cpu().detach().numpy()[0]
 
-    pw_f0 = output[:length, :1]
-    pw_ap = output[:length, 1 : args.pw_para_dim + 1]
-    pw_sp = output[:length, args.pw_para_dim + 1 : args.pw_para_dim * 2 + 1]
-    pw_f0_ture = pw_f0_ture[:length, :]
-    pw_sp_ture = pw_sp_ture[:length, :]
-    pw_ap_ture = pw_ap_ture[:length, :]
+    pw_f0_true = pw_f0_true[:length, :]
+    pw_sp_true = pw_sp_true[:length, :]
+    pw_ap_true = pw_ap_true[:length, :]
 
-    plt.subplot(1, 2, 1)
-    specshow(pw_f0.T)
-    plt.title("prediction")
-    plt.subplot(1, 2, 2)
-    specshow(pw_f0_ture.T)
-    plt.title("ground_truth")
-    plt.savefig(os.path.join(save_dir, "{}_pw_f0.png".format(step)))
+    if pw_model_type == "f0":
+        plt.subplot(1, 2, 1)
+        specshow(output.T)
+        plt.title("prediction")
+        plt.subplot(1, 2, 2)
+        specshow(pw_f0_true.T)
+        plt.title("ground_truth")
+        plt.savefig(os.path.join(save_dir, "{}_pw_f0.png".format(step)))
+    if pw_model_type == "ap":
+        plt.subplot(1, 2, 1)
+        specshow(output.T)
+        plt.title("prediction")
+        plt.subplot(1, 2, 2)
+        specshow(pw_ap_true.T)
+        plt.title("ground_truth")
+        plt.savefig(os.path.join(save_dir, "{}_pw_ap.png".format(step)))
+    if pw_model_type == "sp":
+        plt.subplot(1, 2, 1)
+        specshow(output.T)
+        plt.title("prediction")
+        plt.subplot(1, 2, 2)
+        specshow(pw_sp_true.T)
+        plt.title("ground_truth")
+        plt.savefig(os.path.join(save_dir, "{}_pw_sp.png".format(step)))
+    if pw_model_type == "f0":
+        output = output.reshape(-1)
 
-    plt.subplot(1, 2, 1)
-    specshow(pw_ap.T)
-    plt.title("prediction")
-    plt.subplot(1, 2, 2)
-    specshow(pw_ap_ture.T)
-    plt.title("ground_truth")
-    plt.savefig(os.path.join(save_dir, "{}_pw_ap.png".format(step)))
-
-    plt.subplot(1, 2, 1)
-    specshow(pw_sp.T)
-    plt.title("prediction")
-    plt.subplot(1, 2, 2)
-    specshow(pw_sp_ture.T)
-    plt.title("ground_truth")
-    plt.savefig(os.path.join(save_dir, "{}_pw_sp.png".format(step)))
-
-    pw_f0 = pw_f0.reshape(-1)
-    pw_f0_ture = pw_f0_ture.reshape(-1)
-
-    wav_pw = pw.synthesize(
-        np.ascontiguousarray(pw_f0, dtype=np.double),
-        np.ascontiguousarray(pw_sp, dtype=np.double),
-        np.ascontiguousarray(pw_ap, dtype=np.double),
-        args.sampling_rate,
-        frame_period=args.frame_shift * 1000,
-    )
+    pw_f0_true = pw_f0_true.reshape(-1)
+    if pw_model_type == "f0":
+        wav_pw = pw.synthesize(
+            np.ascontiguousarray(output, dtype=np.double),
+            np.ascontiguousarray(pw_sp_true / 10000, dtype=np.double),
+            np.ascontiguousarray(pw_ap_true, dtype=np.double),
+            args.sampling_rate,
+            frame_period=args.frame_shift * 1000,
+        )
+    if pw_model_type == "sp":
+        wav_pw = pw.synthesize(
+            np.ascontiguousarray(pw_f0_true, dtype=np.double),
+            np.ascontiguousarray(output / 10000, dtype=np.double),
+            np.ascontiguousarray(pw_ap_true, dtype=np.double),
+            args.sampling_rate,
+            frame_period=args.frame_shift * 1000,
+        )
+    if pw_model_type == "ap":
+        wav_pw = pw.synthesize(
+            np.ascontiguousarray(pw_f0_true, dtype=np.double),
+            np.ascontiguousarray(pw_sp_true / 10000, dtype=np.double),
+            np.ascontiguousarray(output, dtype=np.double),
+            args.sampling_rate,
+            frame_period=args.frame_shift * 1000,
+        )
     wav_true = pw.synthesize(
-        np.ascontiguousarray(pw_f0_ture, dtype=np.double),
-        np.ascontiguousarray(pw_sp_ture, dtype=np.double),
-        np.ascontiguousarray(pw_ap_ture, dtype=np.double),
+        np.ascontiguousarray(pw_f0_true, dtype=np.double),
+        np.ascontiguousarray(pw_sp_true / 10000, dtype=np.double),
+        np.ascontiguousarray(pw_ap_true, dtype=np.double),
         args.sampling_rate,
         frame_period=args.frame_shift * 1000,
     )
 
     if librosa.__version__ < "0.8.0":
         librosa.output.write_wav(
-            os.path.join(save_dir, "{}_pw.wav".format(step)),
+            os.path.join(save_dir, "{}_pw_{}.wav".format(step, pw_model_type)),
             wav_pw,
             args.sampling_rate,
         )
@@ -1673,7 +1672,7 @@ def log_figure_pw(
     else:
         # librosa > 0.8 remove librosa.output.write_wav module
         sf.write(
-            os.path.join(save_dir, "{}_pw.wav".format(step)),
+            os.path.join(save_dir, "{}_pw_{}.wav".format(step, pw_model_type)),
             wav_pw,
             args.sampling_rate,
             format="wav",

@@ -922,8 +922,9 @@ class LSTMSVS(nn.Module):
         use_asr_post=False,
         semitone_size=59,
         Hz2semitone=False,
-        feat_dim_pw=513,
+        feat_dim_pw=1025,
         vocoder_category="others",
+        pw_para_type=None,
     ):
         """init."""
         super(LSTMSVS, self).__init__()
@@ -1009,7 +1010,10 @@ class LSTMSVS(nn.Module):
         self.d_model = d_model
         self.feat_dim_pw = feat_dim_pw
         self.vocoder_category = vocoder_category
-        self.output_fc_pw = nn.Linear(d_output, self.feat_dim_pw * 2 + 1)
+        self.pw_para_type = pw_para_type
+        self.output_fc_pw_f0 = nn.Linear(d_output, 1)
+        self.output_fc_pw_sp = nn.Linear(d_output, self.feat_dim_pw)
+        self.output_fc_pw_ap = nn.Linear(d_output, self.feat_dim_pw)
 
     def forward(self, phone, pitch, beats):
         """forward."""
@@ -1052,7 +1056,13 @@ class LSTMSVS(nn.Module):
 
         elif self.vocoder_category == "pyworld":
             out = self.output_fc(out)
-            out = self.output_fc_pw(out)
+            if self.pw_para_type == "f0":
+                out = self.output_fc_pw_f0(out)
+            elif self.pw_para_type == "sp":
+                out = self.output_fc_pw_sp(out)
+            else:
+                out = self.output_fc_pw_ap(out)
+
             return out, (h0, c0), None, None
 
         else:
@@ -1086,6 +1096,7 @@ class LSTMSVS_combine(nn.Module):
         vocoder_category="pyworld",
         semitone_size=59,
         Hz2semitone=False,
+        pw_para_type=None,
     ):
         """init."""
         super(LSTMSVS_combine, self).__init__()
@@ -1171,7 +1182,10 @@ class LSTMSVS_combine(nn.Module):
         self.d_model = d_model
         self.feat_dim_pw = feat_dim_pw
         self.vocoder_category = vocoder_category
-        self.output_fc_pw = nn.Linear(d_output, self.feat_dim_pw * 2 + 1)
+        self.pw_para_type = pw_para_type
+        self.output_fc_pw_f0 = nn.Linear(d_output, 1)
+        self.output_fc_pw_sp = nn.Linear(d_output, self.feat_dim_pw)
+        self.output_fc_pw_ap = nn.Linear(d_output, self.feat_dim_pw)
 
     def forward(self, phone, pitch, beats, singer_vec):
         """forward."""
@@ -1221,7 +1235,13 @@ class LSTMSVS_combine(nn.Module):
 
         elif self.vocoder_category == "pyworld":
             out = self.output_fc(out)
-            out = self.output_fc_pw(out)
+            if self.pw_para_type == "f0":
+                out = self.output_fc_pw_f0(out)
+            elif self.pw_para_type == "sp":
+                out = self.output_fc_pw_sp(out)
+            else:
+                out = self.output_fc_pw_ap(out)
+
             return out, (h0, c0), None, None
 
         else:

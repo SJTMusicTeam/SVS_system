@@ -385,10 +385,11 @@ def train(args):
                     double_mel_loss=args.double_mel_loss,
                     device=device,
                     use_asr_post=args.use_asr_post,
-                    feat_dim_pw=513,
+                    feat_dim_pw=args.pw_para_dim,
                     vocoder_category="pyworld",
                     Hz2semitone=args.Hz2semitone,
                     semitone_size=args.semitone_size,
+                    pw_para_type=args.pw_para_type,
                 )
             else:
                 model = LSTMSVS_combine(
@@ -422,8 +423,9 @@ def train(args):
                     semitone_size=args.semitone_size,
                     device=device,
                     use_asr_post=args.use_asr_post,
-                    feat_dim_pw=513,
+                    feat_dim_pw=args.pw_para_dim,
                     vocoder_category="pyworld",
+                    pw_para_type=args.pw_para_type,
                 )
             else:
                 model = LSTMSVS(

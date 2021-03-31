@@ -6,11 +6,11 @@
 . ./cmd.sh || exit 1;
 
 
-stage=3
+stage=2
 stop_stage=3
 ngpu=1
 raw_data_dir=downloads
-expdir=exp/3_18_rnn_norm
+expdir=exp/3_31_rnn_norm_sp_short
 download_wavernn_vocoder=False
 vocoder=pyworld
 
@@ -47,7 +47,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
       --sil pau sil
   else
     python local/prepare_data.py ${raw_data_dir}/kiritan_singing/wav ${raw_data_dir}/kiritan_singing/mono_label data \
-      --sil pau sil --use_pyworld_vocoder Ture --shift_size 5 --window_size 10 --sr 22050
+      --sil pau sil --use_pyworld_vocoder Ture 
   fi
   ./local/train_dev_test_split.sh data train dev test
 

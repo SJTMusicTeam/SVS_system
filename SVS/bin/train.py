@@ -283,6 +283,7 @@ if __name__ == "__main__":
     parser.add_argument("--stats_sp_file", default="", type=str)
     parser.add_argument("--stats_ap_file", default="", type=str)
     parser.add_argument("--pw_para_dim", default=513, type=int)
+    parser.add_argument("--pw_para_type", default="", type=str)
 
     args = parser.parse_args()
 
