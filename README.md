@@ -6,6 +6,8 @@
 
 An open-source system that works on singing voice synthesis
 
+Note: this repo will be deprecated soon and new functions will mainfurther at https://github.com/SJTMusicTeam/Muskit
+
 ## Environment Install
 
 Please see "[Installation Instructions](https://github.com/SJTMusicTeam/SVS_system/wiki/Installation-Instructions)" for installation instructions.
