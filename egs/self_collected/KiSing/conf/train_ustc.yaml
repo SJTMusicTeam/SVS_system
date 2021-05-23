@@ -1,0 +1,70 @@
+# public kiritan data
+train_align: downloads/kiritan_data/alignment/train
+train_pitch: downloads/kiritan_data/pitch_beat_extraction/train
+train_wav: downloads/kiritan_data/wav_info/train
+val_align: downloads/kiritan_data/alignment/dev
+val_pitch: downloads/kiritan_data/pitch_beat_extraction/dev
+val_wav: downloads/kiritan_data/wav_info/dev
+
+# standard: 4
+# sing_quality: conf/sing_quality.csv
+
+
+# feature related
+sampling_rate: 22050
+nfft: 2048
+n_mels: 80
+feat_dim: 80  # 1025
+frame_length: 0.06
+frame_shift: 0.03
+
+# model related
+model_save_dir: exp/12_18_ustc_lrDdecaySteps50/model                     # change
+model_type: USTC_DAR
+normalize: True
+# double_mel_loss: True
+# perceptual_loss: 0.01
+
+stats_file: exp/12_18_ustc_lrDdecaySteps50/model/feats_stats.npz           # change
+stats_mel_file: exp/12_18_ustc_lrDdecaySteps50/model/feats_mel_stats.npz   # change
+
+embedding_size: 512                                                                 # change
+middle_dim_fc: 512
+multi_history_num: 10     # 2
+middle_dim_prenet: 64
+n_blocks_prenet: 3
+n_heads_prenet: 2
+kernel_size_prenet: 4     # 2
+bi_d_model: 256
+bi_num_layers: 3          # 1
+uni_d_model: 128
+uni_num_layers: 3         # 1
+dropout: 0.1
+feedbackLink_drop_rate: 0.75
+
+num_frames: 500
+char_max_len: 100
+phone_size: 68
+
+# train related
+resume: False
+max_epochs: 300
+gradclip: 5
+
+batchsize: 64 # was 4
+num_workers: 5 # was 10
+
+accumulation_steps: 1
+auto_select_gpu: False
+gpu_id: 1
+
+optimizer: "adam"
+scheduler: "ExponentialLR"
+lr_decay_learning_steps: 250
+loss: "l1"
+noam_scale: 1.0
+gradient_accumulation_steps: 1
+noam_warmup_steps: 4000
+train_step_log: 5
+dev_step_log: 2
+seed: 777
