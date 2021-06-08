@@ -38,6 +38,7 @@ def make_segment(alignment, window_size, shift_size, sil="pau"):
     start_id = 1
     silence_start = []
     silence_end = []
+    # print("alignment: {}".format(alignment))
     for i in range(len(alignment)):
         if len(silence_start) == len(silence_end) and alignment[i] in sil:
             silence_start.append(i)
@@ -66,64 +67,65 @@ def make_segment(alignment, window_size, shift_size, sil="pau"):
         start_id += 1
 
     # threshold = 13500ms / shift_size
-    threshold = round(13500 / shift_size)
+    threshold = round(60000 / shift_size)
 
     # hop = 150ms / shift_size
+    # hop = 0
     hop = round(150 / shift_size)
 
-    if len(silence_start) <= 1:
-        if silence_end[0] - silence_start[0] > hop:
-            start = silence_end[0] - hop
+    # if len(silence_start) <= 1:
+    #     if silence_end[0] - silence_start[0] > hop:
+    #         start = silence_end[0] - hop
+    #     else:
+    #         start = silence_start[0]
+    #     if silence_end[-1] - silence_start[-1] > hop:
+    #         end = silence_start[-1] + hop
+    #     else:
+    #         end = silence_end[-1]
+
+    #     if end - start > threshold:
+    #         segments, size = same_split(alignment[start:end], shift_size)
+    #         for i in range(size):
+    #             segment_info[pack_zero(start_id)] = {
+    #                 "alignment": segments[i],
+    #                 "start": start,
+    #             }
+    #             start_id += 1
+
+    #     segment_info[pack_zero(start_id)] = {
+    #         "alignment": alignment[start:end],
+    #         "start": start,
+    #     }
+
+    # else:
+    for i in range(len(silence_start) - 1):
+        if silence_end[i] - silence_start[i] > hop:
+            start = silence_end[i] - hop
         else:
-            start = silence_start[0]
-        if silence_end[-1] - silence_start[-1] > hop:
-            end = silence_start[-1] + hop
+            start = silence_start[i]
+
+        if silence_end[i + 1] - silence_start[i + 1] > hop:
+            end = silence_start[i + 1] + hop
         else:
-            end = silence_end[-1]
+            end = silence_end[i + 1]
 
         if end - start > threshold:
             segments, size = same_split(alignment[start:end], shift_size)
+            pre_size = 0
             for i in range(size):
                 segment_info[pack_zero(start_id)] = {
                     "alignment": segments[i],
-                    "start": start,
+                    "start": start + pre_size,
                 }
                 start_id += 1
+                pre_size += len(segments[i])
+            continue
 
         segment_info[pack_zero(start_id)] = {
             "alignment": alignment[start:end],
             "start": start,
         }
-
-    else:
-        for i in range(len(silence_start) - 1):
-            if silence_end[i] - silence_start[i] > hop:
-                start = silence_end[i] - hop
-            else:
-                start = silence_start[i]
-
-            if silence_end[i + 1] - silence_start[i + 1] > hop:
-                end = silence_start[i + 1] + hop
-            else:
-                end = silence_end[i + 1]
-
-            if end - start > threshold:
-                segments, size = same_split(alignment[start:end], shift_size)
-                pre_size = 0
-                for i in range(size):
-                    segment_info[pack_zero(start_id)] = {
-                        "alignment": segments[i],
-                        "start": start + pre_size,
-                    }
-                    start_id += 1
-                    pre_size += len(segments[i])
-                continue
-
-            segment_info[pack_zero(start_id)] = {
-                "alignment": alignment[start:end],
-                "start": start,
-            }
-            start_id += 1
+        start_id += 1
 
     if silence_end[-1] != len(alignment) - 1:
         if silence_end[-1] - silence_start[-1] > hop:
@@ -156,13 +158,17 @@ def load_label(
     quantized_align = []
 
     start = "0"
-    # quantized_align.extend(sil * round(float(label_data[0][0]) / frame_shift))
+    quantized_align.extend(
+        sil * round(float(label_data[0].split("\t")[0]) / frame_shift)
+    )
     for label in label_data:
         label = label.split("\t")
         if len(label) < 3:
             continue
-        if label[0] != start and float(label[0]) - float(start) >= 1.5:
-            quantized_align.extend(sil * round((float(label[0]) - float(start)) / frame_shift))
+        if label[0] != start and float(label[0]) - float(start) >= 3.0:
+            quantized_align.extend(
+                sil * round((float(label[0]) - float(start)) / frame_shift)
+            )
         # print("label: {}".format(label))
         if s_type == "s":
             length = (float(label[1]) - float(label[0])) / frame_shift
@@ -171,7 +177,7 @@ def load_label(
         start = label[1]
         quantized_align.extend([label[-1]] * round(length))
 
-    quantized_align.extend(sil * round(1.5 / frame_shift))
+    quantized_align.extend(sil * round(3.0 / frame_shift))
 
     # print("quantized_align: {}".format(quantized_align))
     segment = make_segment(quantized_align, window_size, shift_size, sil=sil)
@@ -217,12 +223,10 @@ def process(args):
         wav_list = os.listdir(wav_list)
         wav_list.sort()
         # print("wav_list: {}".format(wav_list))
-        
 
         song_align = os.path.join(args.outdir, "alignment")
         song_wav = os.path.join(args.outdir, "wav_info", str(index))
         song_pitch_beat = os.path.join(args.outdir, "pitch_beat_extraction", str(index))
-
 
         if not os.path.exists(song_align):
             os.makedirs(song_align)
@@ -236,7 +240,7 @@ def process(args):
             alignment = segments[seg]["alignment"]
             start = segments[seg]["start"]
             name = seg
-            
+
             # print("name: {}".format(name))
 
             alignment_id = np.zeros((len(alignment)))
@@ -292,9 +296,7 @@ def process(args):
             np.save(os.path.join(song_pitch_beat, name) + "_pitch", np.array(_f0))
 
             """save wav"""
-            sf.write(
-                os.path.join(song_wav, name) + ".wav", signal, samplerate=args.sr
-            )
+            sf.write(os.path.join(song_wav, name) + ".wav", signal, samplerate=args.sr)
             print("saved {}".format(os.path.join(song_wav, name) + ".wav"))
             wav_index += 1
 
