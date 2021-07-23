@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2021 The Johns Hopkins University & Peking University (author: Jiatong Shi, Lei Li)
+# Copyright 2020 The Johns Hopkins University (author: Jiatong Shi)
 
 import argparse
 import librosa
@@ -38,7 +38,6 @@ def make_segment(alignment, window_size, shift_size, sil="pau"):
     start_id = 1
     silence_start = []
     silence_end = []
-    # print("alignment: {}".format(alignment))
     for i in range(len(alignment)):
         if len(silence_start) == len(silence_end) and alignment[i] in sil:
             silence_start.append(i)
@@ -46,13 +45,8 @@ def make_segment(alignment, window_size, shift_size, sil="pau"):
             silence_end.append(i)
         else:
             continue
-
     if len(silence_start) != len(silence_end):
         silence_end.append(len(alignment) - 1)
-
-    # print("silence_start: {}".format(silence_start))
-    # print("silence_end: {}".format(silence_end))
-
     if silence_start[0] != 0:
         if silence_end[0] - silence_start[0] > 5:
             segment_info[pack_zero(start_id)] = {
@@ -67,65 +61,64 @@ def make_segment(alignment, window_size, shift_size, sil="pau"):
         start_id += 1
 
     # threshold = 13500ms / shift_size
-    threshold = round(60000 / shift_size)
+    threshold = round(13500 / shift_size)
 
     # hop = 150ms / shift_size
-    # hop = 0
     hop = round(150 / shift_size)
 
-    # if len(silence_start) <= 1:
-    #     if silence_end[0] - silence_start[0] > hop:
-    #         start = silence_end[0] - hop
-    #     else:
-    #         start = silence_start[0]
-    #     if silence_end[-1] - silence_start[-1] > hop:
-    #         end = silence_start[-1] + hop
-    #     else:
-    #         end = silence_end[-1]
-
-    #     if end - start > threshold:
-    #         segments, size = same_split(alignment[start:end], shift_size)
-    #         for i in range(size):
-    #             segment_info[pack_zero(start_id)] = {
-    #                 "alignment": segments[i],
-    #                 "start": start,
-    #             }
-    #             start_id += 1
-
-    #     segment_info[pack_zero(start_id)] = {
-    #         "alignment": alignment[start:end],
-    #         "start": start,
-    #     }
-
-    # else:
-    for i in range(len(silence_start) - 1):
-        if silence_end[i] - silence_start[i] > hop:
-            start = silence_end[i] - hop
+    if len(silence_start) <= 1:
+        if silence_end[0] - silence_start[0] > hop:
+            start = silence_end[0] - hop
         else:
-            start = silence_start[i]
-
-        if silence_end[i + 1] - silence_start[i + 1] > hop:
-            end = silence_start[i + 1] + hop
+            start = silence_start[0]
+        if silence_end[-1] - silence_start[-1] > hop:
+            end = silence_start[-1] + hop
         else:
-            end = silence_end[i + 1]
+            end = silence_end[-1]
 
         if end - start > threshold:
             segments, size = same_split(alignment[start:end], shift_size)
-            pre_size = 0
             for i in range(size):
                 segment_info[pack_zero(start_id)] = {
                     "alignment": segments[i],
-                    "start": start + pre_size,
+                    "start": start,
                 }
                 start_id += 1
-                pre_size += len(segments[i])
-            continue
 
         segment_info[pack_zero(start_id)] = {
             "alignment": alignment[start:end],
             "start": start,
         }
-        start_id += 1
+
+    else:
+        for i in range(len(silence_start) - 1):
+            if silence_end[i] - silence_start[i] > hop:
+                start = silence_end[i] - hop
+            else:
+                start = silence_start[i]
+
+            if silence_end[i + 1] - silence_start[i + 1] > hop:
+                end = silence_start[i + 1] + hop
+            else:
+                end = silence_end[i + 1]
+
+            if end - start > threshold:
+                segments, size = same_split(alignment[start:end], shift_size)
+                pre_size = 0
+                for i in range(size):
+                    segment_info[pack_zero(start_id)] = {
+                        "alignment": segments[i],
+                        "start": start + pre_size,
+                    }
+                    start_id += 1
+                    pre_size += len(segments[i])
+                continue
+
+            segment_info[pack_zero(start_id)] = {
+                "alignment": alignment[start:end],
+                "start": start,
+            }
+            start_id += 1
 
     if silence_end[-1] != len(alignment) - 1:
         if silence_end[-1] - silence_start[-1] > hop:
@@ -138,8 +131,6 @@ def make_segment(alignment, window_size, shift_size, sil="pau"):
                 "alignment": alignment[silence_start[-1] :],
                 "start": silence_start[-1],
             }
-
-    # print("segment_info: {}".format(len(segment_info)))
     return segment_info
 
 
@@ -148,41 +139,31 @@ def load_label(
     s_type="s",
     sr=48000,
     frame_shift=0.03,
-    sil="sil",
+    sil="pau",
     window_size=60,
     shift_size=30,
 ):
     label_data = open(label_file, "r")
     label_data = label_data.read().split("\n")
-
     quantized_align = []
 
-    # start = "0"
-    # print(label_data)
-    start = "1.500000"
+    start = "0"
     for label in label_data:
         label = label.split("\t")
-        # print(label)
         if len(label) < 3:
             continue
-        if label[2] in sil:
-            start = label[0]
-        if label[0] != start:
-            quantized_align.extend(
-                ["pau"] * round((float(label[0]) - float(start)) / frame_shift)
-            )
-        # print("label: {}".format(label))
+        # add head and middle sil
+        if float(label[0]) != float(start):
+            quantized_align.extend(sil * round((float(label[0]) - float(start)) / frame_shift))
         if s_type == "s":
             length = (float(label[1]) - float(label[0])) / frame_shift
         else:
             length = (float(label[1]) - float(label[0])) / (frame_shift * 1e7)
-        start = label[1]
         quantized_align.extend([label[-1]] * round(length))
-        if label[2] in sil and length < 1:
-            quantized_align.extend([label[-1]])
+        start = label[1]
+    # add tail sil
+    quantized_align.extend(sil * round(1.5 / frame_shift))
 
-    # print("quantized_align: {}".format(quantized_align))
-    # print(quantized_align)
     segment = make_segment(quantized_align, window_size, shift_size, sil=sil)
     return segment, list(set(quantized_align))
 
@@ -198,16 +179,41 @@ def process(args):
 
     lab_list = os.listdir(args.labdir)
     lab_list.sort()
-    # print("lab_list: {}".format(lab_list)
-
     phone_set = []
     idscp = {}
     index = 1
-    for lab_file in lab_list:
-        # downloads/segmented-label/421
-        lab_path = os.path.join(args.labdir, lab_file)
-        lab_files = os.listdir(lab_path)
-        lab_files.sort()
+    for lab in lab_list:
+        lab_id = lab[1:4]
+        idscp[lab_id] = index
+
+        segments, phone = load_label(
+            os.path.join(args.labdir, lab),
+            s_type=args.label_type,
+            sr=args.sr,
+            frame_shift=frame_shift,
+            sil=args.sil,
+            window_size=args.window_size,
+            shift_size=args.shift_size,
+        )
+
+        for p in phone:
+            if p not in phone_set:
+                phone_set.append(p)
+
+        wav_path = os.path.join(args.wavdir, lab_id + "_all." + args.wav_extention)
+        if args.wav_extention == "raw":
+            signal, osr = sf.read(
+                wav_path,
+                subtype="PCM_16",
+                channels=1,
+                samplerate=args.sr,
+                endian="LITTLE",
+            )
+        else:
+            signal, osr = librosa.load(wav_path, sr=None)
+
+        if osr != args.sr:
+            signal = librosa.resample(signal, osr, args.sr)
 
         song_align = os.path.join(args.outdir, "alignment")
         song_wav = os.path.join(args.outdir, "wav_info", str(index))
@@ -220,78 +226,19 @@ def process(args):
         if not os.path.exists(song_pitch_beat):
             os.makedirs(song_pitch_beat)
         print("processing {}".format(song_wav))
-
-        lab_index = 1
-        for lab in lab_files:
-            # downloads/segmented-label/421/0001.txt
-            # print(lab)
-
-            lab_id = lab[1:4]
-
-            idscp[lab_id] = index
-
-            segments, phone = load_label(
-                os.path.join(lab_path, lab),
-                s_type=args.label_type,
-                sr=args.sr,
-                frame_shift=frame_shift,
-                sil=args.sil,
-                window_size=args.window_size,
-                shift_size=args.shift_size,
-            )
-
-            # print("segments: {}".format(segments))
-            # assert False
-
-            for p in phone:
-                if p not in phone_set:
-                    phone_set.append(p)
-
-            # print(segments.keys())
-            for seg in segments.keys():
-                alignment = segments[seg]["alignment"]
-                start = segments[seg]["start"]
-                name = pack_zero(lab_index)
-
-                alignment_id = np.zeros((len(alignment)))
-                for i in range(len(alignment)):
-                    alignment_id[i] = phone_set.index(alignment[i])
-                np.save(
-                    os.path.join(song_align, pack_zero(index) + name),
-                    np.array(alignment_id),
+        for seg in segments.keys():
+            alignment = segments[seg]["alignment"]
+            start = segments[seg]["start"]
+            name = seg
+            seg_signal = signal[
+                int(start * hop_length) : int(
+                    start * hop_length + len(alignment) * hop_length
                 )
-                lab_index += 1
-
-        wav_list = os.path.join(args.wavdir, lab_file)
-        wav_list = os.listdir(wav_list)
-        wav_list.sort()
-        # print("wav_list: {}".format(wav_list))
-
-        wav_index = 1
-        for wav_name in wav_list:
-            if wav_name[-4:] != ".wav":
-                continue
-
-            name = pack_zero(wav_index)
-            wav_path = os.path.join(args.wavdir, lab_file, wav_name)
-            # print("wav_path: {}".format(wav_path))
-            if args.wav_extention == "raw":
-                signal, osr = sf.read(
-                    wav_path,
-                    subtype="PCM_16",
-                    channels=1,
-                    samplerate=args.sr,
-                    endian="LITTLE",
-                )
-            else:
-                signal, osr = librosa.load(wav_path, sr=None)
-
-            if osr != args.sr:
-                signal = librosa.resample(signal, osr, args.sr)
+            ]
 
             """extract beats"""
             tempo, beats = librosa.beat.beat_track(
-                y=signal, sr=args.sr, hop_length=hop_length
+                y=seg_signal, sr=args.sr, hop_length=hop_length
             )
             # times = librosa.frames_to_time(beats, sr=args.sr)
             # frames = librosa.time_to_frames(
@@ -300,23 +247,30 @@ def process(args):
             np.save(os.path.join(song_pitch_beat, name) + "_beats", np.array(beats))
 
             """extract pitch"""
-            signal = signal.astype("double")
+            seg_signal = seg_signal.astype("double")
             _f0, t = pw.harvest(
-                signal,
+                seg_signal,
                 args.sr,
                 f0_floor=f0_min,
                 f0_ceil=f0_max,
                 frame_period=frame_shift * 1000,
             )
-            _f0 = pw.stonemask(signal, _f0, t, args.sr)
+            _f0 = pw.stonemask(seg_signal, _f0, t, args.sr)
 
             np.save(os.path.join(song_pitch_beat, name) + "_pitch", np.array(_f0))
 
-            """save wav"""
-            sf.write(os.path.join(song_wav, name) + ".wav", signal, samplerate=args.sr)
-            print("saved {}".format(os.path.join(song_wav, name) + ".wav"))
-            wav_index += 1
+            alignment_id = np.zeros((len(alignment)))
+            for i in range(len(alignment)):
+                alignment_id[i] = phone_set.index(alignment[i])
+            np.save(
+                os.path.join(song_align, pack_zero(index) + name),
+                np.array(alignment_id),
+            )
 
+            sf.write(
+                os.path.join(song_wav, name) + ".wav", seg_signal, samplerate=args.sr
+            )
+            print("saved {}".format(os.path.join(song_wav, name) + ".wav"))
         index += 1
 
     with open(os.path.join(args.outdir, "phone_set.txt"), "w") as f:
