@@ -154,7 +154,9 @@ def load_label(
             continue
         # add head and middle sil
         if float(label[0]) != float(start):
-            quantized_align.extend(sil * round((float(label[0]) - float(start)) / frame_shift))
+            quantized_align.extend(
+                sil * round((float(label[0]) - float(start)) / frame_shift)
+            )
         if s_type == "s":
             length = (float(label[1]) - float(label[0])) / frame_shift
         else:
