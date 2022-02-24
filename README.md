@@ -6,7 +6,7 @@
 
 An open-source system that works on singing voice synthesis
 
-Note: this repo will be deprecated soon and new functions will mainfurther at https://github.com/SJTMusicTeam/Muskit
+Note: this repo is already deprecated and new functions will mainfurther at https://github.com/SJTMusicTeam/Muskit
 
 ## Environment Install
 
