@@ -195,9 +195,6 @@ class PerceptualEntropy(nn.Module):
         self.log_term = 1e-8
         self.Tq = tq(f_bin=np.array(range(win_len // 2)), fs=fs, fft_bins=win_len)
         self.renormalize = None
-        # for BWE, a cutoff should be used,
-        # since we only predict the high band signal
-        # self.cutoff = 17
         # depend on bark band size and the widen frequency part
         # cutoff is one-based
         self.cutoff = 1
